@@ -64,6 +64,7 @@ export function GearShelf({
   const [activeCat, setActiveCat] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
   const [editor, setEditor] = useState<{ open: boolean; gear: GearItem | null }>({
     open: false,
     gear: null,
@@ -238,6 +239,7 @@ export function GearShelf({
               onClick={() => {
                 setEditMode((e) => !e);
                 clearSelection();
+                setSwipeOpenId(null);
                 setSearchOpen(false);
                 setQuery("");
               }}
@@ -261,7 +263,7 @@ export function GearShelf({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="장비 검색…"
-              className="min-w-0 flex-1 bg-transparent text-[15px] text-label outline-none placeholder:text-tertiary"
+              className="min-w-0 flex-1 bg-transparent text-[16px] text-label outline-none placeholder:text-tertiary"
             />
             {query && (
               <button
@@ -364,7 +366,13 @@ export function GearShelf({
                       gear={g}
                       unit={unit}
                       selected={selected.has(g.id)}
-                      onTap={() => toggleSelect(g.id)}
+                      onTap={() => {
+                        if (swipeOpenId) {
+                          setSwipeOpenId(null);
+                          return;
+                        }
+                        toggleSelect(g.id);
+                      }}
                       hasAddOns={addOns.length > 0}
                       expanded={isExpanded}
                       onToggleExpand={() => toggleExpand(g.id)}
@@ -384,6 +392,8 @@ export function GearShelf({
                         onToggleHidden: () => setGearHidden(g.id, true),
                         hidden: false,
                       }}
+                      swipeOpenId={swipeOpenId}
+                      onSwipeOpenChange={setSwipeOpenId}
                     />
                     {isExpanded && addOns.length > 0 && (
                       <div className="bg-[color-mix(in_srgb,var(--tint)_5%,transparent)]">
@@ -391,7 +401,13 @@ export function GearShelf({
                           <button
                             key={a.id}
                             type="button"
-                            onClick={() => toggleSelect(a.id)}
+                            onClick={() => {
+                              if (swipeOpenId) {
+                                setSwipeOpenId(null);
+                                return;
+                              }
+                              toggleSelect(a.id);
+                            }}
                             className={cn(
                               "flex w-full items-center gap-2.5 py-2 pl-9 pr-4 text-left transition active:opacity-60",
                               selected.has(a.id) &&
@@ -429,7 +445,9 @@ export function GearShelf({
                 key={g.id}
                 gear={g}
                 unit={unit}
-                onTap={() => {}}
+                onTap={() => {
+                  if (swipeOpenId) setSwipeOpenId(null);
+                }}
                 topHairline={i > 0}
                 dimmed
                 onNotePeek={(rect) =>
@@ -447,6 +465,8 @@ export function GearShelf({
                   onToggleHidden: () => setGearHidden(g.id, false),
                   hidden: true,
                 }}
+                swipeOpenId={swipeOpenId}
+                onSwipeOpenChange={setSwipeOpenId}
               />
             ))}
           </section>

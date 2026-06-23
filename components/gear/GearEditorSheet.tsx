@@ -151,7 +151,6 @@ export function GearEditorSheet({
 
   const addonResults = useMemo(() => {
     const qq = addonQuery.trim().toLowerCase();
-    if (!qq) return [];
     const exclude = new Set([gear?.id, ...addonIds].filter(Boolean) as string[]);
     return gearOrder
       .map((id) => allGear[id])
@@ -159,10 +158,10 @@ export function GearEditorSheet({
       .filter(
         (g) =>
           !exclude.has(g.id) &&
-          (g.name.toLowerCase().includes(qq) ||
+          (!qq ||
+            g.name.toLowerCase().includes(qq) ||
             (g.brand ?? "").toLowerCase().includes(qq)),
-      )
-      .slice(0, 12);
+      );
   }, [addonQuery, gearOrder, allGear, addonIds, gear]);
 
   function handleSave() {
@@ -361,10 +360,10 @@ export function GearEditorSheet({
             <div className="flex h-10 items-center gap-2.5 rounded-[12px] bg-fill px-3.5">
               <Search size={16} className="shrink-0 text-tertiary" />
               <input
-                className="min-w-0 flex-1 bg-transparent text-[15px] text-label outline-none placeholder:text-tertiary"
+                className="min-w-0 flex-1 bg-transparent text-[16px] text-label outline-none placeholder:text-tertiary"
                 value={addonQuery}
                 onChange={(e) => setAddonQuery(e.target.value)}
-                placeholder="장비를 검색해 애드온으로 추가"
+                placeholder="검색하거나 아래에서 선택"
               />
               {addonQuery && (
                 <button
@@ -378,32 +377,33 @@ export function GearEditorSheet({
               )}
             </div>
 
-            {addonQuery.trim() &&
-              (addonResults.length === 0 ? (
-                <p className="px-1 py-1 text-[14px] text-secondary">
-                  검색 결과가 없습니다.
-                </p>
-              ) : (
-                <div>
-                  {addonResults.map((g) => (
-                    <button
-                      key={g.id}
-                      type="button"
-                      onClick={() => {
-                        setAddonIds((prev) => [...prev, g.id]);
-                        setAddonQuery("");
-                      }}
-                      className="flex w-full items-center gap-2 py-2 text-left active:opacity-60"
-                    >
-                      <span className="min-w-0 flex-1 truncate text-[15px] text-label">
-                        {g.name}
-                        {g.brand && <span className="text-secondary"> · {g.brand}</span>}
-                      </span>
-                      <Plus size={17} className="shrink-0 text-tint" />
-                    </button>
-                  ))}
-                </div>
-              ))}
+            {addonResults.length === 0 ? (
+              <p className="px-1 py-1 text-[14px] text-secondary">
+                {addonQuery.trim()
+                  ? "검색 결과가 없습니다."
+                  : "추가할 다른 장비가 없습니다."}
+              </p>
+            ) : (
+              <div className="no-scrollbar max-h-[40vh] overflow-y-auto">
+                {addonResults.map((g) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => {
+                      setAddonIds((prev) => [...prev, g.id]);
+                      setAddonQuery("");
+                    }}
+                    className="flex w-full items-center gap-2 py-2 text-left active:opacity-60"
+                  >
+                    <span className="min-w-0 flex-1 truncate text-[15px] text-label">
+                      {g.name}
+                      {g.brand && <span className="text-secondary"> · {g.brand}</span>}
+                    </span>
+                    <Plus size={17} className="shrink-0 text-tint" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

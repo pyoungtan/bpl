@@ -6,7 +6,8 @@
       "Bash(git --version)",
       "PowerShell(node -v; npm -v; \\(Get-Command node\\).Source; \\(Get-Command pnpm -ErrorAction SilentlyContinue\\).Source)",
       "PowerShell(winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements --scope user 2>&1)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "PowerShell($machine = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\); $user = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); $env:Path = \"$machine;$user\"; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-Object -First 40; \"EXIT=$LASTEXITCODE\")"
     ]
   }
 }

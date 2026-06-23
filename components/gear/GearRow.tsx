@@ -37,6 +37,8 @@ export interface GearRowProps {
   onNotePeek?: (rect: DOMRect) => void;
   onNotePeekEnd?: () => void;
   swipeActions?: SwipeActions;
+  swipeOpenId?: string | null;
+  onSwipeOpenChange?: (id: string | null) => void;
 }
 
 const RIGHT_W = 112; // edit + delete
@@ -57,6 +59,8 @@ export function GearRow({
   onNotePeek,
   onNotePeekEnd,
   swipeActions,
+  swipeOpenId,
+  onSwipeOpenChange,
 }: GearRowProps) {
   const sub = [gear.minorCategory, gear.brand].filter(Boolean).join(" · ");
   const timer = useRef<number | undefined>(undefined);
@@ -65,16 +69,35 @@ export function GearRow({
   const btnRef = useRef<HTMLButtonElement>(null);
   const x = useMotionValue(0);
   const [open, setOpen] = useState<"closed" | "right" | "left">("closed");
+  const openRef = useRef<"closed" | "right" | "left">("closed");
   const [armedDelete, setArmedDelete] = useState(false);
 
   const swipeable = Boolean(swipeActions) && !editMode;
+  const spring = { type: "spring" as const, stiffness: 520, damping: 44 };
+
+  function setOpenState(next: "closed" | "right" | "left") {
+    openRef.current = next;
+    setOpen(next);
+  }
 
   useEffect(() => {
     if (!swipeable) {
       x.set(0);
-      setOpen("closed");
+      setOpenState("closed");
+      setArmedDelete(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [swipeable, x]);
+
+  // Only one row open at a time: close when another row becomes the open one.
+  useEffect(() => {
+    if (swipeOpenId !== gear.id && openRef.current !== "closed") {
+      animate(x, 0, spring);
+      setOpenState("closed");
+      setArmedDelete(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [swipeOpenId, gear.id, x]);
 
   function clearLongPress() {
     if (timer.current !== undefined) {
@@ -95,15 +118,21 @@ export function GearRow({
     if (longPressed.current) onNotePeekEnd?.();
   }
 
-  function close() {
-    animate(x, 0, { type: "spring", stiffness: 520, damping: 44 });
-    setOpen("closed");
+  function close(notify = true) {
+    animate(x, 0, spring);
+    setOpenState("closed");
     setArmedDelete(false);
+    if (notify) onSwipeOpenChange?.(null);
+  }
+  function settleOpen(dir: "right" | "left") {
+    animate(x, dir === "right" ? -RIGHT_W : LEFT_W, spring);
+    setOpenState(dir);
+    onSwipeOpenChange?.(gear.id);
   }
 
   function handleClick() {
     if (dragging.current) return;
-    if (open !== "closed") {
+    if (openRef.current !== "closed") {
       close();
       return;
     }
@@ -177,22 +206,34 @@ export function GearRow({
         style={{ x }}
         drag={swipeable ? "x" : false}
         dragDirectionLock
-        dragConstraints={{ left: -RIGHT_W, right: LEFT_W }}
+        dragConstraints={
+          open === "right"
+            ? { left: -RIGHT_W, right: 0 }
+            : open === "left"
+              ? { left: 0, right: LEFT_W }
+              : { left: -RIGHT_W, right: LEFT_W }
+        }
         dragElastic={0.06}
         onDragStart={() => {
           dragging.current = true;
           clearLongPress();
+          if (swipeOpenId && swipeOpenId !== gear.id) onSwipeOpenChange?.(null);
         }}
         onDragEnd={(_e, info) => {
           const cur = x.get();
-          if (cur <= -RIGHT_W * 0.4 || info.velocity.x < -400) {
-            animate(x, -RIGHT_W, { type: "spring", stiffness: 520, damping: 44 });
-            setOpen("right");
-          } else if (cur >= LEFT_W * 0.5 || info.velocity.x > 400) {
-            animate(x, LEFT_W, { type: "spring", stiffness: 520, damping: 44 });
-            setOpen("left");
+          const v = info.velocity.x;
+          if (open === "right") {
+            // edit/delete revealed — a reverse (rightward) swipe closes it
+            if (cur >= -RIGHT_W * 0.6 || v > 500) close();
+            else settleOpen("right");
+          } else if (open === "left") {
+            // hide revealed — a reverse (leftward) swipe closes it
+            if (cur <= LEFT_W * 0.4 || v < -500) close();
+            else settleOpen("left");
           } else {
-            close();
+            if (cur <= -RIGHT_W * 0.4 || v < -500) settleOpen("right");
+            else if (cur >= LEFT_W * 0.5 || v > 500) settleOpen("left");
+            else close(false);
           }
           window.setTimeout(() => {
             dragging.current = false;
