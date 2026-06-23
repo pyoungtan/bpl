@@ -1,26 +1,158 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Cream canvas + surfaces */
+  --bg: #faf9f5;
+  --bg-elevated: #ffffff;
+  --card: #ffffff;
+  --card-2: #f5f0e8;
+  --fill: #f0ebe2;
+  --fill-2: #e8e0d2;
+  /* Warm ink text */
+  --label: #141413;
+  --secondary: #6c6a64;
+  --tertiary: #8e8b82;
+  /* Hairlines */
+  --separator: rgba(20, 20, 19, 0.07);
+  --separator-opaque: #ddd5c9;
+  /* Brand coral */
+  --tint: #cc785c;
+  --tint-active: #a9583e;
+  --tint-soft: rgba(204, 120, 92, 0.13);
+  /* Companions / semantic */
+  --green: #5db872;
+  --red: #c64545;
+  --orange: #e8a55a;
+  --orange-strong: #9c5d18;
+  --teal: #5db8a6;
+  /* Dark navy product surfaces */
+  --navy: #181715;
+  --navy-elevated: #252320;
+  --on-dark: #faf9f5;
+  --on-dark-soft: #a09d96;
+  /* Glass */
+  --material: rgba(250, 249, 245, 0.82);
+  --material-border: rgba(20, 20, 19, 0.08);
+}
+
+.dark {
+  --bg: #181715;
+  --bg-elevated: #252320;
+  --card: #252320;
+  --card-2: #1f1e1b;
+  --fill: rgba(255, 255, 255, 0.07);
+  --fill-2: rgba(255, 255, 255, 0.12);
+  --label: #faf9f5;
+  --secondary: #a09d96;
+  --tertiary: #79766f;
+  --separator: rgba(255, 255, 255, 0.07);
+  --separator-opaque: #3a372f;
+  --tint: #d4856a;
+  --tint-active: #cc785c;
+  --tint-soft: rgba(212, 133, 106, 0.2);
+  --green: #5db872;
+  --red: #e0735a;
+  --orange: #e8a55a;
+  --orange-strong: #efb472;
+  --teal: #5db8a6;
+  --navy: #0f0e0d;
+  --navy-elevated: #252320;
+  --on-dark: #faf9f5;
+  --on-dark-soft: #a09d96;
+  --material: rgba(31, 30, 27, 0.82);
+  --material-border: rgba(255, 255, 255, 0.1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-card: var(--card);
+  --color-card-2: var(--card-2);
+  --color-fill: var(--fill);
+  --color-fill-2: var(--fill-2);
+  --color-label: var(--label);
+  --color-secondary: var(--secondary);
+  --color-tertiary: var(--tertiary);
+  --color-separator: var(--separator);
+  --color-separator-opaque: var(--separator-opaque);
+  --color-tint: var(--tint);
+  --color-tint-active: var(--tint-active);
+  --color-tint-soft: var(--tint-soft);
+  --color-green: var(--green);
+  --color-red: var(--red);
+  --color-orange: var(--orange);
+  --color-orange-strong: var(--orange-strong);
+  --color-teal: var(--teal);
+  --color-navy: var(--navy);
+  --color-navy-elevated: var(--navy-elevated);
+  --color-on-dark: var(--on-dark);
+  --color-on-dark-soft: var(--on-dark-soft);
+
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-serif: var(--font-newsreader), "Iowan Old Style", Georgia,
+    "Nanum Myeongjo", "AppleMyungjo", "Batang", serif;
+  --font-mono: var(--font-jbmono), ui-monospace, SFMono-Regular, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    border-color: var(--separator);
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--bg);
+    color: var(--label);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  input,
+  button,
+  textarea,
+  select {
+    font: inherit;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .font-serif {
+    font-family: var(--font-serif);
+  }
+  .material {
+    background: var(--material);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+  }
+  .pb-safe {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }

@@ -1,0 +1,16 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "C:\\Users\\USER\\AppData\\Local\\Microsoft\\WinGet\\Packages\\OpenJS.NodeJS.LTS_Microsoft.Winget.Source_8wekyb3d8bbwe\\node-v24.17.0-win-x64\\node.exe",
+      "runtimeArgs": [
+        "D:\\NAVER\\2026\\_Claude\\bpl\\node_modules\\next\\dist\\bin\\next",
+        "dev",
+        "--port",
+        "3000"
+      ],
+      "port": 3000
+    }
+  ]
+}

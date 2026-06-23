@@ -1,0 +1,172 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import type { ThemePref, WeightUnit } from "@/lib/types";
+import type { CloudState } from "@/lib/useCloudSync";
+import { useAppStore } from "@/lib/store";
+import { WEIGHT_UNITS } from "@/lib/units";
+import { Sheet } from "./ui/Sheet";
+import { Field } from "./ui/Field";
+import { Segmented } from "./ui/Segmented";
+import { Button } from "./ui/Button";
+
+const CURRENCIES = ["KRW", "USD", "EUR", "JPY", "GBP"];
+
+function statusText(status: CloudState["status"]): string {
+  switch (status) {
+    case "syncing":
+      return "동기화 중…";
+    case "synced":
+      return "동기화됨";
+    case "error":
+      return "동기화 오류";
+    default:
+      return "";
+  }
+}
+
+export function SettingsSheet({
+  open,
+  onClose,
+  cloud,
+}: {
+  open: boolean;
+  onClose: () => void;
+  cloud: CloudState;
+}) {
+  const displayUnit = useAppStore((s) => s.displayUnit);
+  const setDisplayUnit = useAppStore((s) => s.setDisplayUnit);
+  const currency = useAppStore((s) => s.currency);
+  const setCurrency = useAppStore((s) => s.setCurrency);
+  const theme = useAppStore((s) => s.theme);
+  const setTheme = useAppStore((s) => s.setTheme);
+  const resetToSample = useAppStore((s) => s.resetToSample);
+
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setConfirmReset(false);
+      setSent(false);
+      setAuthError(null);
+    }
+  }, [open]);
+
+  async function handleSignIn() {
+    setAuthError(null);
+    const { error } = await cloud.signIn(email.trim());
+    if (error) setAuthError(error);
+    else setSent(true);
+  }
+
+  return (
+    <Sheet open={open} onClose={onClose} title="설정" leftLabel="완료">
+      <div className="space-y-6 px-4">
+        {cloud.enabled && (
+          <Field label="클라우드 동기화">
+            {cloud.session ? (
+              <div className="flex items-center justify-between gap-3 rounded-[12px] bg-card px-4 py-3">
+                <div className="min-w-0">
+                  <div className="truncate text-[15px] text-label">
+                    {cloud.session.user.email}
+                  </div>
+                  <div className="text-[13px] text-secondary">
+                    {statusText(cloud.status) || "기기 간 자동 동기화"}
+                  </div>
+                </div>
+                <Button variant="gray" size="sm" onClick={cloud.signOut}>
+                  로그아웃
+                </Button>
+              </div>
+            ) : sent ? (
+              <p className="px-1 text-[14px] leading-relaxed text-secondary">
+                <span className="text-label">{email.trim()}</span> 로 로그인 링크를
+                보냈어요. 메일의 링크를 누르면 이 기기가 로그인됩니다. (다른 기기에서도
+                같은 이메일로 로그인하면 데이터가 동기화돼요.)
+              </p>
+            ) : (
+              <div>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="이메일 주소"
+                    className="h-11 min-w-0 flex-1 rounded-[10px] bg-card px-3.5 text-[15px] text-label outline-none"
+                  />
+                  <Button
+                    variant="filled"
+                    onClick={handleSignIn}
+                    disabled={!email.includes("@")}
+                    className="shrink-0"
+                  >
+                    링크 받기
+                  </Button>
+                </div>
+                {authError && (
+                  <p className="mt-1.5 px-1 text-[13px] text-red">{authError}</p>
+                )}
+                <p className="mt-1.5 px-1 text-[13px] leading-snug text-secondary">
+                  이메일로 로그인하면 폰·PC 등 여러 기기에서 같은 데이터를 쓸 수 있어요.
+                </p>
+              </div>
+            )}
+          </Field>
+        )}
+
+        <Field label="무게 단위">
+          <Segmented
+            className="flex w-full"
+            value={displayUnit}
+            onChange={(u) => setDisplayUnit(u as WeightUnit)}
+            options={WEIGHT_UNITS.map((u) => ({ value: u, label: u }))}
+          />
+        </Field>
+        <Field label="통화">
+          <Segmented
+            className="flex w-full"
+            value={currency}
+            onChange={setCurrency}
+            options={CURRENCIES.map((c) => ({ value: c, label: c }))}
+          />
+        </Field>
+        <Field label="테마">
+          <Segmented
+            className="flex w-full"
+            value={theme}
+            onChange={(t) => setTheme(t as ThemePref)}
+            options={[
+              { value: "light", label: "라이트" },
+              { value: "dark", label: "다크" },
+              { value: "system", label: "시스템" },
+            ]}
+          />
+        </Field>
+
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (!confirmReset) {
+                setConfirmReset(true);
+                return;
+              }
+              resetToSample();
+              setConfirmReset(false);
+              onClose();
+            }}
+            className="flex h-12 w-full items-center justify-center rounded-[12px] bg-card text-[17px] text-red active:opacity-60"
+          >
+            {confirmReset ? "한 번 더 눌러 초기화" : "샘플 데이터로 초기화"}
+          </button>
+          <p className="mt-2 px-1 text-[13px] leading-snug text-secondary">
+            모든 장비와 트립이 예시 데이터로 대체됩니다.
+          </p>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
