@@ -35,17 +35,29 @@
 
 ## 3단계. 웹 배포 (GitHub + Vercel) — 어디서나 접속
 
-1. **GitHub** 가입(https://github.com) → 새 저장소(repository) 생성(이름 예: `trailweight`, Private 가능).
-2. 이 프로젝트 코드를 그 저장소에 올립니다. (제가 커밋까지 준비해두면, 표시되는 명령 몇 줄만 복사·실행하시면 됩니다.)
-3. **Vercel** 가입(https://vercel.com) — **GitHub 계정으로 로그인** 추천.
-4. Vercel → **Add New… → Project** → 방금 만든 GitHub 저장소 **Import**.
-5. **Environment Variables** 에 1단계의 두 값을 추가:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-6. **Deploy** → 잠시 후 `https://무언가.vercel.app` 주소가 생깁니다. 폰·PC 어디서나 그 주소로 접속!
-7. (중요) 배포 주소가 정해지면 Supabase → **Authentication → URL Configuration → Site URL / Redirect URLs** 에 그 주소(`https://....vercel.app`)를 추가해야 메일 로그인 링크가 올바르게 돌아옵니다.
+코드는 이미 커밋돼 있습니다. 터미널 없이 **GitHub Desktop**(GUI)으로 올리는 게 가장 쉬워요.
 
-이후 코드를 GitHub에 올릴 때마다 Vercel이 **자동으로 다시 배포**합니다.
+**A. GitHub에 올리기 (GitHub Desktop)**
+1. https://desktop.github.com 에서 GitHub Desktop 설치 → 가입한 GitHub 계정으로 로그인.
+2. 상단 **File → Add local repository** → 이 프로젝트 폴더(`D:\NAVER\2026\_Claude\bpl`) 선택.
+3. 오른쪽 **Publish repository** 클릭 → 이름(`trailweight` 등) 확인 → (원하면 Private 체크) → **Publish**.
+   - `.env.local`(키)은 깃에서 제외돼 있어 올라가지 않습니다. 안전.
+
+**B. Vercel에 배포 (웹)**
+4. https://vercel.com → **GitHub 계정으로 로그인**.
+5. **Add New… → Project** → 방금 올린 `trailweight` 저장소 **Import**.
+6. **Environment Variables** 섹션에 두 줄 추가 (Supabase 값):
+   - 이름 `NEXT_PUBLIC_SUPABASE_URL` / 값 `https://ziqzsvnlubtxeskxspxg.supabase.co`
+   - 이름 `NEXT_PUBLIC_SUPABASE_ANON_KEY` / 값 `sb_publishable_...`(본인 키)
+7. **Deploy** → 잠시 후 `https://무언가.vercel.app` 주소 생성. 폰·PC 어디서나 접속!
+
+**C. 로그인 링크가 돌아올 주소 등록 (중요)**
+8. 배포 주소가 나오면 Supabase → **Authentication → URL Configuration** →
+   - **Site URL** 을 `https://무언가.vercel.app` 로 설정
+   - **Redirect URLs** 에도 같은 주소 추가
+9. 이제 그 주소를 폰·PC에서 열고, 설정에서 이메일로 **로그인** → 두 기기가 같은 데이터로 동기화됩니다.
+
+이후 GitHub Desktop으로 변경을 **Push** 할 때마다 Vercel이 자동 재배포합니다.
 
 ---
 
