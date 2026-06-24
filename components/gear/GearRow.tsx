@@ -239,14 +239,14 @@ export function GearRow({
             dragging.current = false;
           }, 60);
         }}
-        className={cn(
-          "relative bg-bg",
-          selected && !editMode && "bg-tint-soft shadow-[inset_3px_0_0_var(--tint)]",
-        )}
+        className="relative bg-bg"
       >
+        {selected && !editMode && (
+          <span className="pointer-events-none absolute inset-0 z-0 bg-tint-soft shadow-[inset_3px_0_0_var(--tint)]" />
+        )}
         <div
           className={cn(
-            "flex items-center gap-2.5 px-4 py-2.5",
+            "relative z-10 flex items-center gap-2.5 px-4 py-2.5",
             dimmed && "opacity-45",
           )}
         >

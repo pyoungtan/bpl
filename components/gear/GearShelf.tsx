@@ -409,7 +409,7 @@ export function GearShelf({
                               toggleSelect(a.id);
                             }}
                             className={cn(
-                              "flex w-full items-center gap-2.5 py-2 pl-9 pr-4 text-left transition active:opacity-60",
+                              "flex w-full touch-manipulation select-none items-center gap-2.5 py-2.5 pl-9 pr-4 text-left transition active:opacity-60",
                               selected.has(a.id) &&
                                 "bg-tint-soft shadow-[inset_3px_0_0_var(--tint)]",
                             )}
