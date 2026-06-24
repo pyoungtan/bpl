@@ -71,6 +71,7 @@ export function GearEditorSheet({
 }) {
   const allGear = useAppStore((s) => s.gear);
   const gearOrder = useAppStore((s) => s.gearOrder);
+  const categories = useAppStore((s) => s.categories);
   const displayUnit = useAppStore((s) => s.displayUnit);
   const currency = useAppStore((s) => s.currency);
   const addGear = useAppStore((s) => s.addGear);
@@ -95,11 +96,15 @@ export function GearEditorSheet({
   const [addonOpen, setAddonOpen] = useState(false);
   const [addonQuery, setAddonQuery] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [addingMajor, setAddingMajor] = useState(false);
+  const [newMajor, setNewMajor] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setConfirmDelete(false);
     setAddonQuery("");
+    setAddingMajor(false);
+    setNewMajor("");
     setUnit(displayUnit);
     if (gear) {
       setName(gear.name);
@@ -133,10 +138,20 @@ export function GearEditorSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, gear]);
 
-  const majors = useMemo(
-    () => [...new Set(Object.values(allGear).map((g) => g.majorCategory))].sort(),
-    [allGear],
-  );
+  // 대분류 is chosen from the existing category list (or a newly added one),
+  // never free-typed. Always include the current value so it stays selected.
+  const majorOptions = useMemo(() => {
+    const set = new Set<string>(categories);
+    if (major.trim()) set.add(major.trim());
+    return [...set];
+  }, [categories, major]);
+
+  function commitNewMajor() {
+    const v = newMajor.trim();
+    if (v) setMajor(v);
+    setAddingMajor(false);
+    setNewMajor("");
+  }
   const minors = useMemo(
     () =>
       [
@@ -222,18 +237,54 @@ export function GearEditorSheet({
           />
         </FieldRow>
         <FieldRow label="대분류" divider>
-          <input
-            className={inputCls}
-            list="major-cats"
-            value={major}
-            onChange={(e) => setMajor(e.target.value)}
-            placeholder="예: 셸터"
-          />
-          <datalist id="major-cats">
-            {majors.map((m) => (
-              <option key={m} value={m} />
-            ))}
-          </datalist>
+          <div className="flex flex-wrap gap-1.5 pt-0.5">
+            {majorOptions.map((c) => {
+              const active = major === c && !addingMajor;
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => {
+                    setMajor(c);
+                    setAddingMajor(false);
+                  }}
+                  className={cn(
+                    "h-8 touch-manipulation rounded-full px-3 text-[14px] font-medium transition active:opacity-60",
+                    active ? "bg-tint text-white" : "bg-fill text-secondary",
+                  )}
+                >
+                  {c}
+                </button>
+              );
+            })}
+            {addingMajor ? (
+              <input
+                autoFocus
+                value={newMajor}
+                onChange={(e) => setNewMajor(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    commitNewMajor();
+                  }
+                }}
+                onBlur={commitNewMajor}
+                placeholder="새 대분류"
+                className="h-8 w-32 rounded-full bg-fill px-3 text-[16px] text-label outline-none ring-1 ring-tint placeholder:text-tertiary"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setNewMajor("");
+                  setAddingMajor(true);
+                }}
+                className="flex h-8 touch-manipulation items-center gap-0.5 rounded-full bg-fill px-3 text-[14px] font-medium text-tint active:opacity-60"
+              >
+                <Plus size={14} /> 추가
+              </button>
+            )}
+          </div>
         </FieldRow>
         <FieldRow label="소분류" divider>
           <input

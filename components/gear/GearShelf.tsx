@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -64,6 +64,8 @@ export function GearShelf({
   const [activeCat, setActiveCat] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Rows the user explicitly collapsed, overriding auto-open (e.g. when selected).
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
   const [editor, setEditor] = useState<{ open: boolean; gear: GearItem | null }>({
     open: false,
@@ -165,23 +167,42 @@ export function GearShelf({
   );
 
   function toggleSelect(id: string) {
+    const willSelect = !selected.has(id);
     setSelected((prev) => {
       const n = new Set(prev);
       if (n.has(id)) n.delete(id);
       else n.add(id);
       return n;
     });
+    // Selecting a row re-enables its auto-open (clears any manual collapse).
+    if (willSelect && collapsed.has(id)) {
+      setCollapsed((prev) => {
+        const n = new Set(prev);
+        n.delete(id);
+        return n;
+      });
+    }
   }
-  function toggleExpand(id: string) {
-    setExpanded((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
+  function toggleExpand(id: string, currentlyExpanded: boolean) {
+    if (currentlyExpanded) {
+      setExpanded((prev) => {
+        const n = new Set(prev);
+        n.delete(id);
+        return n;
+      });
+      setCollapsed((prev) => new Set(prev).add(id));
+    } else {
+      setExpanded((prev) => new Set(prev).add(id));
+      setCollapsed((prev) => {
+        const n = new Set(prev);
+        n.delete(id);
+        return n;
+      });
+    }
   }
   function clearSelection() {
     setSelected(new Set());
+    setCollapsed(new Set());
   }
   function applyPreset(gearIds: string[]) {
     setSelected(new Set(gearIds.filter((id) => gear[id])));
@@ -356,10 +377,10 @@ export function GearShelf({
             ) : (
               items.map((g, i) => {
                 const addOns = resolveAddOns(g);
+                const autoOpen =
+                  selected.has(g.id) || addOns.some((a) => selected.has(a.id));
                 const isExpanded =
-                  selected.has(g.id) ||
-                  expanded.has(g.id) ||
-                  addOns.some((a) => selected.has(a.id));
+                  (expanded.has(g.id) || autoOpen) && !collapsed.has(g.id);
                 return (
                   <Fragment key={g.id}>
                     <GearRow
@@ -375,7 +396,7 @@ export function GearShelf({
                       }}
                       hasAddOns={addOns.length > 0}
                       expanded={isExpanded}
-                      onToggleExpand={() => toggleExpand(g.id)}
+                      onToggleExpand={() => toggleExpand(g.id, isExpanded)}
                       topHairline={i > 0}
                       onNotePeek={(rect) =>
                         setPeek({
@@ -398,30 +419,19 @@ export function GearShelf({
                     {isExpanded && addOns.length > 0 && (
                       <div className="bg-[color-mix(in_srgb,var(--tint)_5%,transparent)]">
                         {addOns.map((a) => (
-                          <button
+                          <AddonRow
                             key={a.id}
-                            type="button"
-                            onClick={() => {
+                            gear={a}
+                            unit={unit}
+                            selected={selected.has(a.id)}
+                            onTap={() => {
                               if (swipeOpenId) {
                                 setSwipeOpenId(null);
                                 return;
                               }
                               toggleSelect(a.id);
                             }}
-                            className={cn(
-                              "flex w-full touch-manipulation select-none items-center gap-2.5 py-2.5 pl-9 pr-4 text-left transition active:opacity-60",
-                              selected.has(a.id) &&
-                                "bg-tint-soft shadow-[inset_3px_0_0_var(--tint)]",
-                            )}
-                          >
-                            <span className="min-w-0 flex-1 truncate text-[14px] text-label">
-                              {a.name}
-                            </span>
-                            <span className="shrink-0 tabular text-[13px] text-secondary">
-                              {formatWeight(a.weightG, unit)}
-                            </span>
-                            <span className="w-6 shrink-0" />
-                          </button>
+                          />
                         ))}
                       </div>
                     )}
@@ -485,7 +495,7 @@ export function GearShelf({
           type="button"
           aria-label="장비 추가"
           onClick={() => setEditor({ open: true, gear: null })}
-          className="fixed right-4 z-40 grid h-14 w-14 place-items-center rounded-full bg-tint text-white shadow-xl shadow-black/20 transition active:scale-95"
+          className="shadow-float fixed right-4 z-40 grid h-14 w-14 place-items-center rounded-full bg-tint text-white transition active:scale-95"
           style={{ bottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
         >
           <Plus size={26} />
@@ -501,7 +511,7 @@ export function GearShelf({
             type="button"
             onClick={clearSelection}
             aria-label="선택 해제"
-            className="material grid h-14 w-14 place-items-center rounded-full border border-[var(--material-border)] text-label shadow-xl active:opacity-60"
+            className="material shadow-float grid h-14 w-14 place-items-center rounded-full border border-[var(--material-border)] text-label active:opacity-60"
           >
             <X size={20} />
           </button>
@@ -509,7 +519,7 @@ export function GearShelf({
             type="button"
             onClick={() => setAddTripOpen(true)}
             aria-label={`선택한 ${selected.size}개 Trip에 추가`}
-            className="flex h-14 items-center gap-1.5 rounded-full bg-tint px-5 font-semibold text-white shadow-xl active:opacity-80"
+            className="shadow-float flex h-14 items-center gap-1.5 rounded-full bg-tint px-5 font-semibold text-white active:opacity-80"
           >
             <ArrowRight size={20} />
             <span className="tabular text-[17px]">{selected.size}</span>
@@ -545,6 +555,67 @@ export function GearShelf({
         onApply={applyPreset}
       />
     </div>
+  );
+}
+
+/**
+ * Add-on sub-row. Selection is handled on pointerup (with a small movement
+ * guard) instead of click, so rapid successive taps on a phone are never
+ * dropped or routed to the wrong row by the browser's click/double-tap logic.
+ * Keyboard/synthetic clicks (detail === 0) still work via onClick.
+ */
+function AddonRow({
+  gear,
+  unit,
+  selected,
+  onTap,
+}: {
+  gear: GearItem;
+  unit: WeightUnit;
+  selected: boolean;
+  onTap: () => void;
+}) {
+  const start = useRef<{ x: number; y: number } | null>(null);
+  const moved = useRef(false);
+  return (
+    <button
+      type="button"
+      onPointerDown={(e) => {
+        start.current = { x: e.clientX, y: e.clientY };
+        moved.current = false;
+      }}
+      onPointerMove={(e) => {
+        if (
+          start.current &&
+          Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) > 10
+        ) {
+          moved.current = true;
+        }
+      }}
+      onPointerUp={() => {
+        if (start.current && !moved.current) onTap();
+        start.current = null;
+      }}
+      onPointerCancel={() => {
+        start.current = null;
+      }}
+      onClick={(e) => {
+        if (e.detail === 0) onTap(); // keyboard / programmatic activation
+      }}
+      className={cn(
+        "flex w-full touch-manipulation select-none items-center gap-2.5 py-2.5 pl-9 pr-4 text-left transition active:opacity-60",
+        selected &&
+          "bg-[color-mix(in_srgb,var(--tint)_8%,transparent)] shadow-[inset_2px_0_0_var(--tint)]",
+      )}
+    >
+      <span className="min-w-0 flex-1 truncate text-[14px] text-secondary">
+        {gear.name}
+      </span>
+      <span className="shrink-0 tabular text-[13px] text-tertiary">
+        {formatWeight(gear.weightG, unit)}
+      </span>
+      <span className="w-6 shrink-0" />
+    </button>
   );
 }
 

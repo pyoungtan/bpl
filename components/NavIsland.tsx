@@ -22,7 +22,7 @@ export function NavIsland({
       className="fixed left-4 z-40"
       style={{ bottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
     >
-      <div className="material flex h-14 items-center gap-1 rounded-full border border-[var(--material-border)] px-1.5 shadow-xl">
+      <div className="material shadow-float flex h-14 items-center gap-1 rounded-full border border-[var(--material-border)] px-1.5">
         {TABS.map((t) => {
           const active = t.key === tab;
           return (

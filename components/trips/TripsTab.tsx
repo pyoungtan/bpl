@@ -5,9 +5,9 @@ import { ChevronRight, Map, Plus, Settings } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { Trip } from "@/lib/types";
 import { formatWeightSmart } from "@/lib/units";
-import { cn } from "@/lib/cn";
 import { ScreenHeader } from "../ScreenHeader";
 import { Button } from "../ui/Button";
+import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
 import { TripDetail } from "./TripDetail";
 
 function formatTripDate(date?: string): string {
@@ -56,6 +56,8 @@ function TripList({
   const trips = useAppStore((s) => s.trips);
   const tripOrder = useAppStore((s) => s.tripOrder);
   const createTrip = useAppStore((s) => s.createTrip);
+  const deleteTrip = useAppStore((s) => s.deleteTrip);
+  const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
 
   return (
     <div className="pb-40">
@@ -86,7 +88,16 @@ function TripList({
                   key={id}
                   trip={t}
                   topHairline={i > 0}
-                  onClick={() => onOpen(id)}
+                  onOpen={() => {
+                    if (swipeOpenId) {
+                      setSwipeOpenId(null);
+                      return;
+                    }
+                    onOpen(id);
+                  }}
+                  onDelete={() => deleteTrip(id)}
+                  swipeOpenId={swipeOpenId}
+                  onSwipeOpenChange={setSwipeOpenId}
                 />
               ) : null;
             })}
@@ -98,7 +109,7 @@ function TripList({
         type="button"
         aria-label="새 트립"
         onClick={() => onOpen(createTrip())}
-        className="fixed right-4 z-40 grid h-14 w-14 place-items-center rounded-full bg-tint text-white shadow-xl shadow-black/20 transition active:scale-95"
+        className="shadow-float fixed right-4 z-40 grid h-14 w-14 place-items-center rounded-full bg-tint text-white transition active:scale-95"
         style={{ bottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
       >
         <Plus size={26} />
@@ -110,11 +121,17 @@ function TripList({
 function TripRow({
   trip,
   topHairline,
-  onClick,
+  onOpen,
+  onDelete,
+  swipeOpenId,
+  onSwipeOpenChange,
 }: {
   trip: Trip;
   topHairline: boolean;
-  onClick: () => void;
+  onOpen: () => void;
+  onDelete: () => void;
+  swipeOpenId: string | null;
+  onSwipeOpenChange: (id: string | null) => void;
 }) {
   const gear = useAppStore((s) => s.gear);
   const unit = useAppStore((s) => s.displayUnit);
@@ -125,27 +142,36 @@ function TripRow({
   }, 0);
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex w-full items-center gap-3 px-4 py-3 text-left transition active:bg-fill",
-        topHairline && "border-t border-separator",
+    <SwipeRow
+      id={trip.id}
+      openId={swipeOpenId}
+      onOpenChange={onSwipeOpenChange}
+      rightWidth={56}
+      topHairline={topHairline}
+      bgClassName="bg-card"
+      renderRight={(_close, rowOpen) => (
+        <SwipeDeleteButton rowOpen={rowOpen} onDelete={onDelete} />
       )}
     >
-      <div className="min-w-0 flex-1">
-        <div className="truncate font-serif text-[18px] font-medium tracking-[-0.01em] text-label">
-          {trip.name}
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex w-full touch-manipulation items-center gap-3 px-4 py-3 text-left transition active:bg-fill"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-serif text-[18px] font-medium tracking-[-0.01em] text-label">
+            {trip.name}
+          </div>
+          <div className="mt-0.5 text-[13px] text-secondary">
+            {formatTripDate(trip.date)}
+          </div>
         </div>
-        <div className="mt-0.5 text-[13px] text-secondary">
-          {formatTripDate(trip.date)}
-        </div>
-      </div>
-      <span className="shrink-0 tabular text-[15px] font-medium text-label">
-        {formatWeightSmart(totalG, unit)}
-      </span>
-      <ChevronRight size={18} className="-mr-1 shrink-0 text-tertiary" />
-    </button>
+        <span className="shrink-0 tabular text-[15px] font-medium text-label">
+          {formatWeightSmart(totalG, unit)}
+        </span>
+        <ChevronRight size={18} className="-mr-1 shrink-0 text-tertiary" />
+      </button>
+    </SwipeRow>
   );
 }
 

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/cn";
 
 export function NotePopup({
   note,
@@ -37,15 +36,11 @@ export function NotePopup({
         transition={{ duration: 0.13, ease: "easeOut" }}
         className="max-w-[16rem] rounded-[12px] bg-navy px-3.5 py-2.5 text-on-dark shadow-2xl"
       >
+        <div className="text-[13px] leading-relaxed">
+          {hasNote ? note : <span className="opacity-70">메모 없음</span>}
+        </div>
         {priceText && (
-          <div className="text-[13px] font-semibold tabular">{priceText}</div>
-        )}
-        {hasNote ? (
-          <div className={cn("text-[13px] leading-relaxed", priceText && "mt-1 opacity-75")}>
-            {note}
-          </div>
-        ) : (
-          !priceText && <div className="text-[13px]">메모 없음</div>
+          <div className="mt-1 text-[12px] tabular opacity-55">{priceText}</div>
         )}
       </motion.div>
     </div>,

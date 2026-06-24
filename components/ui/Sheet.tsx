@@ -41,11 +41,36 @@ export function Sheet({
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+
+    // iOS-safe scroll lock: pin the page in place so that focusing a field
+    // inside the sheet (which summons the keyboard) can't scroll the page
+    // behind it. The exact scroll position is restored when the sheet closes.
+    const body = document.body;
+    const scrollY = window.scrollY;
+    const prev = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      body.style.position = prev.position;
+      body.style.top = prev.top;
+      body.style.left = prev.left;
+      body.style.right = prev.right;
+      body.style.width = prev.width;
+      body.style.overflow = prev.overflow;
+      window.scrollTo(0, scrollY);
     };
   }, [open, onClose]);
 
@@ -67,9 +92,14 @@ export function Sheet({
             role="dialog"
             aria-modal="true"
             className={cn(
-              "relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[14px] shadow-2xl",
-              "sm:max-w-md sm:rounded-[14px] sm:max-h-[88dvh]",
-              grouped ? "bg-bg" : "bg-card",
+              "relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[14px]",
+              "sm:max-w-md sm:rounded-[14px] sm:max-h-[88dvh] sm:shadow-2xl",
+              // On mobile the sheet sits at the bottom; a same-colour fill below
+              // the panel covers any gap that appears when the keyboard pushes
+              // the sheet up, so the page never shows through. (+ a top edge shadow)
+              grouped
+                ? "bg-bg max-sm:shadow-[0_40vh_0_40vh_var(--bg),0_-6px_28px_rgba(0,0,0,0.16)]"
+                : "bg-card max-sm:shadow-[0_40vh_0_40vh_var(--card),0_-6px_28px_rgba(0,0,0,0.16)]",
             )}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}

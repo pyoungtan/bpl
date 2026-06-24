@@ -140,6 +140,18 @@
     -webkit-backdrop-filter: saturate(180%) blur(20px);
     backdrop-filter: saturate(180%) blur(20px);
   }
+  /* Ambient shadow with no vertical offset, so floating bottom controls don't
+     cast a downward shadow that gets clipped against the mobile browser chrome. */
+  .shadow-float {
+    box-shadow:
+      0 0 1rem rgba(20, 20, 19, 0.17),
+      0 0 0.25rem rgba(20, 20, 19, 0.08);
+  }
+  .dark .shadow-float {
+    box-shadow:
+      0 0 1rem rgba(0, 0, 0, 0.5),
+      0 0 0.25rem rgba(0, 0, 0, 0.3);
+  }
   .pb-safe {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   }

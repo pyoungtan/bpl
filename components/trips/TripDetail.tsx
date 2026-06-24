@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   CircleCheck,
   ListChecks,
-  Minus,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -17,10 +16,11 @@ import { formatWeight, formatWeightSmart } from "@/lib/units";
 import { cn } from "@/lib/cn";
 import { Donut } from "../Donut";
 import { Sheet } from "../ui/Sheet";
+import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
 import { Checkbox } from "../ui/Checkbox";
 import { Badge } from "../ui/Badge";
 
-type Mode = "none" | "edit" | "check";
+type Mode = "none" | "check";
 
 interface Row {
   gear: GearItem;
@@ -62,6 +62,7 @@ export function TripDetail({
 
   const [memoOpen, setMemoOpen] = useState(true);
   const [mode, setMode] = useState<Mode>("none");
+  const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const memoRef = useRef<HTMLTextAreaElement>(null);
@@ -91,7 +92,6 @@ export function TripDetail({
     trip.packed.some((p) => p.gearId === id),
   ).length;
   const isChecking = mode === "check";
-  const isEditing = mode === "edit";
 
   function handleDelete() {
     if (!confirmDelete) {
@@ -118,10 +118,13 @@ export function TripDetail({
             {checkedCount}/{trip.packed.length} 챙김
           </span>
         )}
-        <div className="flex items-center gap-1 pr-1">
+        <div className="flex items-center gap-1 pr-2">
           <button
             type="button"
-            onClick={() => setMode((m) => (m === "check" ? "none" : "check"))}
+            onClick={() => {
+              setSwipeOpenId(null);
+              setMode((m) => (m === "check" ? "none" : "check"));
+            }}
             aria-label="장비 점검"
             className={cn(
               "grid h-9 w-9 place-items-center rounded-full transition active:opacity-50",
@@ -129,13 +132,6 @@ export function TripDetail({
             )}
           >
             <ListChecks size={20} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode((m) => (m === "edit" ? "none" : "edit"))}
-            className="px-2 text-[17px] text-tint active:opacity-50"
-          >
-            {isEditing ? "완료" : "편집"}
           </button>
         </div>
       </div>
@@ -219,53 +215,57 @@ export function TripDetail({
               const checked = checkedSet.has(g.id);
               const dim = isChecking && checked;
               return (
-                <div
+                <SwipeRow
                   key={g.id}
-                  onClick={isChecking ? () => toggleChecked(tripId, g.id) : undefined}
-                  className={cn(
-                    "relative flex w-full items-center gap-2.5 px-4 py-2.5 text-left transition",
-                    i > 0 &&
-                      "before:pointer-events-none before:absolute before:left-4 before:right-0 before:top-0 before:h-px before:bg-separator",
-                    isChecking && "cursor-pointer active:bg-fill",
-                    dim && "opacity-40",
+                  id={g.id}
+                  openId={swipeOpenId}
+                  onOpenChange={setSwipeOpenId}
+                  swipeDisabled={isChecking}
+                  rightWidth={56}
+                  topHairline={i > 0}
+                  bgClassName="bg-bg"
+                  renderRight={(_close, rowOpen) => (
+                    <SwipeDeleteButton
+                      rowOpen={rowOpen}
+                      onDelete={() => removeEntry(tripId, g.id)}
+                    />
                   )}
                 >
-                  {isEditing && (
-                    <button
-                      type="button"
-                      aria-label="제거"
-                      onClick={() => removeEntry(tripId, g.id)}
-                      className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full bg-red text-white active:opacity-60"
-                    >
-                      <Minus size={15} strokeWidth={3} />
-                    </button>
-                  )}
-                  {isChecking && (
-                    <span className="grid h-[22px] w-[22px] shrink-0 place-items-center">
-                      {checked ? (
-                        <CircleCheck size={22} className="text-tint" />
-                      ) : (
-                        <span className="h-[19px] w-[19px] rounded-full border-[1.5px] border-separator-opaque" />
-                      )}
-                    </span>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <span className="min-w-0 truncate text-[15px] font-semibold leading-tight text-label">
-                        {g.name}
+                  <div
+                    onClick={isChecking ? () => toggleChecked(tripId, g.id) : undefined}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 px-4 py-2.5 text-left transition",
+                      isChecking && "cursor-pointer active:bg-fill",
+                      dim && "opacity-40",
+                    )}
+                  >
+                    {isChecking && (
+                      <span className="grid h-[22px] w-[22px] shrink-0 place-items-center">
+                        {checked ? (
+                          <CircleCheck size={22} className="text-tint" />
+                        ) : (
+                          <span className="h-[19px] w-[19px] rounded-full border-[1.5px] border-separator-opaque" />
+                        )}
                       </span>
-                      {g.worn && <Badge>착용</Badge>}
-                      {g.consumable && <Badge tone="orange">소모</Badge>}
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <span className="min-w-0 truncate text-[15px] font-semibold leading-tight text-label">
+                          {g.name}
+                        </span>
+                        {g.worn && <Badge>착용</Badge>}
+                        {g.consumable && <Badge tone="orange">소모</Badge>}
+                      </div>
+                      <div className="mt-0.5 truncate text-[12.5px] leading-tight text-secondary">
+                        {[g.minorCategory, g.brand].filter(Boolean).join(" · ") || major}
+                      </div>
                     </div>
-                    <div className="mt-0.5 truncate text-[12.5px] leading-tight text-secondary">
-                      {[g.minorCategory, g.brand].filter(Boolean).join(" · ") || major}
-                    </div>
+                    <span className="shrink-0 tabular text-[14px] text-secondary">
+                      {formatWeight(g.weightG, unit)}
+                      {quantity > 1 && <span className="text-tertiary"> ×{quantity}</span>}
+                    </span>
                   </div>
-                  <span className="shrink-0 tabular text-[14px] text-secondary">
-                    {formatWeight(g.weightG, unit)}
-                    {quantity > 1 && <span className="text-tertiary"> ×{quantity}</span>}
-                  </span>
-                </div>
+                </SwipeRow>
               );
             })}
           </section>
