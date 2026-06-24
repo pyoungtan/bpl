@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/cn";
 
@@ -35,44 +35,33 @@ export function Sheet({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // Lock the document scroll while open so the page behind the sheet can't
+  // drift — including when the keyboard opens for a field inside the sheet
+  // (iOS then scrolls the sheet's own scroll area, not the page). Depends only
+  // on `open`, so it applies once per open/close rather than on every render.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
     document.addEventListener("keydown", onKey);
 
-    // iOS-safe scroll lock: pin the page in place so that focusing a field
-    // inside the sheet (which summons the keyboard) can't scroll the page
-    // behind it. The exact scroll position is restored when the sheet closes.
+    const html = document.documentElement;
     const body = document.body;
-    const scrollY = window.scrollY;
-    const prev = {
-      position: body.style.position,
-      top: body.style.top,
-      left: body.style.left,
-      right: body.style.right,
-      width: body.style.width,
-      overflow: body.style.overflow,
-    };
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.left = "0";
-    body.style.right = "0";
-    body.style.width = "100%";
+    const prevHtml = html.style.overflow;
+    const prevBody = body.style.overflow;
+    html.style.overflow = "hidden";
     body.style.overflow = "hidden";
 
     return () => {
       document.removeEventListener("keydown", onKey);
-      body.style.position = prev.position;
-      body.style.top = prev.top;
-      body.style.left = prev.left;
-      body.style.right = prev.right;
-      body.style.width = prev.width;
-      body.style.overflow = prev.overflow;
-      window.scrollTo(0, scrollY);
+      html.style.overflow = prevHtml;
+      body.style.overflow = prevBody;
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!mounted) return null;
 
@@ -113,6 +102,9 @@ export function Sheet({
               <button
                 type="button"
                 onClick={onClose}
+                // Fire even when a field inside the sheet is focused: don't let
+                // the press steal focus / dismiss the keyboard before the click.
+                onMouseDown={(e) => e.preventDefault()}
                 className="justify-self-start text-[17px] text-tint active:opacity-50"
               >
                 {leftLabel}
@@ -124,6 +116,7 @@ export function Sheet({
                 <button
                   type="button"
                   onClick={rightAction.onClick}
+                  onMouseDown={(e) => e.preventDefault()}
                   disabled={rightAction.disabled}
                   className={cn(
                     "justify-self-end text-[17px] text-tint active:opacity-50 disabled:opacity-40",

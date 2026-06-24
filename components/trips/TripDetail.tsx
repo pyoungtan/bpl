@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronLeft,
@@ -63,17 +63,50 @@ export function TripDetail({
   const [memoOpen, setMemoOpen] = useState(true);
   const [mode, setMode] = useState<Mode>("none");
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const memoRef = useRef<HTMLTextAreaElement>(null);
 
-  const groups = useMemo(
-    () => (trip ? groupByMajor(trip.packed, gear, gearOrder) : []),
-    [trip, gear, gearOrder],
+  const packed = useMemo(() => trip?.packed ?? [], [trip]);
+  const packedQty = useMemo(
+    () => new Map(packed.map((p) => [p.gearId, p.quantity])),
+    [packed],
   );
+  // Add-ons that are packed AND whose parent is also packed → shown nested
+  // under the parent (excluded from the top-level list), just like the shelf.
+  const nestedSet = useMemo(() => {
+    const s = new Set<string>();
+    for (const p of packed) {
+      const g = gear[p.gearId];
+      if (!g) continue;
+      for (const aid of g.addOnIds) if (packedQty.has(aid)) s.add(aid);
+    }
+    return s;
+  }, [packed, packedQty, gear]);
+
+  const groups = useMemo(
+    () =>
+      trip
+        ? groupByMajor(
+            trip.packed.filter((p) => !nestedSet.has(p.gearId)),
+            gear,
+            gearOrder,
+          )
+        : [],
+    [trip, gear, gearOrder, nestedSet],
+  );
+  // Stats count every packed item (parents + nested add-ons).
   const stats = useMemo(
-    () => computeStats(groups.flatMap(([, rows]) => rows)),
-    [groups],
+    () =>
+      computeStats(
+        packed
+          .map((p) => ({ gear: gear[p.gearId], quantity: p.quantity }))
+          .filter((r): r is { gear: GearItem; quantity: number } =>
+            Boolean(r.gear),
+          ),
+      ),
+    [packed, gear],
   );
 
   const memo = trip?.memo ?? "";
@@ -100,6 +133,117 @@ export function TripDetail({
     }
     deleteTrip(tripId);
     onBack();
+  }
+
+  function toggleItemExpand(id: string) {
+    setExpandedItems((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  }
+
+  function renderRow(
+    g: GearItem,
+    quantity: number,
+    opts: {
+      nested?: boolean;
+      topHairline?: boolean;
+      hasAddOns?: boolean;
+      expanded?: boolean;
+      major?: string;
+    },
+  ) {
+    const { nested, topHairline, hasAddOns, expanded, major } = opts;
+    const checked = checkedSet.has(g.id);
+    const dim = isChecking && checked;
+    return (
+      <SwipeRow
+        key={g.id}
+        id={g.id}
+        openId={swipeOpenId}
+        onOpenChange={setSwipeOpenId}
+        swipeDisabled={isChecking}
+        rightWidth={56}
+        topHairline={topHairline}
+        bgClassName={
+          nested ? "bg-[color-mix(in_srgb,var(--tint)_6%,var(--bg))]" : "bg-bg"
+        }
+        renderRight={(_close, rowOpen) => (
+          <SwipeDeleteButton
+            rowOpen={rowOpen}
+            onDelete={() => removeEntry(tripId, g.id)}
+          />
+        )}
+      >
+        <div
+          onClick={isChecking ? () => toggleChecked(tripId, g.id) : undefined}
+          className={cn(
+            "flex w-full items-center gap-2.5 py-2.5 text-left transition",
+            nested ? "pl-9 pr-4" : "px-4",
+            isChecking && "cursor-pointer active:bg-fill",
+            dim && "opacity-40",
+          )}
+        >
+          {isChecking && (
+            <span className="grid h-[22px] w-[22px] shrink-0 place-items-center">
+              {checked ? (
+                <CircleCheck size={22} className="text-tint" />
+              ) : (
+                <span className="h-[19px] w-[19px] rounded-full border-[1.5px] border-separator-opaque" />
+              )}
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span
+                className={cn(
+                  "min-w-0 truncate font-semibold leading-tight",
+                  nested ? "text-[14px] text-secondary" : "text-[15px] text-label",
+                )}
+              >
+                {g.name}
+              </span>
+              {g.worn && <Badge>착용</Badge>}
+              {g.consumable && <Badge tone="orange">소모</Badge>}
+            </div>
+            {!nested && (
+              <div className="mt-0.5 truncate text-[12.5px] leading-tight text-secondary">
+                {[g.minorCategory, g.brand].filter(Boolean).join(" · ") || major}
+              </div>
+            )}
+          </div>
+          <span
+            className={cn(
+              "shrink-0 tabular",
+              nested ? "text-[13px] text-tertiary" : "text-[14px] text-secondary",
+            )}
+          >
+            {formatWeight(g.weightG, unit)}
+            {quantity > 1 && <span className="text-tertiary"> ×{quantity}</span>}
+          </span>
+          <div className="flex w-6 shrink-0 justify-end">
+            {!nested && hasAddOns && (
+              <button
+                type="button"
+                aria-label="애드온 펼치기"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleItemExpand(g.id);
+                }}
+                className="-mr-1.5 grid h-7 w-7 touch-manipulation place-items-center rounded-full text-tint active:bg-fill"
+              >
+                <ChevronDown
+                  size={18}
+                  className={cn("transition-transform", expanded && "rotate-180")}
+                />
+              </button>
+            )}
+          </div>
+        </div>
+      </SwipeRow>
+    );
   }
 
   return (
@@ -212,60 +356,26 @@ export function TripDetail({
               <span className="text-[12px] text-tertiary">{rows.length}개</span>
             </div>
             {rows.map(({ gear: g, quantity }, i) => {
-              const checked = checkedSet.has(g.id);
-              const dim = isChecking && checked;
+              const addOns = g.addOnIds
+                .filter((aid) => packedQty.has(aid))
+                .map((aid) => ({ gear: gear[aid], quantity: packedQty.get(aid) ?? 1 }))
+                .filter((r): r is { gear: GearItem; quantity: number } =>
+                  Boolean(r.gear),
+                );
+              const expanded = expandedItems.has(g.id);
               return (
-                <SwipeRow
-                  key={g.id}
-                  id={g.id}
-                  openId={swipeOpenId}
-                  onOpenChange={setSwipeOpenId}
-                  swipeDisabled={isChecking}
-                  rightWidth={56}
-                  topHairline={i > 0}
-                  bgClassName="bg-bg"
-                  renderRight={(_close, rowOpen) => (
-                    <SwipeDeleteButton
-                      rowOpen={rowOpen}
-                      onDelete={() => removeEntry(tripId, g.id)}
-                    />
-                  )}
-                >
-                  <div
-                    onClick={isChecking ? () => toggleChecked(tripId, g.id) : undefined}
-                    className={cn(
-                      "flex w-full items-center gap-2.5 px-4 py-2.5 text-left transition",
-                      isChecking && "cursor-pointer active:bg-fill",
-                      dim && "opacity-40",
+                <Fragment key={g.id}>
+                  {renderRow(g, quantity, {
+                    topHairline: i > 0,
+                    hasAddOns: addOns.length > 0,
+                    expanded,
+                    major,
+                  })}
+                  {expanded &&
+                    addOns.map((a) =>
+                      renderRow(a.gear, a.quantity, { nested: true }),
                     )}
-                  >
-                    {isChecking && (
-                      <span className="grid h-[22px] w-[22px] shrink-0 place-items-center">
-                        {checked ? (
-                          <CircleCheck size={22} className="text-tint" />
-                        ) : (
-                          <span className="h-[19px] w-[19px] rounded-full border-[1.5px] border-separator-opaque" />
-                        )}
-                      </span>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <span className="min-w-0 truncate text-[15px] font-semibold leading-tight text-label">
-                          {g.name}
-                        </span>
-                        {g.worn && <Badge>착용</Badge>}
-                        {g.consumable && <Badge tone="orange">소모</Badge>}
-                      </div>
-                      <div className="mt-0.5 truncate text-[12.5px] leading-tight text-secondary">
-                        {[g.minorCategory, g.brand].filter(Boolean).join(" · ") || major}
-                      </div>
-                    </div>
-                    <span className="shrink-0 tabular text-[14px] text-secondary">
-                      {formatWeight(g.weightG, unit)}
-                      {quantity > 1 && <span className="text-tertiary"> ×{quantity}</span>}
-                    </span>
-                  </div>
-                </SwipeRow>
+                </Fragment>
               );
             })}
           </section>

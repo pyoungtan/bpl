@@ -27,6 +27,7 @@ export interface CloudState {
   session: Session | null;
   status: SyncStatus;
   signIn: (email: string) => Promise<{ error: string | null }>;
+  verifyCode: (email: string, token: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -143,9 +144,28 @@ export function useCloudSync(): CloudState {
     return { error: error?.message ?? null };
   }, []);
 
+  // Verify the 6-digit code from the email — works regardless of which browser
+  // opened the link, so it's the reliable fallback for phone + PWA logins.
+  const verifyCode = useCallback(async (email: string, token: string) => {
+    if (!supabase) return { error: "클라우드가 설정되지 않았습니다." };
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: token.trim(),
+      type: "email",
+    });
+    return { error: error?.message ?? null };
+  }, []);
+
   const signOut = useCallback(async () => {
     if (supabase) await supabase.auth.signOut();
   }, []);
 
-  return { enabled: Boolean(supabase), session, status, signIn, signOut };
+  return {
+    enabled: Boolean(supabase),
+    session,
+    status,
+    signIn,
+    verifyCode,
+    signOut,
+  };
 }

@@ -45,13 +45,17 @@ export function SettingsSheet({
   const [confirmReset, setConfirmReset] = useState(false);
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Keep `sent`/`code` across reopen so the user can leave to fetch the code
+    // from their email and come back to the same step.
     if (open) {
       setConfirmReset(false);
-      setSent(false);
       setAuthError(null);
+      setVerifying(false);
     }
   }, [open]);
 
@@ -60,6 +64,23 @@ export function SettingsSheet({
     const { error } = await cloud.signIn(email.trim());
     if (error) setAuthError(error);
     else setSent(true);
+  }
+
+  async function handleVerify() {
+    setAuthError(null);
+    setVerifying(true);
+    const { error } = await cloud.verifyCode(email.trim(), code);
+    setVerifying(false);
+    if (error) setAuthError(error);
+    // On success, onAuthStateChange sets the session and the UI switches.
+  }
+
+  async function handleSignOut() {
+    await cloud.signOut();
+    setSent(false);
+    setCode("");
+    setEmail("");
+    setAuthError(null);
   }
 
   return (
@@ -77,16 +98,53 @@ export function SettingsSheet({
                     {statusText(cloud.status) || "기기 간 자동 동기화"}
                   </div>
                 </div>
-                <Button variant="gray" size="sm" onClick={cloud.signOut}>
+                <Button variant="gray" size="sm" onClick={handleSignOut}>
                   로그아웃
                 </Button>
               </div>
             ) : sent ? (
-              <p className="px-1 text-[14px] leading-relaxed text-secondary">
-                <span className="text-label">{email.trim()}</span> 로 로그인 링크를
-                보냈어요. 메일의 링크를 누르면 이 기기가 로그인됩니다. (다른 기기에서도
-                같은 이메일로 로그인하면 데이터가 동기화돼요.)
-              </p>
+              <div>
+                <p className="px-1 text-[14px] leading-relaxed text-secondary">
+                  <span className="text-label">{email.trim()}</span> 로 메일을
+                  보냈어요. 메일의 <span className="text-label">링크</span>를 누르거나,
+                  메일에 적힌 <span className="text-label">6자리 코드</span>를 아래에
+                  입력하세요.
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    value={code}
+                    onChange={(e) =>
+                      setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
+                    placeholder="6자리 코드"
+                    className="h-11 min-w-0 flex-1 rounded-[10px] bg-card px-3.5 text-[16px] tracking-[0.3em] tabular text-label outline-none placeholder:tracking-normal"
+                  />
+                  <Button
+                    variant="filled"
+                    onClick={handleVerify}
+                    disabled={code.length < 6 || verifying}
+                    className="shrink-0"
+                  >
+                    {verifying ? "확인 중…" : "확인"}
+                  </Button>
+                </div>
+                {authError && (
+                  <p className="mt-1.5 px-1 text-[13px] text-red">{authError}</p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSent(false);
+                    setCode("");
+                    setAuthError(null);
+                  }}
+                  className="mt-2 px-1 text-[13px] text-tint active:opacity-60"
+                >
+                  이메일 다시 입력
+                </button>
+              </div>
             ) : (
               <div>
                 <div className="flex gap-2">

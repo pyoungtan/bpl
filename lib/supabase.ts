@@ -14,6 +14,11 @@ export const supabase: SupabaseClient | null =
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
+          // Implicit flow: the magic link returns tokens in the URL hash, so a
+          // session is established even when the link is opened in a different
+          // browser/context than the one that requested it (no PKCE verifier
+          // needed). The 6-digit code path (verifyOtp) is the robust fallback.
+          flowType: "implicit",
         },
       })
     : null;
