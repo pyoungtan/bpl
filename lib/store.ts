@@ -30,12 +30,16 @@ interface Actions {
   /** Move a gear next to another (drag reorder); adopts the target's category. */
   moveGear: (activeId: string, overId: string) => void;
   setGearHidden: (id: string, hidden: boolean) => void;
-  /** Append gear from an imported LighterPack list; returns items added. */
+  /**
+   * Import gear from a LighterPack list; returns items added. When `replace`
+   * is true the existing gear catalog (gear/order/categories) is cleared first.
+   */
   importLighterpack: (
     cats: {
       category: string;
       items: { name: string; brand?: string; weightG: number; quantity: number }[];
     }[],
+    replace?: boolean,
   ) => number;
 
   // categories (대분류)
@@ -188,7 +192,7 @@ export const useAppStore = create<Store>()(
           return { gear: { ...s.gear, [id]: { ...g, hidden } } };
         }),
 
-      importLighterpack: (cats) => {
+      importLighterpack: (cats, replace) => {
         const rows = cats.flatMap((c) =>
           c.items.map((it) => ({
             ...it,
@@ -196,9 +200,9 @@ export const useAppStore = create<Store>()(
           })),
         );
         set((s) => {
-          const gear = { ...s.gear };
-          const gearOrder = [...s.gearOrder];
-          const categories = [...s.categories];
+          const gear = replace ? {} : { ...s.gear };
+          const gearOrder = replace ? [] : [...s.gearOrder];
+          const categories = replace ? [] : [...s.categories];
           for (const it of rows) {
             if (!categories.includes(it.category)) categories.push(it.category);
             const id = uid("g");

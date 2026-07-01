@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { ThemePref, WeightUnit } from "@/lib/types";
 import type { CloudState } from "@/lib/useCloudSync";
+import type { LpCategory } from "@/lib/lighterpack";
 import { useAppStore } from "@/lib/store";
 import { WEIGHT_UNITS } from "@/lib/units";
 import { cn } from "@/lib/cn";
@@ -48,6 +49,9 @@ export function SettingsSheet({
   const [lpUrl, setLpUrl] = useState("");
   const [lpLoading, setLpLoading] = useState(false);
   const [lpMsg, setLpMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [lpPending, setLpPending] = useState<{ cats: LpCategory[]; count: number } | null>(
+    null,
+  );
   const [confirmReset, setConfirmReset] = useState(false);
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -68,9 +72,11 @@ export function SettingsSheet({
       setConfirmSignOut(false);
       setLpLoading(false);
       setLpMsg(null);
+      setLpPending(null);
     }
   }, [open]);
 
+  // Step 1: fetch + validate the list, then ask how to apply it.
   async function handleImport() {
     const url = lpUrl.trim();
     if (!url || lpLoading) return;
@@ -86,14 +92,29 @@ export function SettingsSheet({
       if (!res.ok || data.error) {
         setLpMsg({ ok: false, text: data.error ?? "가져오기에 실패했어요." });
       } else {
-        const n = importLighterpack(data.categories ?? []);
-        setLpMsg({ ok: true, text: `${n}개 장비를 가져왔어요. Gear Shelf에서 확인하세요.` });
-        setLpUrl("");
+        const cats: LpCategory[] = data.categories ?? [];
+        const count = cats.reduce((n, c) => n + (c.items?.length ?? 0), 0);
+        if (count === 0) setLpMsg({ ok: false, text: "가져올 장비가 없어요." });
+        else setLpPending({ cats, count });
       }
     } catch {
       setLpMsg({ ok: false, text: "네트워크 오류가 발생했어요." });
     }
     setLpLoading(false);
+  }
+
+  // Step 2: apply — replace the existing catalog or append to it.
+  function finishImport(replace: boolean) {
+    if (!lpPending) return;
+    const n = importLighterpack(lpPending.cats, replace);
+    setLpPending(null);
+    setLpUrl("");
+    setLpMsg({
+      ok: true,
+      text: replace
+        ? `기존 데이터를 지우고 ${n}개 장비를 가져왔어요.`
+        : `${n}개 장비를 가져왔어요. Gear Shelf에서 확인하세요.`,
+    });
   }
 
   async function handleSignIn() {
@@ -295,7 +316,8 @@ export function SettingsSheet({
             </p>
           )}
           <p className="mt-1.5 px-1 text-[13px] leading-snug text-secondary">
-            공유 링크를 붙여넣으면 분류·장비·무게를 그대로 가져와 목록에 추가합니다.
+            공유 링크를 붙여넣으면 분류·장비·무게를 그대로 가져옵니다. 기존 데이터를
+            삭제할지 추가할지 선택할 수 있어요.
           </p>
         </Field>
 
@@ -319,6 +341,48 @@ export function SettingsSheet({
             모든 장비와 트립이 예시 데이터로 대체됩니다.
           </p>
         </div>
+
+        {lpPending && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-6">
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setLpPending(null)}
+            />
+            <div className="relative w-full max-w-xs rounded-[16px] bg-card p-5 shadow-2xl">
+              <h3 className="text-[17px] font-semibold text-label">
+                LighterPack 가져오기
+              </h3>
+              <p className="mt-1.5 text-[14px] leading-relaxed text-secondary">
+                <span className="font-medium text-label">{lpPending.count}개</span> 장비를
+                가져옵니다. 기존 데이터를{" "}
+                <span className="font-medium text-red">모두 삭제</span>하고 가져올까요?
+              </p>
+              <div className="mt-4 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => finishImport(true)}
+                  className="h-11 rounded-[10px] bg-red text-[15px] font-semibold text-white active:opacity-80"
+                >
+                  삭제하고 가져오기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => finishImport(false)}
+                  className="h-11 rounded-[10px] bg-fill text-[15px] font-medium text-label active:opacity-60"
+                >
+                  기존에 추가
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLpPending(null)}
+                  className="h-10 text-[14px] text-secondary active:opacity-60"
+                >
+                  취소
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Sheet>
   );
