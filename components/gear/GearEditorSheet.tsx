@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Minus, Plus, Search, Trash2, X } from "lucide-react";
 import type { GearItem, WeightUnit } from "@/lib/types";
 import { useAppStore } from "@/lib/store";
@@ -98,6 +98,7 @@ export function GearEditorSheet({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [addingMajor, setAddingMajor] = useState(false);
   const [newMajor, setNewMajor] = useState("");
+  const addonSearchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -408,12 +409,26 @@ export function GearEditorSheet({
               );
             })}
 
-            <div className="flex h-10 items-center gap-2.5 rounded-[12px] bg-fill px-3.5">
+            <div
+              ref={addonSearchRef}
+              className="flex h-10 items-center gap-2.5 rounded-[12px] bg-fill px-3.5"
+            >
               <Search size={16} className="shrink-0 text-tertiary" />
               <input
                 className="min-w-0 flex-1 bg-transparent text-[16px] text-label outline-none placeholder:text-tertiary"
                 value={addonQuery}
                 onChange={(e) => setAddonQuery(e.target.value)}
+                onFocus={() => {
+                  // Bring the search box to the top so results are clearly visible.
+                  window.setTimeout(
+                    () =>
+                      addonSearchRef.current?.scrollIntoView({
+                        block: "start",
+                        behavior: "smooth",
+                      }),
+                    120,
+                  );
+                }}
                 placeholder="검색하거나 아래에서 선택"
               />
               {addonQuery && (

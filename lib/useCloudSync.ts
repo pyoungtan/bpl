@@ -35,6 +35,8 @@ export function useCloudSync(): CloudState {
   const [session, setSession] = useState<Session | null>(null);
   const [status, setStatus] = useState<SyncStatus>("idle");
   const lastPushed = useRef<string>("");
+  const lastSyncedAt = useRef<string>("");
+  const pendingLocal = useRef(false);
   const pushTimer = useRef<number | undefined>(undefined);
   const ready = useRef(false);
 
@@ -61,7 +63,7 @@ export function useCloudSync(): CloudState {
     (async () => {
       const { data, error } = await sb
         .from("user_data")
-        .select("data")
+        .select("data, updated_at")
         .eq("user_id", userId)
         .maybeSingle();
       if (cancelled) return;
@@ -71,14 +73,18 @@ export function useCloudSync(): CloudState {
       }
       if (data?.data) {
         lastPushed.current = JSON.stringify(data.data);
+        lastSyncedAt.current = (data.updated_at as string) ?? "";
         useAppStore.getState().replaceAll(data.data as AppData);
       } else {
         const local = pickData(useAppStore.getState());
+        const now = new Date().toISOString();
         lastPushed.current = JSON.stringify(local);
+        lastSyncedAt.current = now;
         await sb
           .from("user_data")
-          .upsert({ user_id: userId, data: local, updated_at: new Date().toISOString() });
+          .upsert({ user_id: userId, data: local, updated_at: now });
       }
+      pendingLocal.current = false;
       ready.current = true;
       setStatus("synced");
     })();
@@ -94,11 +100,18 @@ export function useCloudSync(): CloudState {
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          const remote = (payload.new as { data?: AppData })?.data;
+          const row = payload.new as { data?: AppData; updated_at?: string };
+          const remote = row?.data;
           if (!remote) return;
           const json = JSON.stringify(remote);
           if (json === lastPushed.current) return; // ignore our own echo
+          // Never let an older row overwrite what we already have, and never
+          // clobber unsaved local edits that are about to be pushed.
+          const remoteAt = row.updated_at ?? "";
+          if (remoteAt && lastSyncedAt.current && remoteAt <= lastSyncedAt.current) return;
+          if (pendingLocal.current) return;
           lastPushed.current = json;
+          lastSyncedAt.current = remoteAt || lastSyncedAt.current;
           useAppStore.getState().replaceAll(remote);
         },
       )
@@ -119,13 +132,17 @@ export function useCloudSync(): CloudState {
       const data = pickData(state);
       const json = JSON.stringify(data);
       if (json === lastPushed.current) return;
+      pendingLocal.current = true; // protect this edit from realtime clobbering
       if (pushTimer.current !== undefined) clearTimeout(pushTimer.current);
       pushTimer.current = window.setTimeout(async () => {
+        const now = new Date().toISOString();
         lastPushed.current = json;
+        lastSyncedAt.current = now;
         setStatus("syncing");
         const { error } = await sb
           .from("user_data")
-          .upsert({ user_id: userId, data, updated_at: new Date().toISOString() });
+          .upsert({ user_id: userId, data, updated_at: now });
+        pendingLocal.current = false;
         setStatus(error ? "error" : "synced");
       }, 800);
     });

@@ -164,7 +164,7 @@ export function SwipeRow({
           <span
             className={cn(
               "pointer-events-none absolute inset-0 z-0",
-              selectedClassName ?? "bg-tint-soft shadow-[inset_3px_0_0_var(--tint)]",
+              selectedClassName ?? "bg-tint-soft",
             )}
           />
         )}

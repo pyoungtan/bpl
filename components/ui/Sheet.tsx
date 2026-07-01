@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useDragControls } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/cn";
@@ -37,6 +37,7 @@ export function Sheet({
 
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const dragControls = useDragControls();
 
   // Lock the document scroll while open so the page behind the sheet can't
   // drift — including when the keyboard opens for a field inside the sheet
@@ -94,8 +95,21 @@ export function Sheet({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 36, stiffness: 400 }}
+            // Swipe the top handle down to dismiss (mobile). dragListener is off
+            // so only the handle starts a drag — the body still scrolls normally.
+            drag="y"
+            dragListener={false}
+            dragControls={dragControls}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.5 }}
+            onDragEnd={(_e, info) => {
+              if (info.offset.y > 120 || info.velocity.y > 600) onCloseRef.current();
+            }}
           >
-            <div className="flex shrink-0 justify-center pt-2 sm:hidden">
+            <div
+              className="flex shrink-0 cursor-grab touch-none justify-center pb-1 pt-2.5 active:cursor-grabbing sm:hidden"
+              onPointerDown={(e) => dragControls.start(e)}
+            >
               <div className="h-1 w-9 rounded-full bg-separator-opaque" />
             </div>
             <div className="grid h-12 shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-separator px-4">

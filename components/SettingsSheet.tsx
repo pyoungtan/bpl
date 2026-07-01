@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import type { ThemePref, WeightUnit } from "@/lib/types";
 import type { CloudState } from "@/lib/useCloudSync";
 import { useAppStore } from "@/lib/store";
@@ -45,9 +46,11 @@ export function SettingsSheet({
   const [confirmReset, setConfirmReset] = useState(false);
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
   const [code, setCode] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
 
   useEffect(() => {
     // Keep `sent`/`code` across reopen so the user can leave to fetch the code
@@ -56,12 +59,17 @@ export function SettingsSheet({
       setConfirmReset(false);
       setAuthError(null);
       setVerifying(false);
+      setSending(false);
+      setConfirmSignOut(false);
     }
   }, [open]);
 
   async function handleSignIn() {
+    if (sending) return;
     setAuthError(null);
+    setSending(true);
     const { error } = await cloud.signIn(email.trim());
+    setSending(false);
     if (error) setAuthError(error);
     else setSent(true);
   }
@@ -81,6 +89,7 @@ export function SettingsSheet({
     setCode("");
     setEmail("");
     setAuthError(null);
+    setConfirmSignOut(false);
   }
 
   return (
@@ -98,8 +107,18 @@ export function SettingsSheet({
                     {statusText(cloud.status) || "기기 간 자동 동기화"}
                   </div>
                 </div>
-                <Button variant="gray" size="sm" onClick={handleSignOut}>
-                  로그아웃
+                <Button
+                  variant={confirmSignOut ? "filled" : "gray"}
+                  size="sm"
+                  onClick={() => {
+                    if (!confirmSignOut) {
+                      setConfirmSignOut(true);
+                      return;
+                    }
+                    handleSignOut();
+                  }}
+                >
+                  {confirmSignOut ? "확인" : "로그아웃"}
                 </Button>
               </div>
             ) : sent ? (
@@ -158,10 +177,14 @@ export function SettingsSheet({
                   <Button
                     variant="filled"
                     onClick={handleSignIn}
-                    disabled={!email.includes("@")}
+                    disabled={!email.includes("@") || sending}
                     className="shrink-0"
                   >
-                    링크 받기
+                    {sending ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      "링크 받기"
+                    )}
                   </Button>
                 </div>
                 {authError && (

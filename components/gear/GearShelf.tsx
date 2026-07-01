@@ -125,6 +125,18 @@ export function GearShelf({
     [gear, gearOrder],
   );
 
+  // Items designated as an add-on of another item — hidden from the normal
+  // list, but gathered into one section in edit mode so they can be reached.
+  const addonItems = useMemo(
+    () =>
+      gearOrder
+        .map((id) => gear[id])
+        .filter(
+          (g): g is GearItem => Boolean(g) && addOnIdSet.has(g.id) && !g.hidden,
+        ),
+    [gear, gearOrder, addOnIdSet],
+  );
+
   const q = query.trim().toLowerCase();
   const visibleGroups = useMemo(() => {
     return allGroups
@@ -431,6 +443,15 @@ export function GearShelf({
                               }
                               toggleSelect(a.id);
                             }}
+                            onNotePeek={(rect) =>
+                              setPeek({
+                                note: a.note ?? "",
+                                priceText:
+                                  a.price != null ? formatPrice(a.price, currency) : null,
+                                rect,
+                              })
+                            }
+                            onNotePeekEnd={() => setPeek(null)}
                           />
                         ))}
                       </div>
@@ -441,6 +462,27 @@ export function GearShelf({
             )}
           </section>
         ))}
+
+        {editMode && addonItems.length > 0 && (
+          <section>
+            <div className="flex items-baseline justify-between px-4 pb-1 pt-6">
+              <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-secondary">
+                애드온
+              </span>
+              <span className="text-[12px] text-tertiary">{addonItems.length}개</span>
+            </div>
+            {addonItems.map((g, i) => (
+              <GearRow
+                key={g.id}
+                gear={g}
+                unit={unit}
+                editMode
+                topHairline={i > 0}
+                onTap={() => setEditor({ open: true, gear: g })}
+              />
+            ))}
+          </section>
+        )}
 
         {!editMode && activeCat === "all" && hiddenItems.length > 0 && (
           <section>
@@ -569,20 +611,42 @@ function AddonRow({
   unit,
   selected,
   onTap,
+  onNotePeek,
+  onNotePeekEnd,
 }: {
   gear: GearItem;
   unit: WeightUnit;
   selected: boolean;
   onTap: () => void;
+  onNotePeek?: (rect: DOMRect) => void;
+  onNotePeekEnd?: () => void;
 }) {
   const start = useRef<{ x: number; y: number } | null>(null);
   const moved = useRef(false);
+  const timer = useRef<number | undefined>(undefined);
+  const longPressed = useRef(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const sub = gear.brand ? ` · ${gear.brand}` : "";
+
+  function clearTimer() {
+    if (timer.current !== undefined) {
+      clearTimeout(timer.current);
+      timer.current = undefined;
+    }
+  }
   return (
     <button
+      ref={btnRef}
       type="button"
       onPointerDown={(e) => {
         start.current = { x: e.clientX, y: e.clientY };
         moved.current = false;
+        longPressed.current = false;
+        clearTimer();
+        timer.current = window.setTimeout(() => {
+          longPressed.current = true;
+          if (btnRef.current) onNotePeek?.(btnRef.current.getBoundingClientRect());
+        }, 420);
       }}
       onPointerMove={(e) => {
         if (
@@ -590,26 +654,32 @@ function AddonRow({
           Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) > 10
         ) {
           moved.current = true;
+          clearTimer();
         }
       }}
       onPointerUp={() => {
-        if (start.current && !moved.current) onTap();
+        clearTimer();
+        if (longPressed.current) onNotePeekEnd?.();
+        else if (start.current && !moved.current) onTap();
         start.current = null;
       }}
       onPointerCancel={() => {
+        clearTimer();
+        if (longPressed.current) onNotePeekEnd?.();
         start.current = null;
       }}
+      onContextMenu={(e) => e.preventDefault()}
       onClick={(e) => {
         if (e.detail === 0) onTap(); // keyboard / programmatic activation
       }}
       className={cn(
         "flex w-full touch-manipulation select-none items-center gap-2.5 py-2.5 pl-9 pr-4 text-left transition active:opacity-60",
-        selected &&
-          "bg-[color-mix(in_srgb,var(--tint)_8%,transparent)] shadow-[inset_2px_0_0_var(--tint)]",
+        selected && "bg-[color-mix(in_srgb,var(--tint)_8%,transparent)]",
       )}
     >
       <span className="min-w-0 flex-1 truncate text-[14px] text-secondary">
         {gear.name}
+        {sub && <span className="text-tertiary">{sub}</span>}
       </span>
       <span className="shrink-0 tabular text-[13px] text-tertiary">
         {formatWeight(gear.weightG, unit)}
