@@ -39,6 +39,11 @@ export function Sheet({
   onCloseRef.current = onClose;
   const dragControls = useDragControls();
   const scrollRef = useRef<HTMLDivElement>(null);
+  // How much of the viewport bottom is covered by the software keyboard, tracked
+  // via the VisualViewport API. We lift the whole sheet by this amount so it
+  // sits above the keyboard (not pushed off the top) and its scroll area is
+  // sized to the visible region (so the bottom fields stay reachable).
+  const [kbInset, setKbInset] = useState(0);
 
   // When a field inside the sheet gains focus, bring it into view within the
   // sheet's own scroll area. iOS doesn't reliably scroll fields above the
@@ -106,12 +111,35 @@ export function Sheet({
     };
   }, [open]);
 
+  // Track the software keyboard's height so the sheet can sit above it.
+  useEffect(() => {
+    if (!open) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      // Bottom area of the layout viewport hidden by the keyboard.
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKbInset(inset);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+      setKbInset(0);
+    };
+  }, [open]);
+
   if (!mounted) return null;
 
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+        <div
+          className="fixed inset-x-0 top-0 z-50 flex items-end justify-center sm:items-center"
+          style={{ bottom: kbInset }}
+        >
           <motion.div
             className="absolute inset-0 bg-black/40"
             initial={{ opacity: 0 }}
@@ -124,7 +152,10 @@ export function Sheet({
             role="dialog"
             aria-modal="true"
             className={cn(
-              "relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[14px]",
+              // min(…, 100%) caps the panel to the visible area above the
+              // keyboard (the container shrinks by kbInset), so the top isn't
+              // pushed off-screen and the bottom fields stay scrollable.
+              "relative flex max-h-[min(92dvh,100%)] w-full flex-col overflow-hidden rounded-t-[14px]",
               "sm:max-w-md sm:rounded-[14px] sm:max-h-[88dvh] sm:shadow-2xl",
               // On mobile the sheet sits at the bottom; a same-colour fill below
               // the panel covers any gap that appears when the keyboard pushes
