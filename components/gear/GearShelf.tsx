@@ -724,12 +724,20 @@ function DndArea({
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
-      onDragStart={(e) => setActiveId(String(e.active.id))}
+      onDragStart={(e) => {
+        setActiveId(String(e.active.id));
+        // Signal PullToRefresh (and any other gesture) to stand down.
+        document.body.dataset.dragging = "true";
+      }}
       onDragEnd={(e) => {
         setActiveId(null);
+        delete document.body.dataset.dragging;
         onDragEnd(e);
       }}
-      onDragCancel={() => setActiveId(null)}
+      onDragCancel={() => {
+        setActiveId(null);
+        delete document.body.dataset.dragging;
+      }}
     >
       {children}
       <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>

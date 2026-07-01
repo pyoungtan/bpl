@@ -42,7 +42,9 @@ export function PullToRefresh() {
     function blocked() {
       return (
         document.querySelector('[role="dialog"]') !== null ||
-        document.body.style.overflow === "hidden"
+        document.body.style.overflow === "hidden" ||
+        // A drag-reorder is in progress (set by the gear shelf's DndContext).
+        document.body.dataset.dragging === "true"
       );
     }
     function onStart(e: TouchEvent) {
@@ -58,6 +60,14 @@ export function PullToRefresh() {
     }
     function onMove(e: TouchEvent) {
       if (!active.current) return;
+      // A drag-reorder can activate mid-gesture (after a few px) — cancel the
+      // pull the moment it does so the page can't get pulled/reloaded.
+      if (blocked()) {
+        active.current = false;
+        dist.current = 0;
+        paint(0);
+        return;
+      }
       const dy = e.touches[0].clientY - startY.current;
       if (dy <= 0 || window.scrollY > 2) {
         dist.current = 0;
