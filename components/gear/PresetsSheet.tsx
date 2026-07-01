@@ -52,7 +52,7 @@ export function PresetsSheet({
 
   return (
     <Sheet open={open} onClose={onClose} title="프리셋" leftLabel="완료">
-      <div className="space-y-6 px-4">
+      <div className="space-y-6 px-4 pb-[max(2rem,calc(env(safe-area-inset-bottom)+1.25rem))]">
         <div>
           <h2 className="mb-1.5 px-1 text-[13px] font-medium uppercase tracking-wide text-secondary">
             현재 선택 저장

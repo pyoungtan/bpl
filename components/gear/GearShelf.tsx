@@ -410,6 +410,7 @@ export function GearShelf({
           enabled={editMode}
           sensors={sensors}
           onDragEnd={handleDragEnd}
+          sortIds={visibleGroups.flatMap(([, items]) => items.map((i) => i.id))}
           renderOverlay={(id) => {
             const g = gear[id];
             return g ? (
@@ -427,21 +428,16 @@ export function GearShelf({
             </div>
 
             {editMode ? (
-              <SortableContext
-                items={items.map((i) => i.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {items.map((g, i) => (
-                  <SortableGearRow
-                    key={g.id}
-                    id={g.id}
-                    gear={g}
-                    unit={unit}
-                    topHairline={i > 0}
-                    onEdit={() => setEditor({ open: true, gear: g })}
-                  />
-                ))}
-              </SortableContext>
+              items.map((g, i) => (
+                <SortableGearRow
+                  key={g.id}
+                  id={g.id}
+                  gear={g}
+                  unit={unit}
+                  topHairline={i > 0}
+                  onEdit={() => setEditor({ open: true, gear: g })}
+                />
+              ))
             ) : (
               items.map((g, i) => {
                 const addOns = resolveAddOns(g);
@@ -605,12 +601,9 @@ export function GearShelf({
       {/* Pack-quantity stepper for the most recently selected item (above GNB) */}
       {selecting && !editMode && lastSelectedId && selected.has(lastSelectedId) && gear[lastSelectedId] && (
         <div
-          className="material shadow-float fixed left-1/2 z-40 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-[var(--material-border)] py-1.5 pl-3.5 pr-1.5"
+          className="material shadow-float fixed left-1/2 z-40 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-[var(--material-border)] p-1.5"
           style={{ bottom: "calc(env(safe-area-inset-bottom) + 82px)" }}
         >
-          <span className="max-w-[128px] truncate text-[13px] font-medium text-secondary">
-            {gear[lastSelectedId].name}
-          </span>
           <button
             type="button"
             aria-label="수량 감소"
@@ -710,12 +703,14 @@ function DndArea({
   sensors,
   onDragEnd,
   renderOverlay,
+  sortIds,
   children,
 }: {
   enabled: boolean;
   sensors: ReturnType<typeof useSensors>;
   onDragEnd: (e: DragEndEvent) => void;
   renderOverlay: (id: string) => React.ReactNode;
+  sortIds: string[];
   children: React.ReactNode;
 }) {
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -739,7 +734,11 @@ function DndArea({
         delete document.body.dataset.dragging;
       }}
     >
-      {children}
+      {/* One SortableContext spanning every category so a row reorders live and
+          drops at an exact position even after crossing a category boundary. */}
+      <SortableContext items={sortIds} strategy={verticalListSortingStrategy}>
+        {children}
+      </SortableContext>
       <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
         {activeId ? (
           <div className="shadow-float rounded-[10px] bg-card">

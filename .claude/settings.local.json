@@ -7,7 +7,27 @@
       "PowerShell(node -v; npm -v; \\(Get-Command node\\).Source; \\(Get-Command pnpm -ErrorAction SilentlyContinue\\).Source)",
       "PowerShell(winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements --scope user 2>&1)",
       "mcp__Claude_Preview__preview_start",
-      "PowerShell($machine = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\); $user = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); $env:Path = \"$machine;$user\"; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-Object -First 40; \"EXIT=$LASTEXITCODE\")"
+      "PowerShell($machine = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\); $user = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); $env:Path = \"$machine;$user\"; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-Object -First 40; \"EXIT=$LASTEXITCODE\")",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(cd \"D:/NAVER/2026/_Claude/bpl\" && echo \"=== project svgs ===\" && find . -name \"*.svg\" -not -path \"./node_modules/*\" -not -path \"./.next/*\" 2>/dev/null && echo \"=== Downloads svgs \\(recent\\) ===\" && ls -t ~/Downloads/*.svg 2>/dev/null | head -10 && echo \"=== scratchpad ===\" && ls -t \"/c/Users/USER/AppData/Local/Temp/claude/D--NAVER-2026--Claude-bpl/16f8adc1-590f-4b82-b74d-71b11b7283a5/scratchpad\" 2>/dev/null | head)",
+      "PowerShell($machine = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\); $user = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); $env:Path = \"$machine;$user\"; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-String -Pattern \"error|GearShelf|AddToTrip\" | Select-Object -First 30; \"EXIT=$LASTEXITCODE\")",
+      "PowerShell($machine = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\); $user = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); $env:Path = \"$machine;$user\"; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-String -Pattern \"error TS\" | Select-Object -First 20; \"EXIT=$LASTEXITCODE\")",
+      "PowerShell($machine = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\); $user = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); $env:Path = \"$machine;$user\"; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-String -Pattern \"error TS\" | Select-Object -First 30; \"EXIT=$LASTEXITCODE\")",
+      "WebFetch(domain:lighterpack.com)",
+      "WebSearch",
+      "PowerShell($machine = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\); $user = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); $env:Path = \"$machine;$user\"; node \"C:\\\\Users\\\\USER\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--NAVER-2026--Claude-bpl\\\\16f8adc1-590f-4b82-b74d-71b11b7283a5\\\\scratchpad\\\\lp-probe.mjs\" 2>&1 | Select-Object -First 80)",
+      "PowerShell($machine = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\); $user = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); $env:Path = \"$machine;$user\"; node \"C:\\\\Users\\\\USER\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--NAVER-2026--Claude-bpl\\\\16f8adc1-590f-4b82-b74d-71b11b7283a5\\\\scratchpad\\\\lp-probe2.mjs\" 2>&1 | Select-Object -First 90)",
+      "PowerShell($machine = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\); $user = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); $env:Path = \"$machine;$user\"; node \"C:\\\\Users\\\\USER\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--NAVER-2026--Claude-bpl\\\\16f8adc1-590f-4b82-b74d-71b11b7283a5\\\\scratchpad\\\\lp-probe3.mjs\" 2>&1 | Select-Object -First 120)",
+      "PowerShell($machine = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\); $user = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); $env:Path = \"$machine;$user\"; node \"C:\\\\Users\\\\USER\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--NAVER-2026--Claude-bpl\\\\16f8adc1-590f-4b82-b74d-71b11b7283a5\\\\scratchpad\\\\lp-parse.mjs\" 2>&1 | Select-Object -First 120)",
+      "PowerShell($machine = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\); $user = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); $env:Path = \"$machine;$user\"; node \"C:\\\\Users\\\\USER\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--NAVER-2026--Claude-bpl\\\\16f8adc1-590f-4b82-b74d-71b11b7283a5\\\\scratchpad\\\\lp-qty.mjs\" 2>&1 | Select-Object -First 60)",
+      "PowerShell($machine = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\); $user = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); $env:Path = \"$machine;$user\"; npx tsc --noEmit -p tsconfig.json 2>&1 | Select-String -Pattern \"error TS\" | Select-Object -First 25; \"EXIT=$LASTEXITCODE\")",
+      "PowerShell($machine=[Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\); $user=[Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); $env:Path=\"$machine;$user\"; Set-Location \"D:\\\\NAVER\\\\2026\\\\_Claude\\\\bpl\"; npx tsc --noEmit; \"EXIT=$LASTEXITCODE\")",
+      "Bash(git config *)",
+      "Bash(git commit -m ' *)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); npx tsc --noEmit 2>&1 | Select-Object -First 40)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); npx tsc --noEmit 2>&1 | Select-Object -First 30)"
     ]
   }
 }
