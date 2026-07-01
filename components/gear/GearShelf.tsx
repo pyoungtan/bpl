@@ -11,7 +11,6 @@ import {
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  arrayMove,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -55,7 +54,7 @@ export function GearShelf({
   const categories = useAppStore((s) => s.categories);
   const unit = useAppStore((s) => s.displayUnit);
   const currency = useAppStore((s) => s.currency);
-  const reorderGear = useAppStore((s) => s.reorderGear);
+  const moveGear = useAppStore((s) => s.moveGear);
   const deleteGear = useAppStore((s) => s.deleteGear);
   const setGearHidden = useAppStore((s) => s.setGearHidden);
 
@@ -253,14 +252,12 @@ export function GearShelf({
       .filter((x): x is GearItem => Boolean(x));
   }
 
-  function handleDragEnd(major: string, event: DragEndEvent) {
+  function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const ids = (allGroups.find(([m]) => m === major)?.[1] ?? []).map((g) => g.id);
-    const oldIndex = ids.indexOf(String(active.id));
-    const newIndex = ids.indexOf(String(over.id));
-    if (oldIndex < 0 || newIndex < 0) return;
-    reorderGear(major, arrayMove(ids, oldIndex, newIndex));
+    // One DndContext spans all categories, so `over` may live in another
+    // category — moveGear reorders and adopts the target's category.
+    moveGear(String(active.id), String(over.id));
   }
 
   const selecting = selected.size > 0;
@@ -383,6 +380,7 @@ export function GearShelf({
       )}
 
       <div className="pt-1">
+        <DndArea enabled={editMode} sensors={sensors} onDragEnd={handleDragEnd}>
         {visibleGroups.map(([major, items]) => (
           <section key={major}>
             <div className="flex items-baseline justify-between px-4 pb-1 pt-5">
@@ -393,27 +391,21 @@ export function GearShelf({
             </div>
 
             {editMode ? (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={(e) => handleDragEnd(major, e)}
+              <SortableContext
+                items={items.map((i) => i.id)}
+                strategy={verticalListSortingStrategy}
               >
-                <SortableContext
-                  items={items.map((i) => i.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {items.map((g, i) => (
-                    <SortableGearRow
-                      key={g.id}
-                      id={g.id}
-                      gear={g}
-                      unit={unit}
-                      topHairline={i > 0}
-                      onEdit={() => setEditor({ open: true, gear: g })}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
+                {items.map((g, i) => (
+                  <SortableGearRow
+                    key={g.id}
+                    id={g.id}
+                    gear={g}
+                    unit={unit}
+                    topHairline={i > 0}
+                    onEdit={() => setEditor({ open: true, gear: g })}
+                  />
+                ))}
+              </SortableContext>
             ) : (
               items.map((g, i) => {
                 const addOns = resolveAddOns(g);
@@ -427,6 +419,7 @@ export function GearShelf({
                       gear={g}
                       unit={unit}
                       selected={selected.has(g.id)}
+                      packCount={selected.has(g.id) ? packQty[g.id] ?? 1 : undefined}
                       onTap={() => {
                         if (swipeOpenId) {
                           setSwipeOpenId(null);
@@ -464,6 +457,9 @@ export function GearShelf({
                             gear={a}
                             unit={unit}
                             selected={selected.has(a.id)}
+                            packCount={
+                              selected.has(a.id) ? packQty[a.id] ?? 1 : undefined
+                            }
                             onTap={() => {
                               if (swipeOpenId) {
                                 setSwipeOpenId(null);
@@ -490,6 +486,7 @@ export function GearShelf({
             )}
           </section>
         ))}
+        </DndArea>
 
         {editMode && addonItems.length > 0 && (
           <section>
@@ -660,6 +657,31 @@ export function GearShelf({
   );
 }
 
+// Wraps the gear groups in a single DndContext while editing, so a row can be
+// dragged across category boundaries; passes children through otherwise.
+function DndArea({
+  enabled,
+  sensors,
+  onDragEnd,
+  children,
+}: {
+  enabled: boolean;
+  sensors: ReturnType<typeof useSensors>;
+  onDragEnd: (e: DragEndEvent) => void;
+  children: React.ReactNode;
+}) {
+  if (!enabled) return <>{children}</>;
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={onDragEnd}
+    >
+      {children}
+    </DndContext>
+  );
+}
+
 /**
  * Add-on sub-row. Selection is handled on pointerup (with a small movement
  * guard) instead of click, so rapid successive taps on a phone are never
@@ -670,6 +692,7 @@ function AddonRow({
   gear,
   unit,
   selected,
+  packCount,
   onTap,
   onNotePeek,
   onNotePeekEnd,
@@ -677,6 +700,7 @@ function AddonRow({
   gear: GearItem;
   unit: WeightUnit;
   selected: boolean;
+  packCount?: number;
   onTap: () => void;
   onNotePeek?: (rect: DOMRect) => void;
   onNotePeekEnd?: () => void;
@@ -741,6 +765,11 @@ function AddonRow({
         {gear.name}
         {sub && <span className="text-tertiary">{sub}</span>}
       </span>
+      {packCount != null && packCount > 1 && (
+        <span className="shrink-0 tabular text-[13px] font-semibold text-tint">
+          ×{packCount}
+        </span>
+      )}
       <span className="shrink-0 tabular text-[13px] text-tertiary">
         {formatWeight(gear.weightG, unit)}
       </span>

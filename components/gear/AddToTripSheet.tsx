@@ -80,6 +80,14 @@ export function AddToTripSheet({
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="새 트립 이름 (선택)"
+              onFocus={(e) => {
+                // Lift the field above the keyboard so it isn't cut off.
+                const el = e.currentTarget;
+                window.setTimeout(
+                  () => el.scrollIntoView({ block: "center", behavior: "smooth" }),
+                  150,
+                );
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();

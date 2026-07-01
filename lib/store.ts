@@ -27,6 +27,8 @@ interface Actions {
   updateGear: (id: string, patch: Partial<GearItem>) => void;
   deleteGear: (id: string) => void;
   reorderGear: (major: string, orderedGroupIds: string[]) => void;
+  /** Move a gear next to another (drag reorder); adopts the target's category. */
+  moveGear: (activeId: string, overId: string) => void;
   setGearHidden: (id: string, hidden: boolean) => void;
 
   // categories (대분류)
@@ -146,6 +148,30 @@ export const useAppStore = create<Store>()(
             if (orderedGroupIds[i] != null) next[pos] = orderedGroupIds[i];
           });
           return { gearOrder: next };
+        }),
+
+      moveGear: (activeId, overId) =>
+        set((s) => {
+          const active = s.gear[activeId];
+          const over = s.gear[overId];
+          if (!active || !over || activeId === overId) return s;
+          const from = s.gearOrder.indexOf(activeId);
+          const to = s.gearOrder.indexOf(overId);
+          if (from < 0 || to < 0) return s;
+          const gearOrder = s.gearOrder.slice();
+          gearOrder.splice(to, 0, gearOrder.splice(from, 1)[0]);
+          // Dropping into another category adopts that category immediately.
+          const gear =
+            active.majorCategory === over.majorCategory
+              ? s.gear
+              : {
+                  ...s.gear,
+                  [activeId]: { ...active, majorCategory: over.majorCategory },
+                };
+          const categories = s.categories.includes(over.majorCategory)
+            ? s.categories
+            : [...s.categories, over.majorCategory];
+          return { gear, gearOrder, categories };
         }),
 
       setGearHidden: (id, hidden) =>

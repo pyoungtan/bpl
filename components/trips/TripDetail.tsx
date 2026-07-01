@@ -13,6 +13,7 @@ import { useAppStore } from "@/lib/store";
 import { computeStats } from "@/lib/calc";
 import type { GearItem } from "@/lib/types";
 import { formatWeight, formatWeightSmart } from "@/lib/units";
+import { tripNights } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { Donut } from "../Donut";
 import { Sheet } from "../ui/Sheet";
@@ -67,6 +68,7 @@ export function TripDetail({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const memoRef = useRef<HTMLTextAreaElement>(null);
+  const backSwipe = useRef<{ x: number; y: number; ok: boolean } | null>(null);
 
   const packed = useMemo(() => trip?.packed ?? [], [trip]);
   const packedQty = useMemo(
@@ -248,6 +250,28 @@ export function TripDetail({
 
   return (
     <div className="pb-40">
+      {/* Left-edge swipe-right to go back (iOS-style), below the header so it
+          doesn't block the back button. */}
+      <div
+        className="fixed left-0 z-30 w-4"
+        style={{ top: "calc(env(safe-area-inset-top) + 48px)", bottom: 0 }}
+        onPointerDown={(e) => {
+          backSwipe.current = { x: e.clientX, y: e.clientY, ok: true };
+        }}
+        onPointerMove={(e) => {
+          const s = backSwipe.current;
+          if (!s || !s.ok) return;
+          if (Math.abs(e.clientY - s.y) > 45) s.ok = false; // vertical → cancel
+        }}
+        onPointerUp={(e) => {
+          const s = backSwipe.current;
+          backSwipe.current = null;
+          if (s && s.ok && e.clientX - s.x > 70) onBack();
+        }}
+        onPointerCancel={() => {
+          backSwipe.current = null;
+        }}
+      />
       <div className="material sticky top-0 z-20 flex h-12 items-center justify-between border-b border-separator pt-safe">
         <button
           type="button"
@@ -288,12 +312,37 @@ export function TripDetail({
             placeholder="트립 이름"
             className="w-full bg-transparent font-serif text-[28px] font-medium tracking-[-0.02em] text-label outline-none placeholder:text-tertiary"
           />
-          <input
-            type="date"
-            value={trip.date ?? ""}
-            onChange={(e) => updateTrip(tripId, { date: e.target.value || undefined })}
-            className="mt-1 bg-transparent text-[14px] text-secondary outline-none"
-          />
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px] text-secondary">
+            <input
+              type="date"
+              aria-label="시작일"
+              value={trip.startDate ?? trip.date ?? ""}
+              max={trip.endDate || undefined}
+              onChange={(e) =>
+                updateTrip(tripId, {
+                  startDate: e.target.value || undefined,
+                  date: e.target.value || undefined,
+                })
+              }
+              className="tabular bg-transparent text-secondary outline-none"
+            />
+            <span className="text-tertiary">~</span>
+            <input
+              type="date"
+              aria-label="종료일"
+              value={trip.endDate ?? ""}
+              min={trip.startDate ?? trip.date ?? undefined}
+              onChange={(e) =>
+                updateTrip(tripId, { endDate: e.target.value || undefined })
+              }
+              className="tabular bg-transparent text-secondary outline-none"
+            />
+            {tripNights(trip.startDate ?? trip.date, trip.endDate) && (
+              <span className="text-[13px] font-medium text-tint">
+                {tripNights(trip.startDate ?? trip.date, trip.endDate)}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Collapsible memo — full text when expanded */}

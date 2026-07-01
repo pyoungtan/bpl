@@ -5,21 +5,11 @@ import { ChevronRight, Map, Plus, Settings } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { Trip } from "@/lib/types";
 import { formatWeightSmart } from "@/lib/units";
+import { formatTripRange, tripNights, tripStart } from "@/lib/dates";
 import { ScreenHeader } from "../ScreenHeader";
 import { Button } from "../ui/Button";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
 import { TripDetail } from "./TripDetail";
-
-function formatTripDate(date?: string): string {
-  if (!date) return "날짜 미정";
-  const d = new Date(`${date}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return date;
-  return d.toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
 
 export function TripsTab({
   onOpenSettings,
@@ -162,8 +152,13 @@ function TripRow({
           <div className="truncate font-serif text-[18px] font-medium tracking-[-0.01em] text-label">
             {trip.name}
           </div>
-          <div className="mt-0.5 text-[13px] text-secondary">
-            {formatTripDate(trip.date)}
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[13px] text-secondary">
+            <span>{formatTripRange(tripStart(trip), trip.endDate)}</span>
+            {tripNights(tripStart(trip), trip.endDate) && (
+              <span className="text-tertiary">
+                · {tripNights(tripStart(trip), trip.endDate)}
+              </span>
+            )}
           </div>
         </div>
         <span className="shrink-0 tabular text-[15px] font-medium text-label">

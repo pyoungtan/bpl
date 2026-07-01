@@ -36,8 +36,11 @@ export interface PackedEntry {
 export interface Trip {
   id: string;
   name: string;
-  /** ISO date (yyyy-mm-dd). */
+  /** ISO date (yyyy-mm-dd). Legacy single date — kept for migration/fallback. */
   date?: string;
+  /** ISO start/end dates (yyyy-mm-dd) for a date range. */
+  startDate?: string;
+  endDate?: string;
   memo: string;
   packed: PackedEntry[];
   /** gearIds the user has checked off as packed (gear-check mode). */
