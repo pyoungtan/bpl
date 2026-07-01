@@ -450,6 +450,65 @@ export const useAppStore = create<Store>()(
   ),
 );
 
+/** localStorage key holding the ISO time the local catalog/trips last changed. */
+export const LOCAL_UPDATED_KEY = "bpl-local-updated-at";
+
+/** Order-independent JSON: object keys are sorted and undefined-valued keys are
+ *  dropped, so it matches Postgres jsonb (which doesn't preserve key order)
+ *  round-trips. Arrays keep their order (it's meaningful here). */
+function stableStringify(v: unknown): string {
+  if (v === null || typeof v !== "object") return JSON.stringify(v) ?? "null";
+  if (Array.isArray(v)) return `[${v.map(stableStringify).join(",")}]`;
+  const obj = v as Record<string, unknown>;
+  const keys = Object.keys(obj)
+    .filter((k) => obj[k] !== undefined)
+    .sort();
+  return `{${keys
+    .map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`)
+    .join(",")}}`;
+}
+
+/** Content signature of the real data (excludes UI-only settings like theme),
+ *  used to detect local↔cloud divergence and to stamp local edits. Canonical
+ *  so a semantically-identical cloud copy doesn't read as a false conflict. */
+export function dataSignature(s: AppData): string {
+  return stableStringify({
+    gear: s.gear,
+    gearOrder: s.gearOrder,
+    categories: s.categories,
+    presets: s.presets,
+    trips: s.trips,
+    tripOrder: s.tripOrder,
+  });
+}
+
+// Stamp a "local last modified" time whenever the catalog/trips actually change
+// — but not on hydration, and not for pure settings tweaks. Read on login to
+// decide whether local or cloud data is newer. Writes to its own key (not the
+// store), so it can't recurse.
+if (typeof window !== "undefined") {
+  let prevSig: string | null = null;
+  const seed = () => {
+    prevSig = dataSignature(useAppStore.getState());
+  };
+  if (useAppStore.persist.hasHydrated()) seed();
+  else useAppStore.persist.onFinishHydration(seed);
+  useAppStore.subscribe((state) => {
+    const sig = dataSignature(state);
+    if (prevSig === null) {
+      prevSig = sig;
+      return;
+    }
+    if (sig === prevSig) return;
+    prevSig = sig;
+    try {
+      localStorage.setItem(LOCAL_UPDATED_KEY, new Date().toISOString());
+    } catch {
+      /* ignore quota/availability errors */
+    }
+  });
+}
+
 /** True once the persisted store has rehydrated on the client. */
 export function useHydrated(): boolean {
   const [hydrated, setHydrated] = useState(false);
