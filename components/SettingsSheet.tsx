@@ -6,6 +6,7 @@ import type { ThemePref, WeightUnit } from "@/lib/types";
 import type { CloudState } from "@/lib/useCloudSync";
 import { useAppStore } from "@/lib/store";
 import { WEIGHT_UNITS } from "@/lib/units";
+import { cn } from "@/lib/cn";
 import { Sheet } from "./ui/Sheet";
 import { Field } from "./ui/Field";
 import { Segmented } from "./ui/Segmented";
@@ -42,7 +43,11 @@ export function SettingsSheet({
   const theme = useAppStore((s) => s.theme);
   const setTheme = useAppStore((s) => s.setTheme);
   const resetToSample = useAppStore((s) => s.resetToSample);
+  const importLighterpack = useAppStore((s) => s.importLighterpack);
 
+  const [lpUrl, setLpUrl] = useState("");
+  const [lpLoading, setLpLoading] = useState(false);
+  const [lpMsg, setLpMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -61,8 +66,35 @@ export function SettingsSheet({
       setVerifying(false);
       setSending(false);
       setConfirmSignOut(false);
+      setLpLoading(false);
+      setLpMsg(null);
     }
   }, [open]);
+
+  async function handleImport() {
+    const url = lpUrl.trim();
+    if (!url || lpLoading) return;
+    setLpLoading(true);
+    setLpMsg(null);
+    try {
+      const res = await fetch("/api/lighterpack", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setLpMsg({ ok: false, text: data.error ?? "가져오기에 실패했어요." });
+      } else {
+        const n = importLighterpack(data.categories ?? []);
+        setLpMsg({ ok: true, text: `${n}개 장비를 가져왔어요. Gear Shelf에서 확인하세요.` });
+        setLpUrl("");
+      }
+    } catch {
+      setLpMsg({ ok: false, text: "네트워크 오류가 발생했어요." });
+    }
+    setLpLoading(false);
+  }
 
   async function handleSignIn() {
     if (sending) return;
@@ -225,6 +257,46 @@ export function SettingsSheet({
               { value: "system", label: "시스템" },
             ]}
           />
+        </Field>
+
+        <Field label="LighterPack 가져오기">
+          <div className="flex gap-2">
+            <input
+              type="url"
+              inputMode="url"
+              value={lpUrl}
+              onChange={(e) => setLpUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleImport();
+                }
+              }}
+              placeholder="lighterpack.com/r/… 링크"
+              className="h-11 min-w-0 flex-1 rounded-[10px] bg-card px-3.5 text-[16px] text-label outline-none"
+            />
+            <Button
+              variant="filled"
+              onClick={handleImport}
+              disabled={!lpUrl.trim() || lpLoading}
+              className="shrink-0"
+            >
+              {lpLoading ? <Loader2 size={18} className="animate-spin" /> : "가져오기"}
+            </Button>
+          </div>
+          {lpMsg && (
+            <p
+              className={cn(
+                "mt-1.5 px-1 text-[13px]",
+                lpMsg.ok ? "text-secondary" : "text-red",
+              )}
+            >
+              {lpMsg.text}
+            </p>
+          )}
+          <p className="mt-1.5 px-1 text-[13px] leading-snug text-secondary">
+            공유 링크를 붙여넣으면 분류·장비·무게를 그대로 가져와 목록에 추가합니다.
+          </p>
         </Field>
 
         <div className="pt-2">

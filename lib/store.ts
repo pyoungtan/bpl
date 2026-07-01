@@ -30,6 +30,13 @@ interface Actions {
   /** Move a gear next to another (drag reorder); adopts the target's category. */
   moveGear: (activeId: string, overId: string) => void;
   setGearHidden: (id: string, hidden: boolean) => void;
+  /** Append gear from an imported LighterPack list; returns items added. */
+  importLighterpack: (
+    cats: {
+      category: string;
+      items: { name: string; brand?: string; weightG: number; quantity: number }[];
+    }[],
+  ) => number;
 
   // categories (대분류)
   addCategory: (name: string) => void;
@@ -180,6 +187,36 @@ export const useAppStore = create<Store>()(
           if (!g) return s;
           return { gear: { ...s.gear, [id]: { ...g, hidden } } };
         }),
+
+      importLighterpack: (cats) => {
+        const rows = cats.flatMap((c) =>
+          c.items.map((it) => ({
+            ...it,
+            category: (c.category || "").trim() || "가져온 목록",
+          })),
+        );
+        set((s) => {
+          const gear = { ...s.gear };
+          const gearOrder = [...s.gearOrder];
+          const categories = [...s.categories];
+          for (const it of rows) {
+            if (!categories.includes(it.category)) categories.push(it.category);
+            const id = uid("g");
+            gear[id] = {
+              id,
+              name: it.name || "장비",
+              brand: it.brand,
+              majorCategory: it.category,
+              weightG: Math.max(0, Math.round(it.weightG || 0)),
+              quantity: Math.max(1, Math.round(it.quantity || 1)),
+              addOnIds: [],
+            };
+            gearOrder.push(id);
+          }
+          return { gear, gearOrder, categories };
+        });
+        return rows.length;
+      },
 
       addCategory: (name) =>
         set((s) => {
