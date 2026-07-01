@@ -787,7 +787,7 @@ function AddonRow({
     >
       <span className="min-w-0 flex-1 truncate text-[14px] text-secondary">
         {gear.name}
-        {sub && <span className="text-tertiary">{sub}</span>}
+        {sub && <span className="text-[12px] text-tertiary">{sub}</span>}
       </span>
       {packCount != null && packCount > 1 && (
         <span className="shrink-0 tabular text-[13px] font-semibold text-tint">
