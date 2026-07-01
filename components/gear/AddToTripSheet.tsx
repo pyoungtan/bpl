@@ -13,12 +13,14 @@ import { WeightBar } from "../WeightBar";
 export function AddToTripSheet({
   open,
   gearIds,
+  quantities,
   selectedStats,
   onClose,
   onAdded,
 }: {
   open: boolean;
   gearIds: string[];
+  quantities?: Record<string, number>;
   selectedStats: Stats;
   onClose: () => void;
   onAdded: (tripId: string) => void;
@@ -37,7 +39,7 @@ export function AddToTripSheet({
 
   const entries = gearIds
     .filter((id) => gear[id])
-    .map((id) => ({ gearId: id, quantity: gear[id].quantity }));
+    .map((id) => ({ gearId: id, quantity: quantities?.[id] ?? 1 }));
 
   function addTo(tripId: string) {
     addEntriesToTrip(tripId, entries);

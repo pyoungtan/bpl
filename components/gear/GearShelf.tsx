@@ -21,6 +21,7 @@ import {
   Bookmark,
   Check,
   GripVertical,
+  Minus,
   Plus,
   Search,
   Settings,
@@ -67,6 +68,10 @@ export function GearShelf({
   // Rows the user explicitly collapsed, overriding auto-open (e.g. when selected).
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
+  // Per-selection pack quantity (default 1); only the last-selected item's
+  // count is adjustable via the floating stepper.
+  const [packQty, setPackQty] = useState<Record<string, number>>({});
+  const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
   const [editor, setEditor] = useState<{ open: boolean; gear: GearItem | null }>({
     open: false,
     gear: null,
@@ -173,9 +178,9 @@ export function GearShelf({
         [...selected]
           .map((id) => gear[id])
           .filter((g): g is GearItem => Boolean(g))
-          .map((g) => ({ gear: g, quantity: g.quantity })),
+          .map((g) => ({ gear: g, quantity: packQty[g.id] ?? 1 })),
       ),
-    [selected, gear],
+    [selected, gear, packQty],
   );
 
   function toggleSelect(id: string) {
@@ -186,14 +191,32 @@ export function GearShelf({
       else n.add(id);
       return n;
     });
-    // Selecting a row re-enables its auto-open (clears any manual collapse).
-    if (willSelect && collapsed.has(id)) {
-      setCollapsed((prev) => {
-        const n = new Set(prev);
-        n.delete(id);
-        return n;
+    if (willSelect) {
+      setLastSelectedId(id);
+      setPackQty((q) => (q[id] ? q : { ...q, [id]: 1 }));
+      // Selecting a row re-enables its auto-open (clears any manual collapse).
+      if (collapsed.has(id)) {
+        setCollapsed((prev) => {
+          const n = new Set(prev);
+          n.delete(id);
+          return n;
+        });
+      }
+    } else {
+      setPackQty((q) => {
+        const { [id]: _drop, ...rest } = q;
+        return rest;
       });
+      setLastSelectedId((cur) => (cur === id ? null : cur));
     }
+  }
+
+  function setLastQty(delta: number) {
+    if (!lastSelectedId) return;
+    setPackQty((q) => ({
+      ...q,
+      [lastSelectedId]: Math.max(1, (q[lastSelectedId] ?? 1) + delta),
+    }));
   }
   function toggleExpand(id: string, currentlyExpanded: boolean) {
     if (currentlyExpanded) {
@@ -215,9 +238,14 @@ export function GearShelf({
   function clearSelection() {
     setSelected(new Set());
     setCollapsed(new Set());
+    setPackQty({});
+    setLastSelectedId(null);
   }
   function applyPreset(gearIds: string[]) {
-    setSelected(new Set(gearIds.filter((id) => gear[id])));
+    const ids = gearIds.filter((id) => gear[id]);
+    setSelected(new Set(ids));
+    setPackQty(Object.fromEntries(ids.map((id) => [id, 1])));
+    setLastSelectedId(null);
   }
   function resolveAddOns(g: GearItem) {
     return g.addOnIds
@@ -531,6 +559,37 @@ export function GearShelf({
         )}
       </div>
 
+      {/* Pack-quantity stepper for the most recently selected item (above GNB) */}
+      {selecting && !editMode && lastSelectedId && selected.has(lastSelectedId) && gear[lastSelectedId] && (
+        <div
+          className="material shadow-float fixed left-1/2 z-40 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-[var(--material-border)] py-1.5 pl-3.5 pr-1.5"
+          style={{ bottom: "calc(env(safe-area-inset-bottom) + 82px)" }}
+        >
+          <span className="max-w-[128px] truncate text-[13px] font-medium text-secondary">
+            {gear[lastSelectedId].name}
+          </span>
+          <button
+            type="button"
+            aria-label="수량 감소"
+            onClick={() => setLastQty(-1)}
+            className="grid h-8 w-8 touch-manipulation place-items-center rounded-full bg-fill text-label active:opacity-60"
+          >
+            <Minus size={16} />
+          </button>
+          <span className="w-5 text-center tabular text-[15px] font-semibold text-label">
+            {packQty[lastSelectedId] ?? 1}
+          </span>
+          <button
+            type="button"
+            aria-label="수량 증가"
+            onClick={() => setLastQty(1)}
+            className="grid h-8 w-8 touch-manipulation place-items-center rounded-full bg-fill text-label active:opacity-60"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Add-gear FAB (hidden while selecting so the Trip action takes its place) */}
       {!selecting && (
         <button
@@ -581,6 +640,7 @@ export function GearShelf({
       <AddToTripSheet
         open={addTripOpen}
         gearIds={[...selected]}
+        quantities={packQty}
         selectedStats={selectedStats}
         onClose={() => setAddTripOpen(false)}
         onAdded={(tripId) => {
