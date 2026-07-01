@@ -141,6 +141,13 @@ export function TripDetail({
     return computeStats(rows);
   }, [packed, gear, packedQty]);
 
+  // Per-category weight totals (add-ons credited to their parent's category,
+  // same as the donut) — shown under each category group in the packed list.
+  const catTotals = useMemo(
+    () => new Map(stats.byCategory.map((c) => [c.name, c.weightG])),
+    [stats],
+  );
+
   const memo = trip?.memo ?? "";
   useEffect(() => {
     const el = memoRef.current;
@@ -678,6 +685,12 @@ export function TripDetail({
                 </Fragment>
               );
             })}
+            <div className="flex items-baseline justify-end gap-2 pb-0.5 pl-4 pr-10 pt-2">
+              <span className="text-[11px] text-tertiary">합계</span>
+              <span className="tabular text-[13px] font-semibold text-tint">
+                {formatWeightSmart(catTotals.get(major) ?? 0, unit)}
+              </span>
+            </div>
           </section>
         ))}
 
