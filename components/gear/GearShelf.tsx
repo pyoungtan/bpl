@@ -796,6 +796,7 @@ function AddonRow({
       )}
       <span className="shrink-0 tabular text-[13px] text-tertiary">
         {formatWeight(gear.weightG, unit)}
+        {gear.quantity > 1 && <span> ×{gear.quantity}</span>}
       </span>
       <span className="w-6 shrink-0" />
     </button>
