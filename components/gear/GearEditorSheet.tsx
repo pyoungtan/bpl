@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, Minus, Plus, Search, Trash2, X } from "lucide-react";
+import { ChevronDown, Plus, Search, Trash2, X } from "lucide-react";
 import type { GearItem, WeightUnit } from "@/lib/types";
 import { useAppStore } from "@/lib/store";
 import { fromGrams, toGrams, WEIGHT_UNITS } from "@/lib/units";
@@ -86,7 +86,7 @@ export function GearEditorSheet({
   const [minor, setMinor] = useState("");
   const [unit, setUnit] = useState<WeightUnit>(displayUnit);
   const [weight, setWeight] = useState("");
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState("1");
   const [price, setPrice] = useState("");
   const [worn, setWorn] = useState(false);
   const [consumable, setConsumable] = useState(false);
@@ -113,7 +113,7 @@ export function GearEditorSheet({
       setMajor(gear.majorCategory);
       setMinor(gear.minorCategory ?? "");
       setWeight(gear.weightG ? String(round3(fromGrams(gear.weightG, displayUnit))) : "");
-      setQty(gear.quantity);
+      setQty(String(gear.quantity));
       setPrice(gear.price != null ? String(gear.price) : "");
       setWorn(!!gear.worn);
       setConsumable(!!gear.consumable);
@@ -127,7 +127,7 @@ export function GearEditorSheet({
       setMajor("");
       setMinor("");
       setWeight("");
-      setQty(1);
+      setQty("1");
       setPrice("");
       setWorn(false);
       setConsumable(false);
@@ -211,7 +211,7 @@ export function GearEditorSheet({
       majorCategory: major.trim() || "기타",
       minorCategory: minor.trim() || undefined,
       weightG,
-      quantity: Math.max(1, Math.round(qty) || 1),
+      quantity: Math.max(1, parseInt(qty, 10) || 1),
       price: priceNum,
       worn,
       consumable,
@@ -371,26 +371,17 @@ export function GearEditorSheet({
             />
           </div>
         </FieldRow>
-        <FieldRow label="수량" divider>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setQty((q) => Math.max(1, q - 1))}
-              aria-label="수량 감소"
-              className="grid h-8 w-8 place-items-center rounded-full bg-fill text-label active:opacity-60"
-            >
-              <Minus size={16} />
-            </button>
-            <span className="w-8 text-center tabular text-[16px] text-label">{qty}</span>
-            <button
-              type="button"
-              onClick={() => setQty((q) => q + 1)}
-              aria-label="수량 증가"
-              className="grid h-8 w-8 place-items-center rounded-full bg-fill text-label active:opacity-60"
-            >
-              <Plus size={16} />
-            </button>
-          </div>
+        <FieldRow label="기준 수량" divider>
+          <input
+            className={cn(inputCls, "tabular")}
+            type="number"
+            inputMode="numeric"
+            value={qty}
+            onChange={(e) => setQty(e.target.value.replace(/[^\d]/g, ""))}
+            placeholder="1"
+            min={1}
+            step={1}
+          />
         </FieldRow>
         <FieldRow label={`가격 (${currency})`} divider>
           <input

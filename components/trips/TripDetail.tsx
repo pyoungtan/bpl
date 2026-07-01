@@ -114,18 +114,32 @@ export function TripDetail({
         : [],
     [trip, gear, gearOrder, nestedSet],
   );
-  // Stats count every packed item (parents + nested add-ons).
-  const stats = useMemo(
-    () =>
-      computeStats(
-        packed
-          .map((p) => ({ gear: gear[p.gearId], quantity: p.quantity }))
-          .filter((r): r is { gear: GearItem; quantity: number } =>
-            Boolean(r.gear),
-          ),
-      ),
-    [packed, gear],
-  );
+  // Stats count every packed item (parents + nested add-ons). A packed add-on
+  // is logically part of its parent, so its weight is credited to the parent's
+  // category (not the add-on's own) in the donut + breakdown.
+  const stats = useMemo(() => {
+    const parentCat = new Map<string, string>();
+    for (const p of packed) {
+      const g = gear[p.gearId];
+      if (!g) continue;
+      for (const aid of g.addOnIds) {
+        if (packedQty.has(aid)) parentCat.set(aid, g.majorCategory);
+      }
+    }
+    const rows = packed
+      .map((p) => {
+        const g = gear[p.gearId];
+        if (!g) return null;
+        const cat = parentCat.get(p.gearId);
+        return {
+          gear:
+            cat && cat !== g.majorCategory ? { ...g, majorCategory: cat } : g,
+          quantity: p.quantity,
+        };
+      })
+      .filter((r): r is { gear: GearItem; quantity: number } => Boolean(r));
+    return computeStats(rows);
+  }, [packed, gear, packedQty]);
 
   const memo = trip?.memo ?? "";
   useEffect(() => {
