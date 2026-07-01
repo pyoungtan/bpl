@@ -20,6 +20,30 @@ export interface SyncConflict {
   cloud: SyncSummary;
 }
 
+/** Turn a Supabase AuthError / thrown value into a human-readable string that
+ *  includes the status code and name — so an empty `.message` (which otherwise
+ *  renders as "{}") still tells us what actually failed. Also logs the raw
+ *  error so it can be inspected from the friend's device console. */
+function describeAuthError(e: unknown, fallback: string): string {
+  if (typeof console !== "undefined") console.error("[cloud auth]", e);
+  if (!e) return fallback;
+  if (typeof e === "string") return e || fallback;
+  const o = e as {
+    message?: string;
+    error_description?: string;
+    msg?: string;
+    status?: number;
+    code?: number | string;
+    name?: string;
+  };
+  const raw = (o.message || o.error_description || o.msg || "").trim();
+  const status = o.status ?? o.code;
+  // A blank or "{}" message means the server returned an empty error body;
+  // surface the status/name instead so it isn't a mystery.
+  const base = raw && raw !== "{}" ? raw : o.name || fallback;
+  return status != null ? `${base} (${status})` : base;
+}
+
 function pickData(s: Store): AppData {
   return {
     gear: s.gear,
@@ -263,11 +287,9 @@ export function useCloudSync(): CloudState {
         email,
         options: { emailRedirectTo: window.location.origin },
       });
-      return { error: error?.message ?? null };
+      return { error: error ? describeAuthError(error, "로그인 요청 실패") : null };
     } catch (e) {
-      return {
-        error: e instanceof Error ? e.message : "로그인 요청에 실패했어요.",
-      };
+      return { error: describeAuthError(e, "로그인 요청에 실패했어요.") };
     }
   }, []);
 
@@ -281,11 +303,9 @@ export function useCloudSync(): CloudState {
         token: token.trim(),
         type: "email",
       });
-      return { error: error?.message ?? null };
+      return { error: error ? describeAuthError(error, "코드 확인 실패") : null };
     } catch (e) {
-      return {
-        error: e instanceof Error ? e.message : "코드 확인에 실패했어요.",
-      };
+      return { error: describeAuthError(e, "코드 확인에 실패했어요.") };
     }
   }, []);
 
