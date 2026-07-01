@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-// Apple touch / home-screen icon — light gray ground with a centered mountain.
+// Apple touch / home-screen icon — white compass star centered on #FE4900.
 // iOS applies its own rounded-corner mask, so the background is full-bleed.
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
@@ -15,12 +15,14 @@ export default function AppleIcon() {
           height: "100%",
           alignItems: "center",
           justifyContent: "center",
-          background: "#ecebe6",
+          background: "#FE4900",
         }}
       >
-        <svg width="118" height="118" viewBox="0 0 64 64">
-          <path d="M15 47 L39 16 L60 47 Z" fill="#1f1e1b" />
-          <path d="M4 47 L24 25 L44 47 Z" fill="#cc785c" />
+        <svg width="118" height="118" viewBox="0 0 512 512">
+          <path
+            fill="#ffffff"
+            d="M 256 1.5273438 L 228.91211 207.77539 L 137.86719 137.86719 L 207.77539 228.91211 L 1.5273438 256 L 207.77539 283.08789 L 137.86719 374.13281 L 228.91211 304.22461 L 256 510.47266 L 283.08789 304.22461 L 374.13281 374.13281 L 304.22461 283.08789 L 510.47266 256 L 304.22461 228.91211 L 374.13281 137.86719 L 283.08789 207.77539 L 256 1.5273438 z"
+          />
         </svg>
       </div>
     ),
