@@ -74,7 +74,7 @@ export function TripDetail({
   const setEntryQuantity = useAppStore((s) => s.setEntryQuantity);
   const toggleChecked = useAppStore((s) => s.toggleTripChecked);
 
-  const [memoOpen, setMemoOpen] = useState(true);
+  const [memoOpen, setMemoOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("none");
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
@@ -685,11 +685,14 @@ export function TripDetail({
                 </Fragment>
               );
             })}
-            <div className="flex items-baseline justify-end gap-2 pb-0.5 pl-4 pr-10 pt-2">
-              <span className="text-[11px] text-tertiary">합계</span>
-              <span className="tabular text-[13px] font-semibold text-tint">
+            {/* Mirror the item row layout so this subtotal aligns exactly
+                under the per-item weights. */}
+            <div className="flex items-center gap-2.5 px-4 pb-0.5 pt-2">
+              <span className="flex-1" />
+              <span className="shrink-0 tabular text-[13px] font-semibold text-tint">
                 {formatWeightSmart(catTotals.get(major) ?? 0, unit)}
               </span>
+              <span className="w-6 shrink-0" />
             </div>
           </section>
         ))}
