@@ -7,6 +7,7 @@ import { NavIsland, type TabKey } from "./NavIsland";
 import { GearShelf } from "./gear/GearShelf";
 import { TripsTab } from "./trips/TripsTab";
 import { SettingsSheet } from "./SettingsSheet";
+import { PullToRefresh } from "./PullToRefresh";
 
 export function AppShell() {
   const hydrated = useHydrated();
@@ -42,6 +43,7 @@ export function AppShell() {
 
   return (
     <div className="mx-auto min-h-dvh w-full max-w-2xl">
+      <PullToRefresh />
       {tab === "shelf" ? (
         <GearShelf
           onOpenSettings={() => setSettingsOpen(true)}

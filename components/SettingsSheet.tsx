@@ -231,12 +231,15 @@ export function SettingsSheet({
                     variant="filled"
                     onClick={handleSignIn}
                     disabled={!email.includes("@") || sending}
-                    className="shrink-0"
+                    className="relative shrink-0"
                   >
-                    {sending ? (
-                      <Loader2 size={18} className="animate-spin" />
-                    ) : (
-                      "링크 받기"
+                    {/* Keep the label in the layout (invisible) so the button
+                        width never changes when the spinner overlays it. */}
+                    <span className={cn(sending && "invisible")}>링크 받기</span>
+                    {sending && (
+                      <span className="absolute inset-0 grid place-items-center">
+                        <Loader2 size={18} className="animate-spin" />
+                      </span>
                     )}
                   </Button>
                 </div>
@@ -300,9 +303,14 @@ export function SettingsSheet({
               variant="filled"
               onClick={handleImport}
               disabled={!lpUrl.trim() || lpLoading}
-              className="shrink-0"
+              className="relative shrink-0"
             >
-              {lpLoading ? <Loader2 size={18} className="animate-spin" /> : "가져오기"}
+              <span className={cn(lpLoading && "invisible")}>가져오기</span>
+              {lpLoading && (
+                <span className="absolute inset-0 grid place-items-center">
+                  <Loader2 size={18} className="animate-spin" />
+                </span>
+              )}
             </Button>
           </div>
           {lpMsg && (

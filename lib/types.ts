@@ -41,6 +41,11 @@ export interface Trip {
   /** ISO start/end dates (yyyy-mm-dd) for a date range. */
   startDate?: string;
   endDate?: string;
+  /** Free-text location for the embedded map (place name or address). */
+  place?: string;
+  /** Geocoded coordinates for `place` (cached so we don't re-geocode). */
+  lat?: number;
+  lng?: number;
   memo: string;
   packed: PackedEntry[];
   /** gearIds the user has checked off as packed (gear-check mode). */

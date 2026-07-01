@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   CircleCheck,
   ListChecks,
+  MapPin,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -45,6 +46,15 @@ function groupByMajor(
   return [...map.entries()];
 }
 
+/** Keyless OpenStreetMap preview centred on a point, with a marker. Google
+ *  refuses to be framed (X-Frame-Options), so we render OSM inline and link out
+ *  to Google Maps on tap. */
+function osmEmbedSrc(lat: number, lng: number) {
+  const d = 0.04; // bbox half-size in degrees → a regional/park-level view
+  const bbox = [lng - d, lat - d, lng + d, lat + d].join(",");
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`;
+}
+
 export function TripDetail({
   tripId,
   onBack,
@@ -67,6 +77,7 @@ export function TripDetail({
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [geoState, setGeoState] = useState<"idle" | "loading" | "error">("idle");
   const memoRef = useRef<HTMLTextAreaElement>(null);
   const backSwipe = useRef<{ x: number; y: number; ok: boolean } | null>(null);
 
@@ -119,6 +130,54 @@ export function TripDetail({
       el.style.height = `${el.scrollHeight}px`;
     }
   }, [memo, memoOpen]);
+
+  // Geocode the free-text place → coordinates (debounced), cached on the trip so
+  // reopening doesn't refetch. Cleared when the place is emptied.
+  const place = trip?.place ?? "";
+  const geoResolvedFor = useRef<string | null>(null);
+  if (geoResolvedFor.current === null) {
+    geoResolvedFor.current =
+      trip && trip.lat != null && trip.lng != null ? place : "";
+  }
+  useEffect(() => {
+    const q = place.trim();
+    if (!q) {
+      geoResolvedFor.current = "";
+      setGeoState("idle");
+      const cur = useAppStore.getState().trips[tripId];
+      if (cur && (cur.lat != null || cur.lng != null)) {
+        updateTrip(tripId, { lat: undefined, lng: undefined });
+      }
+      return;
+    }
+    if (q === geoResolvedFor.current) return; // already have coords for this text
+    const ctrl = new AbortController();
+    setGeoState("loading");
+    const timer = window.setTimeout(() => {
+      fetch(`/api/geocode?q=${encodeURIComponent(q)}`, { signal: ctrl.signal })
+        .then(async (res) => {
+          const data = await res.json();
+          if (
+            res.ok &&
+            typeof data.lat === "number" &&
+            typeof data.lng === "number"
+          ) {
+            geoResolvedFor.current = q;
+            setGeoState("idle");
+            updateTrip(tripId, { lat: data.lat, lng: data.lng });
+          } else {
+            setGeoState("error");
+          }
+        })
+        .catch(() => {
+          if (!ctrl.signal.aborted) setGeoState("error");
+        });
+    }, 700);
+    return () => {
+      ctrl.abort();
+      window.clearTimeout(timer);
+    };
+  }, [place, tripId, updateTrip]);
 
   if (!trip) return null;
 
@@ -343,6 +402,15 @@ export function TripDetail({
               </span>
             )}
           </div>
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <MapPin size={15} className="shrink-0 text-tertiary" />
+            <input
+              value={trip.place ?? ""}
+              onChange={(e) => updateTrip(tripId, { place: e.target.value })}
+              placeholder="장소 (지도에 표시)"
+              className="min-w-0 flex-1 bg-transparent text-[14px] text-secondary outline-none placeholder:text-tertiary"
+            />
+          </div>
         </div>
 
         {/* Collapsible memo — full text when expanded */}
@@ -392,6 +460,50 @@ export function TripDetail({
             </div>
           </div>
         </div>
+
+        {place.trim() && (
+          <div className="overflow-hidden rounded-[14px] bg-card">
+            {trip.lat != null && trip.lng != null ? (
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  place,
+                )}`}
+                target="_blank"
+                rel="noreferrer"
+                className="relative block active:opacity-90"
+              >
+                <iframe
+                  title="지도"
+                  src={osmEmbedSrc(trip.lat, trip.lng)}
+                  className="pointer-events-none block h-44 w-full"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+                <span className="material shadow-float absolute left-2 top-2 flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-medium text-tint">
+                  <MapPin size={12} /> Google 지도
+                </span>
+              </a>
+            ) : (
+              <div className="flex h-24 items-center justify-center px-4 text-center text-[13px] text-secondary">
+                {geoState === "error" ? (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                      place,
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-tint active:opacity-60"
+                  >
+                    위치를 찾지 못했어요 · Google 지도에서 열기
+                  </a>
+                ) : (
+                  "위치를 찾는 중…"
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Packed gear — flat list */}
