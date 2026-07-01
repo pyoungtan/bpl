@@ -1,6 +1,7 @@
 "use client";
 
 import { Backpack, Map } from "lucide-react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/cn";
 
 export type TabKey = "shelf" | "trips";
@@ -33,11 +34,24 @@ export function NavIsland({
               aria-label={t.label}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "grid h-11 w-11 place-items-center rounded-full transition active:scale-90",
-                active ? "bg-tint-soft text-tint" : "text-secondary",
+                "relative grid h-11 w-11 place-items-center rounded-full transition-colors active:scale-90",
+                active ? "text-tint" : "text-secondary",
               )}
             >
-              {t.icon}
+              {active && (
+                <motion.span
+                  layoutId="navPill"
+                  className="absolute inset-0 rounded-full bg-tint-soft"
+                  transition={{ type: "spring", stiffness: 480, damping: 38 }}
+                />
+              )}
+              <motion.span
+                className="relative z-10 grid place-items-center"
+                animate={{ scale: active ? 1.06 : 1 }}
+                transition={{ type: "spring", stiffness: 480, damping: 30 }}
+              >
+                {t.icon}
+              </motion.span>
             </button>
           );
         })}

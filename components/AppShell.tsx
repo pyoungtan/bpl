@@ -49,21 +49,29 @@ export function AppShell() {
   return (
     <div className="mx-auto min-h-dvh w-full max-w-2xl">
       <PullToRefresh />
-      {tab === "shelf" ? (
-        <GearShelf
-          onOpenSettings={() => setSettingsOpen(true)}
-          onOpenTrip={(id) => {
-            setTripToOpen(id);
-            setTab("trips");
-          }}
-        />
-      ) : (
-        <TripsTab
-          onOpenSettings={() => setSettingsOpen(true)}
-          openTripId={tripToOpen}
-          onConsumeOpen={() => setTripToOpen(null)}
-        />
-      )}
+      {/* Re-keyed per tab so the CSS slide-in replays on switch. The animation
+          ends at transform:none (fill-mode none), so sticky headers / fixed
+          FABs inside each tab are unaffected at rest. */}
+      <div
+        key={tab}
+        className={cn(tab === "trips" ? "tab-from-right" : "tab-from-left")}
+      >
+        {tab === "shelf" ? (
+          <GearShelf
+            onOpenSettings={() => setSettingsOpen(true)}
+            onOpenTrip={(id) => {
+              setTripToOpen(id);
+              setTab("trips");
+            }}
+          />
+        ) : (
+          <TripsTab
+            onOpenSettings={() => setSettingsOpen(true)}
+            openTripId={tripToOpen}
+            onConsumeOpen={() => setTripToOpen(null)}
+          />
+        )}
+      </div>
       <NavIsland tab={tab} onChange={setTab} />
       <SettingsSheet
         open={settingsOpen}

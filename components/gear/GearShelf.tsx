@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   closestCenter,
   useSensor,
@@ -15,6 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
   Bookmark,
@@ -404,7 +406,17 @@ export function GearShelf({
       </div>
 
       <div className="pt-1">
-        <DndArea enabled={editMode} sensors={sensors} onDragEnd={handleDragEnd}>
+        <DndArea
+          enabled={editMode}
+          sensors={sensors}
+          onDragEnd={handleDragEnd}
+          renderOverlay={(id) => {
+            const g = gear[id];
+            return g ? (
+              <GearRow gear={g} unit={unit} editMode topHairline={false} onTap={() => {}} />
+            ) : null;
+          }}
+        >
         {visibleGroups.map(([major, items]) => (
           <section key={major}>
             <div className="flex items-baseline justify-between px-4 pb-1 pt-5">
@@ -473,37 +485,47 @@ export function GearShelf({
                       swipeOpenId={swipeOpenId}
                       onSwipeOpenChange={setSwipeOpenId}
                     />
-                    {isExpanded && addOns.length > 0 && (
-                      <div className="bg-[color-mix(in_srgb,var(--tint)_5%,transparent)]">
-                        {addOns.map((a) => (
-                          <AddonRow
-                            key={a.id}
-                            gear={a}
-                            unit={unit}
-                            selected={selected.has(a.id)}
-                            packCount={
-                              selected.has(a.id) ? packQty[a.id] ?? 1 : undefined
-                            }
-                            onTap={() => {
-                              if (swipeOpenId) {
-                                setSwipeOpenId(null);
-                                return;
+                    <AnimatePresence initial={false}>
+                      {isExpanded && addOns.length > 0 && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.24, ease: [0.22, 0.61, 0.36, 1] }}
+                          className="overflow-hidden bg-[color-mix(in_srgb,var(--tint)_5%,transparent)]"
+                        >
+                          {addOns.map((a) => (
+                            <AddonRow
+                              key={a.id}
+                              gear={a}
+                              unit={unit}
+                              selected={selected.has(a.id)}
+                              packCount={
+                                selected.has(a.id) ? packQty[a.id] ?? 1 : undefined
                               }
-                              toggleSelect(a.id);
-                            }}
-                            onNotePeek={(rect) =>
-                              setPeek({
-                                note: a.note ?? "",
-                                priceText:
-                                  a.price != null ? formatPrice(a.price, currency) : null,
-                                rect,
-                              })
-                            }
-                            onNotePeekEnd={() => setPeek(null)}
-                          />
-                        ))}
-                      </div>
-                    )}
+                              onTap={() => {
+                                if (swipeOpenId) {
+                                  setSwipeOpenId(null);
+                                  return;
+                                }
+                                toggleSelect(a.id);
+                              }}
+                              onNotePeek={(rect) =>
+                                setPeek({
+                                  note: a.note ?? "",
+                                  priceText:
+                                    a.price != null
+                                      ? formatPrice(a.price, currency)
+                                      : null,
+                                  rect,
+                                })
+                              }
+                              onNotePeekEnd={() => setPeek(null)}
+                            />
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </Fragment>
                 );
               })
@@ -687,21 +709,36 @@ function DndArea({
   enabled,
   sensors,
   onDragEnd,
+  renderOverlay,
   children,
 }: {
   enabled: boolean;
   sensors: ReturnType<typeof useSensors>;
   onDragEnd: (e: DragEndEvent) => void;
+  renderOverlay: (id: string) => React.ReactNode;
   children: React.ReactNode;
 }) {
+  const [activeId, setActiveId] = useState<string | null>(null);
   if (!enabled) return <>{children}</>;
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
-      onDragEnd={onDragEnd}
+      onDragStart={(e) => setActiveId(String(e.active.id))}
+      onDragEnd={(e) => {
+        setActiveId(null);
+        onDragEnd(e);
+      }}
+      onDragCancel={() => setActiveId(null)}
     >
       {children}
+      <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
+        {activeId ? (
+          <div className="shadow-float rounded-[10px] bg-card">
+            {renderOverlay(activeId)}
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }
@@ -821,12 +858,18 @@ function SortableGearRow({
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.7 : 1,
+    // Hide the in-list row while dragging; the DragOverlay renders the floating
+    // copy that follows the pointer smoothly across categories. A faint tint
+    // marks the gap it will drop into.
+    opacity: isDragging ? 0 : 1,
     position: "relative",
-    zIndex: isDragging ? 10 : undefined,
   };
   return (
-    <div ref={setNodeRef} style={style} className={cn(isDragging && "bg-card")}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(isDragging && "bg-tint-soft")}
+    >
       <GearRow
         gear={gear}
         unit={unit}
