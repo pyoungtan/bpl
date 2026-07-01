@@ -1,12 +1,14 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown,
   ChevronLeft,
   CircleCheck,
   ListChecks,
   MapPin,
+  Minus,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -69,11 +71,14 @@ export function TripDetail({
   const updateTrip = useAppStore((s) => s.updateTrip);
   const deleteTrip = useAppStore((s) => s.deleteTrip);
   const removeEntry = useAppStore((s) => s.removeEntryFromTrip);
+  const setEntryQuantity = useAppStore((s) => s.setEntryQuantity);
   const toggleChecked = useAppStore((s) => s.toggleTripChecked);
 
   const [memoOpen, setMemoOpen] = useState(true);
+  const [catOpen, setCatOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("none");
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -219,12 +224,16 @@ export function TripDetail({
     const { nested, topHairline, hasAddOns, expanded, major } = opts;
     const checked = checkedSet.has(g.id);
     const dim = isChecking && checked;
+    const selected = !isChecking && selectedId === g.id;
     return (
+      <Fragment key={g.id}>
       <SwipeRow
-        key={g.id}
         id={g.id}
         openId={swipeOpenId}
-        onOpenChange={setSwipeOpenId}
+        onOpenChange={(id) => {
+          setSwipeOpenId(id);
+          if (id) setSelectedId(null); // don't show swipe actions + panel at once
+        }}
         swipeDisabled={isChecking}
         rightWidth={56}
         topHairline={topHairline}
@@ -239,11 +248,16 @@ export function TripDetail({
         )}
       >
         <div
-          onClick={isChecking ? () => toggleChecked(tripId, g.id) : undefined}
+          onClick={
+            isChecking
+              ? () => toggleChecked(tripId, g.id)
+              : () => setSelectedId((cur) => (cur === g.id ? null : g.id))
+          }
           className={cn(
             "flex w-full items-center gap-2.5 py-2.5 text-left transition",
             nested ? "pl-9 pr-4" : "px-4",
-            isChecking && "cursor-pointer active:bg-fill",
+            "cursor-pointer active:bg-fill",
+            selected && "bg-fill",
             dim && "opacity-40",
           )}
         >
@@ -304,6 +318,59 @@ export function TripDetail({
           </div>
         </div>
       </SwipeRow>
+      <AnimatePresence initial={false}>
+        {selected && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="overflow-hidden bg-fill"
+          >
+            <div
+              className={cn(
+                "flex items-center justify-between gap-3 py-2.5",
+                nested ? "pl-9 pr-4" : "px-4",
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  aria-label="수량 감소"
+                  disabled={quantity <= 1}
+                  onClick={() => setEntryQuantity(tripId, g.id, quantity - 1)}
+                  className="grid h-8 w-8 place-items-center rounded-full bg-bg text-label shadow-float active:opacity-60 disabled:opacity-30"
+                >
+                  <Minus size={16} />
+                </button>
+                <span className="w-8 text-center tabular text-[16px] font-medium text-label">
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  aria-label="수량 증가"
+                  onClick={() => setEntryQuantity(tripId, g.id, quantity + 1)}
+                  className="grid h-8 w-8 place-items-center rounded-full bg-bg text-label shadow-float active:opacity-60"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  removeEntry(tripId, g.id);
+                  setSelectedId(null);
+                }}
+                className="flex items-center gap-1.5 text-[14px] font-medium text-red active:opacity-60"
+              >
+                <Trash2 size={16} />
+                트립에서 삭제
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      </Fragment>
     );
   }
 
@@ -350,6 +417,7 @@ export function TripDetail({
             type="button"
             onClick={() => {
               setSwipeOpenId(null);
+              setSelectedId(null);
               setMode((m) => (m === "check" ? "none" : "check"));
             }}
             aria-label="장비 점검"
@@ -443,9 +511,14 @@ export function TripDetail({
           )}
         </div>
 
-        {/* Summary */}
-        <div className="rounded-[14px] bg-card p-4">
-          <div className="flex items-center gap-4">
+        {/* Summary — tap to expand the per-category weight breakdown */}
+        <div className="overflow-hidden rounded-[14px] bg-card">
+          <button
+            type="button"
+            onClick={() => setCatOpen((o) => !o)}
+            aria-expanded={catOpen}
+            className="flex w-full items-center gap-4 p-4 text-left active:bg-fill"
+          >
             <div className="relative grid shrink-0 place-items-center">
               <Donut segments={stats.byCategory} size={84} stroke={12} />
               <span className="absolute tabular text-[12px] font-semibold text-label">
@@ -458,7 +531,53 @@ export function TripDetail({
               <Stat label="소모" value={formatWeightSmart(stats.consumableG, unit)} color="var(--orange)" />
               <Stat label="총 무게" value={formatWeightSmart(stats.totalG, unit)} strong />
             </div>
-          </div>
+            <ChevronDown
+              size={18}
+              className={cn(
+                "shrink-0 self-center text-tertiary transition-transform",
+                catOpen && "rotate-180",
+              )}
+            />
+          </button>
+          <AnimatePresence initial={false}>
+            {catOpen && stats.byCategory.length > 0 && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.22, ease: "easeInOut" }}
+                className="overflow-hidden"
+              >
+                <div className="border-t border-separator px-4 py-1.5">
+                  {stats.byCategory.map((c) => {
+                    const pct = stats.totalG
+                      ? Math.round((c.weightG / stats.totalG) * 100)
+                      : 0;
+                    return (
+                      <div
+                        key={c.name}
+                        className="flex items-center gap-2.5 py-1.5"
+                      >
+                        <span
+                          className="h-2.5 w-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: c.color }}
+                        />
+                        <span className="min-w-0 flex-1 truncate text-[14px] text-label">
+                          {c.name}
+                        </span>
+                        <span className="shrink-0 tabular text-[13px] text-secondary">
+                          {formatWeightSmart(c.weightG, unit)}
+                        </span>
+                        <span className="w-11 shrink-0 text-right tabular text-[13px] font-medium text-tint">
+                          {pct}%
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {place.trim() && (

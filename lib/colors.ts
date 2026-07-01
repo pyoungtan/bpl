@@ -1,20 +1,21 @@
 /**
- * Warm, editorial category palette tuned to the cream/coral Anthropic system.
+ * Fresh, crisp category palette tuned to the cream/coral Anthropic system —
+ * brighter and cleaner than the earlier earth-tone set, while staying harmonious.
  * Coral (#cc785c) is intentionally excluded — it is reserved for primary CTAs.
  */
 export const CATEGORY_PALETTE = [
-  "#5db8a6", // teal
-  "#e8a55a", // amber
-  "#8b6f5c", // walnut
-  "#6c8e7f", // sage
-  "#b5654a", // terracotta
-  "#5f7a8a", // slate blue
-  "#9c7a8a", // dusty plum
-  "#c19a6b", // tan
-  "#84a98c", // muted green
-  "#a98467", // khaki
-  "#7b8b9a", // dusty blue
-  "#c4915c", // ochre
+  "#34b3a0", // aqua teal
+  "#f2a93b", // marigold
+  "#6a9fd4", // sky blue
+  "#83c26b", // fresh green
+  "#b184c8", // orchid
+  "#4fc0b0", // mint
+  "#f0b849", // gold
+  "#7d8add", // periwinkle
+  "#d98bb0", // rose
+  "#9ac955", // lime
+  "#58a7cf", // cerulean
+  "#a9c17a", // soft olive
 ];
 
 /** Deterministically map a category name to a stable palette color. */

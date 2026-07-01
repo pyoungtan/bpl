@@ -20,14 +20,19 @@ const ENTITIES: Record<string, string> = {
   gt: ">",
   quot: '"',
   apos: "'",
-  "#39": "'",
   nbsp: " ",
 };
 
 function decode(s: string): string {
   return s
     .replace(/<[^>]*>/g, " ") // strip any nested tags (links etc.)
-    .replace(/&(#?\w+);/g, (_, e) => ENTITIES[e] ?? _)
+    // Numeric character references — hex (&#x2F;) and decimal (&#39;). LighterPack
+    // HTML-escapes slashes as &#x2F;, which the named-entity map alone can't decode.
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) =>
+      String.fromCodePoint(parseInt(h, 16)),
+    )
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+    .replace(/&(\w+);/g, (_, e) => ENTITIES[e] ?? `&${e};`)
     .replace(/\s+/g, " ")
     .trim();
 }

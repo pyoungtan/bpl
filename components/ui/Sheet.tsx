@@ -38,6 +38,32 @@ export function Sheet({
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const dragControls = useDragControls();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // When a field inside the sheet gains focus, bring it into view within the
+  // sheet's own scroll area. iOS doesn't reliably scroll fields above the
+  // keyboard on its own, so fields low in a long form can stay hidden — the
+  // user otherwise has to scroll by hand. Delay so the keyboard has animated in.
+  useEffect(() => {
+    if (!open) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    let timer = 0;
+    const onFocusIn = (e: FocusEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (!t || !/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(
+        () => t.scrollIntoView({ block: "center", behavior: "smooth" }),
+        300,
+      );
+    };
+    el.addEventListener("focusin", onFocusIn);
+    return () => {
+      window.clearTimeout(timer);
+      el.removeEventListener("focusin", onFocusIn);
+    };
+  }, [open]);
 
   // Lock the document scroll while open so the page behind the sheet can't
   // drift — including when the keyboard opens for a field inside the sheet
@@ -143,7 +169,10 @@ export function Sheet({
                 <span />
               )}
             </div>
-            <div className="grow overflow-y-auto overscroll-contain py-4">
+            <div
+              ref={scrollRef}
+              className="grow overflow-y-auto overscroll-contain py-4"
+            >
               {children}
             </div>
           </motion.div>

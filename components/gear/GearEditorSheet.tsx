@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Minus, Plus, Search, Trash2, X } from "lucide-react";
 import type { GearItem, WeightUnit } from "@/lib/types";
 import { useAppStore } from "@/lib/store";
@@ -98,7 +98,7 @@ export function GearEditorSheet({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [addingMajor, setAddingMajor] = useState(false);
   const [newMajor, setNewMajor] = useState("");
-  const addonSearchRef = useRef<HTMLDivElement>(null);
+  const [brandFocused, setBrandFocused] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -165,6 +165,27 @@ export function GearEditorSheet({
     [allGear],
   );
 
+  // Brands already used across the catalog — suggested as you type so the same
+  // brand isn't re-entered with slightly different spelling/casing.
+  const brands = useMemo(
+    () =>
+      [
+        ...new Set(
+          Object.values(allGear)
+            .map((g) => g.brand?.trim())
+            .filter((b): b is string => Boolean(b)),
+        ),
+      ].sort((a, b) => a.localeCompare(b)),
+    [allGear],
+  );
+  const brandMatches = useMemo(() => {
+    const q = brand.trim().toLowerCase();
+    if (!q) return [];
+    return brands
+      .filter((b) => b.toLowerCase().includes(q) && b.toLowerCase() !== q)
+      .slice(0, 6);
+  }, [brands, brand]);
+
   const addonResults = useMemo(() => {
     const qq = addonQuery.trim().toLowerCase();
     const exclude = new Set([gear?.id, ...addonIds].filter(Boolean) as string[]);
@@ -181,7 +202,8 @@ export function GearEditorSheet({
   }, [addonQuery, gearOrder, allGear, addonIds, gear]);
 
   function handleSave() {
-    const weightG = toGrams(parseFloat(weight) || 0, unit);
+    // Canonical grams carry at most one decimal place (0.1 g resolution).
+    const weightG = Math.round(toGrams(parseFloat(weight) || 0, unit) * 10) / 10;
     const priceNum = price.trim() === "" ? undefined : parseFloat(price) || 0;
     const patch: Partial<GearItem> = {
       name: name.trim() || "새 장비",
@@ -230,12 +252,39 @@ export function GearEditorSheet({
           />
         </FieldRow>
         <FieldRow label="브랜드" divider>
-          <input
-            className={inputCls}
-            value={brand}
-            onChange={(e) => setBrand(e.target.value)}
-            placeholder="예: Osprey"
-          />
+          <div className="relative">
+            <input
+              className={inputCls}
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              onFocus={() => setBrandFocused(true)}
+              // Delay so a tap on a suggestion (below) registers before blur hides it.
+              onBlur={() => window.setTimeout(() => setBrandFocused(false), 120)}
+              placeholder="예: Osprey"
+            />
+            {brandFocused && brandMatches.length > 0 && (
+              <div className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-[12px] bg-card shadow-float ring-1 ring-separator">
+                {brandMatches.map((b, i) => (
+                  <button
+                    key={b}
+                    type="button"
+                    // Commit before the input's blur fires.
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setBrand(b);
+                      setBrandFocused(false);
+                    }}
+                    className={cn(
+                      "flex w-full items-center px-3.5 py-2.5 text-left text-[15px] text-label active:bg-fill",
+                      i > 0 && HAIR,
+                    )}
+                  >
+                    {b}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </FieldRow>
         <FieldRow label="대분류" divider>
           <div className="flex flex-wrap gap-1.5 pt-0.5">
@@ -409,26 +458,12 @@ export function GearEditorSheet({
               );
             })}
 
-            <div
-              ref={addonSearchRef}
-              className="flex h-10 items-center gap-2.5 rounded-[12px] bg-fill px-3.5"
-            >
+            <div className="flex h-10 items-center gap-2.5 rounded-[12px] bg-fill px-3.5">
               <Search size={16} className="shrink-0 text-tertiary" />
               <input
                 className="min-w-0 flex-1 bg-transparent text-[16px] text-label outline-none placeholder:text-tertiary"
                 value={addonQuery}
                 onChange={(e) => setAddonQuery(e.target.value)}
-                onFocus={() => {
-                  // Bring the search box to the top so results are clearly visible.
-                  window.setTimeout(
-                    () =>
-                      addonSearchRef.current?.scrollIntoView({
-                        block: "start",
-                        behavior: "smooth",
-                      }),
-                    120,
-                  );
-                }}
                 placeholder="검색하거나 아래에서 선택"
               />
               {addonQuery && (

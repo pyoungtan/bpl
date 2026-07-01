@@ -20,7 +20,7 @@ export function fromGrams(grams: number, unit: WeightUnit): number {
 function decimalsFor(unit: WeightUnit): number {
   switch (unit) {
     case "g":
-      return 0;
+      return 1; // grams carry up to one decimal (e.g. 73.5 g)
     case "kg":
       return 2;
     case "oz":
@@ -30,7 +30,8 @@ function decimalsFor(unit: WeightUnit): number {
   }
 }
 
-/** Format a gram value in the given unit, e.g. (1234, "kg") -> "1.23 kg". */
+/** Format a gram value in the given unit, e.g. (1234, "kg") -> "1.23 kg". Grams
+ *  trim a trailing ".0" so whole numbers stay clean (1100 g, not 1100.0 g). */
 export function formatWeight(
   grams: number,
   unit: WeightUnit,
@@ -40,7 +41,7 @@ export function formatWeight(
   const decimals = decimalsFor(unit);
   const value = fromGrams(grams, unit);
   const str = value.toLocaleString(undefined, {
-    minimumFractionDigits: decimals,
+    minimumFractionDigits: unit === "g" ? 0 : decimals,
     maximumFractionDigits: decimals,
   });
   return withUnit ? `${str} ${unit}` : str;
@@ -56,7 +57,8 @@ export function formatWeightSmart(grams: number, unit: WeightUnit): string {
     return `${kg.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`;
   }
   if ((unit === "g" || unit === "kg") && grams < 1000) {
-    return `${Math.round(grams).toLocaleString()} g`;
+    const v = Math.round(grams * 10) / 10;
+    return `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })} g`;
   }
   if (unit === "lb" && fromGrams(grams, "lb") < 1) {
     return formatWeight(grams, "oz");
