@@ -293,6 +293,12 @@ export function TripDetail({
                 )}
               >
                 {g.name}
+                {nested && g.brand && (
+                  <span className="font-normal text-[12px] text-tertiary">
+                    {" · "}
+                    {g.brand}
+                  </span>
+                )}
               </span>
               {g.worn && <Badge>착용</Badge>}
               {g.consumable && <Badge tone="orange">소모</Badge>}
