@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -83,6 +83,25 @@ export function GearShelf({
     priceText: string | null;
     rect: DOMRect;
   } | null>(null);
+
+  // Auto-hiding top bar: hide on scroll-down, reveal on scroll-up (iOS-style).
+  // Drive the transform directly on the element (with a CSS transition) so it
+  // doesn't depend on React re-renders.
+  const headerRef = useRef<HTMLDivElement>(null);
+  const lastScroll = useRef(0);
+  useEffect(() => {
+    const onScroll = () => {
+      const el = headerRef.current;
+      if (!el) return;
+      const y = window.scrollY;
+      if (y < 120) el.style.transform = "translateY(0)";
+      else if (y - lastScroll.current > 6) el.style.transform = "translateY(-100%)";
+      else if (y - lastScroll.current < -6) el.style.transform = "translateY(0)";
+      lastScroll.current = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -264,6 +283,10 @@ export function GearShelf({
 
   return (
     <div className="pb-40">
+      <div
+        ref={headerRef}
+        className="sticky top-0 z-30 bg-bg transition-transform duration-300 ease-in-out will-change-transform"
+      >
       <ScreenHeader
         title="Gear Shelf"
         subtitle={
@@ -378,6 +401,7 @@ export function GearShelf({
           </button>
         </div>
       )}
+      </div>
 
       <div className="pt-1">
         <DndArea enabled={editMode} sensors={sensors} onDragEnd={handleDragEnd}>
