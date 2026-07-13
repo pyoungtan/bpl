@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  CalendarDays,
   ChevronDown,
   ChevronLeft,
   CircleCheck,
@@ -10,15 +11,18 @@ import {
   MapPin,
   Minus,
   Plus,
+  Thermometer,
   Trash2,
+  Users,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { computeStats } from "@/lib/calc";
 import type { GearItem } from "@/lib/types";
 import { formatWeight, formatWeightSmart } from "@/lib/units";
-import { tripNights } from "@/lib/dates";
+import { formatTripRange, tripNights, tripStart } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { Donut } from "../Donut";
+import { RangeCalendar } from "../ui/RangeCalendar";
 import { Sheet } from "../ui/Sheet";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
 import { Checkbox } from "../ui/Checkbox";
@@ -67,6 +71,7 @@ export function TripDetail({
 
   const [memoOpen, setMemoOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
+  const [calOpen, setCalOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("none");
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -408,36 +413,67 @@ export function TripDetail({
             placeholder="트립 이름"
             className="w-full bg-transparent font-serif text-[28px] font-medium tracking-[-0.02em] text-label outline-none placeholder:text-tertiary"
           />
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px] text-secondary">
-            <input
-              type="date"
-              aria-label="시작일"
-              value={trip.startDate ?? trip.date ?? ""}
-              max={trip.endDate || undefined}
-              onChange={(e) =>
-                updateTrip(tripId, {
-                  startDate: e.target.value || undefined,
-                  date: e.target.value || undefined,
-                })
-              }
-              className="tabular bg-transparent text-secondary outline-none"
-            />
-            <span className="text-tertiary">~</span>
-            <input
-              type="date"
-              aria-label="종료일"
-              value={trip.endDate ?? ""}
-              min={trip.startDate ?? trip.date ?? undefined}
-              onChange={(e) =>
-                updateTrip(tripId, { endDate: e.target.value || undefined })
-              }
-              className="tabular bg-transparent text-secondary outline-none"
-            />
-            {tripNights(trip.startDate ?? trip.date, trip.endDate) && (
+          {/* Date range — tap to open the calendar; first tap = start, second = end */}
+          <button
+            type="button"
+            onClick={() => setCalOpen((o) => !o)}
+            aria-expanded={calOpen}
+            className="mt-1 flex items-center gap-1.5 text-[14px] active:opacity-60"
+          >
+            <CalendarDays size={15} className="shrink-0 text-tertiary" />
+            <span
+              className={cn(
+                "tabular",
+                tripStart(trip) ? "text-secondary" : "text-tertiary",
+              )}
+            >
+              {formatTripRange(tripStart(trip), trip.endDate)}
+            </span>
+            {tripNights(tripStart(trip), trip.endDate) && (
               <span className="text-[13px] font-medium text-tint">
-                {tripNights(trip.startDate ?? trip.date, trip.endDate)}
+                {tripNights(tripStart(trip), trip.endDate)}
               </span>
             )}
+          </button>
+          <AnimatePresence initial={false}>
+            {calOpen && (
+              <motion.div
+                key="trip-cal"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }}
+                className="overflow-hidden"
+              >
+                <div className="pt-2">
+                  <RangeCalendar
+                    start={tripStart(trip)}
+                    end={trip.endDate}
+                    onChange={(s, e) => {
+                      updateTrip(tripId, {
+                        startDate: s,
+                        date: s,
+                        endDate: e,
+                      });
+                      // Range complete → tuck the calendar away after a beat.
+                      if (s && e) window.setTimeout(() => setCalOpen(false), 300);
+                    }}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          {/* 누구와 — same hierarchy as the date line */}
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <Users size={15} className="shrink-0 text-tertiary" />
+            <input
+              value={trip.companions ?? ""}
+              onChange={(e) =>
+                updateTrip(tripId, { companions: e.target.value })
+              }
+              placeholder="함께한 사람"
+              className="min-w-0 flex-1 bg-transparent text-[14px] text-secondary outline-none placeholder:text-tertiary"
+            />
           </div>
           <div className="mt-1.5 flex items-center gap-1.5">
             <MapPin size={15} className="shrink-0 text-tertiary" />
@@ -447,6 +483,22 @@ export function TripDetail({
               placeholder="장소"
               className="min-w-0 flex-1 bg-transparent text-[14px] text-secondary outline-none placeholder:text-tertiary"
             />
+          </div>
+          {/* 기온 — 최저 ~ 최고 range */}
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <Thermometer size={15} className="shrink-0 text-tertiary" />
+            <TempInput
+              value={trip.tempLow ?? ""}
+              placeholder="최저"
+              onChange={(v) => updateTrip(tripId, { tempLow: v || undefined })}
+            />
+            <span className="text-[14px] text-tertiary">~</span>
+            <TempInput
+              value={trip.tempHigh ?? ""}
+              placeholder="최고"
+              onChange={(v) => updateTrip(tripId, { tempHigh: v || undefined })}
+            />
+            <span className="text-[14px] text-tertiary">℃</span>
           </div>
         </div>
 
@@ -584,11 +636,11 @@ export function TripDetail({
                 </Fragment>
               );
             })}
-            {/* Mirror the item row layout so this subtotal aligns exactly
-                under the per-item weights. */}
-            <div className="flex items-center gap-2.5 px-4 pb-0.5 pt-2">
+            {/* Mirror the item row layout (same padding + font size) so this
+                subtotal aligns exactly under the per-item weights. */}
+            <div className="flex items-center gap-2.5 px-4 py-2.5">
               <span className="flex-1" />
-              <span className="shrink-0 tabular text-[13px] font-semibold text-tint">
+              <span className="shrink-0 tabular text-[14px] font-semibold text-tint">
                 {formatWeightSmart(catTotals.get(major) ?? 0, unit)}
               </span>
               <span className="w-6 shrink-0" />
@@ -630,6 +682,34 @@ export function TripDetail({
         onClose={() => setPickerOpen(false)}
       />
     </div>
+  );
+}
+
+/** Small temperature field — free-text so a minus sign is typeable on iOS
+ *  (numeric keyboards there have no "−"); sanitised to an optional leading
+ *  minus + up to 3 digits. */
+function TempInput({
+  value,
+  placeholder,
+  onChange,
+}: {
+  value: string;
+  placeholder: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <input
+      value={value}
+      onChange={(e) => {
+        const v = e.target.value
+          .replace(/[^\d-]/g, "")
+          .replace(/(?!^)-/g, "")
+          .slice(0, 4);
+        onChange(v);
+      }}
+      placeholder={placeholder}
+      className="w-9 bg-transparent text-center tabular text-[14px] text-secondary outline-none placeholder:text-tertiary"
+    />
   );
 }
 
@@ -680,8 +760,16 @@ function GearPickerSheet({
   const addEntries = useAppStore((s) => s.addEntriesToTrip);
 
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [qty, setQty] = useState<Record<string, number>>({});
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   useEffect(() => {
-    if (open) setPicked(new Set());
+    if (open) {
+      setPicked(new Set());
+      setQty({});
+      setExpandedIds(new Set());
+      setCollapsedIds(new Set());
+    }
   }, [open]);
 
   const alreadyIn = useMemo(
@@ -689,33 +777,191 @@ function GearPickerSheet({
     [trip],
   );
 
+  // Add-ons whose parent is also pickable nest under that parent (excluded
+  // from the top level), mirroring the shelf. An add-on whose parent is
+  // already packed stays at the top level so it remains reachable.
+  const nestedSet = useMemo(() => {
+    const s = new Set<string>();
+    for (const id of gearOrder) {
+      const g = gear[id];
+      if (!g || alreadyIn.has(id)) continue;
+      for (const aid of g.addOnIds) {
+        if (gear[aid] && !alreadyIn.has(aid)) s.add(aid);
+      }
+    }
+    return s;
+  }, [gearOrder, gear, alreadyIn]);
+
   const groups = useMemo(() => {
     const map = new Map<string, GearItem[]>();
     for (const id of gearOrder) {
-      if (alreadyIn.has(id)) continue;
+      if (alreadyIn.has(id) || nestedSet.has(id)) continue;
       const g = gear[id];
       if (!g) continue;
       if (!map.has(g.majorCategory)) map.set(g.majorCategory, []);
       map.get(g.majorCategory)!.push(g);
     }
     return [...map.entries()];
-  }, [gear, gearOrder, alreadyIn]);
+  }, [gear, gearOrder, alreadyIn, nestedSet]);
 
   function toggle(id: string) {
+    const willPick = !picked.has(id);
     setPicked((prev) => {
       const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
+      if (willPick) n.add(id);
+      else n.delete(id);
       return n;
     });
+    if (willPick) {
+      // Seed the pack quantity from the gear's base quantity.
+      setQty((q) => (q[id] ? q : { ...q, [id]: gear[id]?.quantity ?? 1 }));
+      // Re-enable auto-expand of this row's add-ons.
+      setCollapsedIds((s) => {
+        if (!s.has(id)) return s;
+        const n = new Set(s);
+        n.delete(id);
+        return n;
+      });
+    }
+  }
+
+  function step(id: string, delta: number) {
+    setQty((q) => ({ ...q, [id]: Math.max(1, (q[id] ?? 1) + delta) }));
+  }
+
+  function toggleExpand(id: string, isExpanded: boolean) {
+    if (isExpanded) {
+      setCollapsedIds((s) => new Set(s).add(id));
+      setExpandedIds((s) => {
+        const n = new Set(s);
+        n.delete(id);
+        return n;
+      });
+    } else {
+      setExpandedIds((s) => new Set(s).add(id));
+      setCollapsedIds((s) => {
+        const n = new Set(s);
+        n.delete(id);
+        return n;
+      });
+    }
   }
 
   function add() {
     addEntries(
       tripId,
-      [...picked].map((id) => ({ gearId: id, quantity: gear[id]?.quantity ?? 1 })),
+      [...picked].map((id) => ({
+        gearId: id,
+        quantity: qty[id] ?? gear[id]?.quantity ?? 1,
+      })),
     );
     onClose();
+  }
+
+  function renderPickRow(
+    g: GearItem,
+    opts: {
+      nested?: boolean;
+      topHairline?: boolean;
+      major?: string;
+      hasAddOns?: boolean;
+      expanded?: boolean;
+    },
+  ) {
+    const { nested, topHairline, major, hasAddOns, expanded } = opts;
+    const isPicked = picked.has(g.id);
+    return (
+      <div
+        key={g.id}
+        className={cn(
+          "flex items-center gap-2.5 py-2.5",
+          nested
+            ? "bg-[color-mix(in_srgb,var(--tint)_5%,transparent)] pl-9 pr-4"
+            : "px-4",
+          topHairline &&
+            "relative before:pointer-events-none before:absolute before:left-4 before:right-0 before:top-0 before:h-px before:bg-separator",
+        )}
+      >
+        <Checkbox
+          checked={isPicked}
+          onChange={() => toggle(g.id)}
+          aria-label={g.name}
+        />
+        <button
+          type="button"
+          onClick={() => toggle(g.id)}
+          className="flex min-w-0 flex-1 items-center text-left active:opacity-50"
+        >
+          <div className="min-w-0 flex-1">
+            <div
+              className={cn(
+                "truncate font-semibold",
+                nested ? "text-[14px] text-secondary" : "text-[15px] text-label",
+              )}
+            >
+              {g.name}
+              {nested && g.brand && (
+                <span className="font-normal text-[12px] text-tertiary">
+                  {" · "}
+                  {g.brand}
+                </span>
+              )}
+            </div>
+            {!nested && (
+              <div className="truncate text-[12.5px] text-secondary">
+                {[g.minorCategory, g.brand].filter(Boolean).join(" · ") || major}
+              </div>
+            )}
+          </div>
+        </button>
+        {isPicked && (
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              aria-label="수량 감소"
+              onClick={() => step(g.id, -1)}
+              className="grid h-7 w-7 touch-manipulation place-items-center rounded-full bg-fill text-label active:opacity-60"
+            >
+              <Minus size={14} />
+            </button>
+            <span className="w-5 text-center tabular text-[14px] font-semibold text-label">
+              {qty[g.id] ?? 1}
+            </span>
+            <button
+              type="button"
+              aria-label="수량 증가"
+              onClick={() => step(g.id, 1)}
+              className="grid h-7 w-7 touch-manipulation place-items-center rounded-full bg-fill text-label active:opacity-60"
+            >
+              <Plus size={14} />
+            </button>
+          </div>
+        )}
+        <span
+          className={cn(
+            "shrink-0 tabular",
+            nested ? "text-[13px] text-tertiary" : "text-[14px] text-secondary",
+          )}
+        >
+          {formatWeight(g.weightG, unit)}
+        </span>
+        <div className="flex w-6 shrink-0 justify-end">
+          {!nested && hasAddOns && (
+            <button
+              type="button"
+              aria-label="애드온 펼치기"
+              onClick={() => toggleExpand(g.id, !!expanded)}
+              className="-mr-1.5 grid h-7 w-7 touch-manipulation place-items-center rounded-full text-tint active:bg-fill"
+            >
+              <ChevronDown
+                size={17}
+                className={cn("transition-transform", expanded && "rotate-180")}
+              />
+            </button>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -744,39 +990,43 @@ function GearPickerSheet({
                 </span>
                 <span className="text-[12px] text-tertiary">{items.length}개</span>
               </div>
-              {items.map((g, i) => (
-                <div
-                  key={g.id}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-2.5",
-                    i > 0 &&
-                      "relative before:pointer-events-none before:absolute before:left-4 before:right-0 before:top-0 before:h-px before:bg-separator",
-                  )}
-                >
-                  <Checkbox
-                    checked={picked.has(g.id)}
-                    onChange={() => toggle(g.id)}
-                    aria-label={g.name}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => toggle(g.id)}
-                    className="flex min-w-0 flex-1 items-center text-left active:opacity-50"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-[15px] font-semibold text-label">
-                        {g.name}
-                      </div>
-                      <div className="truncate text-[12.5px] text-secondary">
-                        {[g.minorCategory, g.brand].filter(Boolean).join(" · ") || major}
-                      </div>
-                    </div>
-                  </button>
-                  <span className="shrink-0 tabular text-[14px] text-secondary">
-                    {formatWeight(g.weightG, unit)}
-                  </span>
-                </div>
-              ))}
+              {items.map((g, i) => {
+                const addOns = g.addOnIds
+                  .map((aid) => gear[aid])
+                  .filter(
+                    (a): a is GearItem => Boolean(a) && !alreadyIn.has(a.id),
+                  );
+                const autoOpen =
+                  picked.has(g.id) || addOns.some((a) => picked.has(a.id));
+                const isExpanded =
+                  (expandedIds.has(g.id) || autoOpen) && !collapsedIds.has(g.id);
+                return (
+                  <Fragment key={g.id}>
+                    {renderPickRow(g, {
+                      topHairline: i > 0,
+                      major,
+                      hasAddOns: addOns.length > 0,
+                      expanded: isExpanded,
+                    })}
+                    <AnimatePresence initial={false}>
+                      {isExpanded && addOns.length > 0 && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{
+                            duration: 0.22,
+                            ease: [0.22, 0.61, 0.36, 1],
+                          }}
+                          className="overflow-hidden"
+                        >
+                          {addOns.map((a) => renderPickRow(a, { nested: true }))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </Fragment>
+                );
+              })}
             </section>
           ))}
         </div>

@@ -1,15 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Map, Plus, Settings } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { Trip } from "@/lib/types";
 import { formatWeightSmart } from "@/lib/units";
 import { formatTripRange, tripNights, tripStart } from "@/lib/dates";
+import { cn } from "@/lib/cn";
 import { ScreenHeader } from "../ScreenHeader";
 import { Button } from "../ui/Button";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
 import { TripDetail } from "./TripDetail";
+
+type TripSort = "date" | "created" | "companions";
+
+const SORTS: { key: TripSort; label: string }[] = [
+  { key: "date", label: "다녀온 날짜" },
+  { key: "created", label: "작성일" },
+  { key: "companions", label: "함께한 사람" },
+];
+
+const SORT_KEY = "bpl-trip-sort";
 
 export function TripsTab({
   onOpenSettings,
@@ -48,6 +59,46 @@ function TripList({
   const createTrip = useAppStore((s) => s.createTrip);
   const deleteTrip = useAppStore((s) => s.deleteTrip);
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
+  // Sort preference, remembered across sessions. Safe to read directly: the
+  // list only mounts client-side (AppShell gates on hydration).
+  const [sort, setSort] = useState<TripSort>(() => {
+    if (typeof window === "undefined") return "created";
+    const v = localStorage.getItem(SORT_KEY);
+    return v === "date" || v === "companions" ? v : "created";
+  });
+  function changeSort(s: TripSort) {
+    setSort(s);
+    try {
+      localStorage.setItem(SORT_KEY, s);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const sortedIds = useMemo(() => {
+    const ids = tripOrder.filter((id) => trips[id]);
+    if (sort === "created") return ids; // tripOrder is newest-created first
+    if (sort === "date") {
+      // Most recent trip first; undated trips sink to the bottom.
+      return [...ids].sort((a, b) => {
+        const sa = tripStart(trips[a]) ?? "";
+        const sb = tripStart(trips[b]) ?? "";
+        if (!sa && !sb) return 0;
+        if (!sa) return 1;
+        if (!sb) return -1;
+        return sb.localeCompare(sa);
+      });
+    }
+    // 함께한 사람 가나다순; trips without companions sink to the bottom.
+    return [...ids].sort((a, b) => {
+      const ca = (trips[a].companions ?? "").trim();
+      const cb = (trips[b].companions ?? "").trim();
+      if (!ca && !cb) return 0;
+      if (!ca) return 1;
+      if (!cb) return -1;
+      return ca.localeCompare(cb, "ko");
+    });
+  }, [tripOrder, trips, sort]);
 
   return (
     <div className="pb-40">
@@ -70,8 +121,24 @@ function TripList({
         <EmptyTrips onCreate={() => onOpen(createTrip())} />
       ) : (
         <div className="px-4 pt-2">
+          <div className="no-scrollbar mb-2 flex gap-1.5 overflow-x-auto">
+            {SORTS.map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => changeSort(s.key)}
+                aria-pressed={sort === s.key}
+                className={cn(
+                  "h-7 shrink-0 whitespace-nowrap rounded-full px-3 text-[12.5px] font-medium transition active:opacity-60",
+                  sort === s.key ? "bg-tint text-white" : "bg-fill text-secondary",
+                )}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
           <div className="overflow-hidden rounded-[12px] bg-card">
-            {tripOrder.map((id, i) => {
+            {sortedIds.map((id, i) => {
               const t = trips[id];
               return t ? (
                 <TripRow
@@ -157,6 +224,11 @@ function TripRow({
             {tripNights(tripStart(trip), trip.endDate) && (
               <span className="text-tertiary">
                 · {tripNights(tripStart(trip), trip.endDate)}
+              </span>
+            )}
+            {trip.companions?.trim() && (
+              <span className="truncate text-tertiary">
+                · {trip.companions.trim()}
               </span>
             )}
           </div>

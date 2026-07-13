@@ -41,11 +41,16 @@ export interface Trip {
   /** ISO start/end dates (yyyy-mm-dd) for a date range. */
   startDate?: string;
   endDate?: string;
-  /** Free-text location for the embedded map (place name or address). */
+  /** Free-text location label. */
   place?: string;
-  /** Geocoded coordinates for `place` (cached so we don't re-geocode). */
+  /** Legacy geocoded coordinates (map feature removed) — kept so old data loads. */
   lat?: number;
   lng?: number;
+  /** Free-text companions ("누구와") — also a trip-list sort key. */
+  companions?: string;
+  /** Temperature range, free-text numbers (strings so "-" can be typed). */
+  tempLow?: string;
+  tempHigh?: string;
   memo: string;
   packed: PackedEntry[];
   /** gearIds the user has checked off as packed (gear-check mode). */
