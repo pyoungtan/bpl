@@ -22,7 +22,7 @@ function statusText(status: CloudState["status"]): string {
     case "synced":
       return "동기화됨";
     case "error":
-      return "동기화 오류";
+      return "동기화 오류 · 잠시 후 자동 재시도";
     default:
       return "";
   }

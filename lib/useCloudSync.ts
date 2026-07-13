@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { useAppStore, dataSignature, LOCAL_UPDATED_KEY, type Store } from "./store";
+import { createSampleData } from "./sample";
 import type { AppData } from "./types";
 
 export type SyncStatus = "idle" | "syncing" | "synced" | "error";
@@ -118,63 +119,81 @@ export function useCloudSync(): CloudState {
     const sb = supabase;
     if (!sb || !userId) return;
     let cancelled = false;
+    let retryTimer: number | undefined;
     setStatus("syncing");
 
-    (async () => {
-      const { data, error } = await sb
-        .from("user_data")
-        .select("data, updated_at")
-        .eq("user_id", userId)
-        .maybeSingle();
-      if (cancelled) return;
-      if (error) {
-        setStatus("error");
-        return;
-      }
-      if (data?.data) {
-        const remote = data.data as AppData;
-        const remoteAt = (data.updated_at as string) ?? "";
-        const remoteJson = JSON.stringify(remote);
-        const local = pickData(useAppStore.getState());
-        const localAt = readLocalUpdatedAt();
-        const differs = dataSignature(local) !== dataSignature(remote);
-
-        // Local has its own edits AND diverges from the cloud copy → ask the
-        // user which to keep instead of silently overwriting either side.
-        if (differs && localAt) {
-          pendingRemote.current = { remote, remoteJson, remoteAt };
-          conflictActive.current = true;
-          setConflict({
-            local: {
-              updatedAt: localAt,
-              gearCount: Object.keys(local.gear ?? {}).length,
-              tripCount: Object.keys(local.trips ?? {}).length,
-            },
-            cloud: {
-              updatedAt: remoteAt || null,
-              gearCount: Object.keys(remote.gear ?? {}).length,
-              tripCount: Object.keys(remote.trips ?? {}).length,
-            },
-          });
-          return; // resolveConflict() completes setup once the user chooses
-        }
-
-        lastPushed.current = remoteJson;
-        lastSyncedAt.current = remoteAt;
-        useAppStore.getState().replaceAll(remote);
-      } else {
-        const local = pickData(useAppStore.getState());
-        const now = new Date().toISOString();
-        lastPushed.current = JSON.stringify(local);
-        lastSyncedAt.current = now;
-        await sb
+    // Initial pull, with a hard timeout and automatic retry — a request that
+    // hangs (laptop sleep, network drop) must not leave the status stuck on
+    // "동기화 중" forever with nothing ever pushed.
+    const pullOnce = async () => {
+      try {
+        const ctrl = new AbortController();
+        const timeout = window.setTimeout(() => ctrl.abort(), 15_000);
+        const { data, error } = await sb
           .from("user_data")
-          .upsert({ user_id: userId, data: local, updated_at: now });
+          .select("data, updated_at")
+          .eq("user_id", userId)
+          .abortSignal(ctrl.signal)
+          .maybeSingle();
+        window.clearTimeout(timeout);
+        if (cancelled) return;
+        if (error) throw error;
+
+        if (data?.data) {
+          const remote = data.data as AppData;
+          const remoteAt = (data.updated_at as string) ?? "";
+          const remoteJson = JSON.stringify(remote);
+          const local = pickData(useAppStore.getState());
+          const localAt = readLocalUpdatedAt();
+          const differs = dataSignature(local) !== dataSignature(remote);
+          // "Pristine" local = the untouched first-run sample → adopt the
+          // cloud copy silently. Anything else that diverges gets the
+          // which-side-to-keep dialog, even without an edit timestamp, so a
+          // stale cloud row can never silently clobber real local work.
+          const pristine =
+            dataSignature({ ...createSampleData() }) === dataSignature(local);
+
+          if (differs && !pristine) {
+            pendingRemote.current = { remote, remoteJson, remoteAt };
+            conflictActive.current = true;
+            setConflict({
+              local: {
+                updatedAt: localAt,
+                gearCount: Object.keys(local.gear ?? {}).length,
+                tripCount: Object.keys(local.trips ?? {}).length,
+              },
+              cloud: {
+                updatedAt: remoteAt || null,
+                gearCount: Object.keys(remote.gear ?? {}).length,
+                tripCount: Object.keys(remote.trips ?? {}).length,
+              },
+            });
+            return; // resolveConflict() completes setup once the user chooses
+          }
+
+          lastPushed.current = remoteJson;
+          lastSyncedAt.current = remoteAt;
+          if (differs) useAppStore.getState().replaceAll(remote);
+        } else {
+          const local = pickData(useAppStore.getState());
+          const now = new Date().toISOString();
+          const { error: seedError } = await sb
+            .from("user_data")
+            .upsert({ user_id: userId, data: local, updated_at: now });
+          if (seedError) throw seedError;
+          lastPushed.current = JSON.stringify(local);
+          lastSyncedAt.current = now;
+        }
+        pendingLocal.current = false;
+        ready.current = true;
+        setStatus("synced");
+      } catch {
+        if (cancelled) return;
+        setStatus("error");
+        retryTimer = window.setTimeout(pullOnce, 6_000);
       }
-      pendingLocal.current = false;
-      ready.current = true;
-      setStatus("synced");
-    })();
+    };
+    pullOnce();
 
     const channel = sb
       .channel(`user_data_${userId}`)
@@ -207,6 +226,7 @@ export function useCloudSync(): CloudState {
 
     return () => {
       cancelled = true;
+      if (retryTimer !== undefined) clearTimeout(retryTimer);
       conflictActive.current = false;
       pendingRemote.current = null;
       sb.removeChannel(channel);
@@ -251,30 +271,58 @@ export function useCloudSync(): CloudState {
     }
   }, []);
 
-  // Push local changes (debounced) once initial sync is done.
+  // Push local changes (debounced) once initial sync is done. lastPushed is
+  // only advanced AFTER a successful upsert — a failed push must stay "unsent"
+  // so it retries; pendingLocal stays true meanwhile so realtime can't clobber
+  // the unsaved edits. Every attempt has a hard timeout (no infinite
+  // "동기화 중"), and failures auto-retry.
   useEffect(() => {
     const sb = supabase;
     if (!sb || !userId) return;
+    let disposed = false;
+
+    const pushNow = async () => {
+      const data = pickData(useAppStore.getState());
+      const json = JSON.stringify(data);
+      if (json === lastPushed.current) {
+        pendingLocal.current = false;
+        setStatus("synced");
+        return;
+      }
+      const now = new Date().toISOString();
+      setStatus("syncing");
+      try {
+        const ctrl = new AbortController();
+        const timeout = window.setTimeout(() => ctrl.abort(), 15_000);
+        const { error } = await sb
+          .from("user_data")
+          .upsert({ user_id: userId, data, updated_at: now })
+          .abortSignal(ctrl.signal);
+        window.clearTimeout(timeout);
+        if (disposed) return;
+        if (error) throw error;
+        lastPushed.current = json;
+        lastSyncedAt.current = now;
+        pendingLocal.current = false;
+        setStatus("synced");
+      } catch {
+        if (disposed) return;
+        setStatus("error");
+        if (pushTimer.current !== undefined) clearTimeout(pushTimer.current);
+        pushTimer.current = window.setTimeout(pushNow, 5_000);
+      }
+    };
+
     const unsub = useAppStore.subscribe((state) => {
       if (!ready.current) return;
-      const data = pickData(state);
-      const json = JSON.stringify(data);
+      const json = JSON.stringify(pickData(state));
       if (json === lastPushed.current) return;
       pendingLocal.current = true; // protect this edit from realtime clobbering
       if (pushTimer.current !== undefined) clearTimeout(pushTimer.current);
-      pushTimer.current = window.setTimeout(async () => {
-        const now = new Date().toISOString();
-        lastPushed.current = json;
-        lastSyncedAt.current = now;
-        setStatus("syncing");
-        const { error } = await sb
-          .from("user_data")
-          .upsert({ user_id: userId, data, updated_at: now });
-        pendingLocal.current = false;
-        setStatus(error ? "error" : "synced");
-      }, 800);
+      pushTimer.current = window.setTimeout(pushNow, 800);
     });
     return () => {
+      disposed = true;
       unsub();
       if (pushTimer.current !== undefined) clearTimeout(pushTimer.current);
     };
