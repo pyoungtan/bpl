@@ -46,8 +46,9 @@ export interface Trip {
   /** Legacy geocoded coordinates (map feature removed) — kept so old data loads. */
   lat?: number;
   lng?: number;
-  /** Free-text companions ("누구와") — also a trip-list sort key. */
-  companions?: string;
+  /** Companion tags ("누구와") — also a trip-list sort key. Legacy data may
+   *  hold a free-text string; read through tripCompanions() to normalize. */
+  companions?: string[];
   /** Temperature range, free-text numbers (strings so "-" can be typed). */
   tempLow?: string;
   tempHigh?: string;

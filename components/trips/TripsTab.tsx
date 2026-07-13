@@ -6,6 +6,7 @@ import { useAppStore } from "@/lib/store";
 import type { Trip } from "@/lib/types";
 import { formatWeightSmart } from "@/lib/units";
 import { formatTripRange, tripNights, tripStart } from "@/lib/dates";
+import { tripCompanions } from "@/lib/trips";
 import { cn } from "@/lib/cn";
 import { ScreenHeader } from "../ScreenHeader";
 import { Button } from "../ui/Button";
@@ -91,8 +92,8 @@ function TripList({
     }
     // 함께한 사람 가나다순; trips without companions sink to the bottom.
     return [...ids].sort((a, b) => {
-      const ca = (trips[a].companions ?? "").trim();
-      const cb = (trips[b].companions ?? "").trim();
+      const ca = tripCompanions(trips[a]).join(", ");
+      const cb = tripCompanions(trips[b]).join(", ");
       if (!ca && !cb) return 0;
       if (!ca) return 1;
       if (!cb) return -1;
@@ -226,9 +227,9 @@ function TripRow({
                 · {tripNights(tripStart(trip), trip.endDate)}
               </span>
             )}
-            {trip.companions?.trim() && (
+            {tripCompanions(trip).length > 0 && (
               <span className="truncate text-tertiary">
-                · {trip.companions.trim()}
+                · {tripCompanions(trip).join(", ")}
               </span>
             )}
           </div>

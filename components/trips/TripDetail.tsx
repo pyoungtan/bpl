@@ -14,12 +14,14 @@ import {
   Thermometer,
   Trash2,
   Users,
+  X,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { computeStats } from "@/lib/calc";
 import type { GearItem } from "@/lib/types";
 import { formatWeight, formatWeightSmart } from "@/lib/units";
 import { formatTripRange, tripNights, tripStart } from "@/lib/dates";
+import { tripCompanions } from "@/lib/trips";
 import { cn } from "@/lib/cn";
 import { Donut } from "../Donut";
 import { RangeCalendar } from "../ui/RangeCalendar";
@@ -72,6 +74,7 @@ export function TripDetail({
   const [memoOpen, setMemoOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
+  const [companionDraft, setCompanionDraft] = useState("");
   const [mode, setMode] = useState<Mode>("none");
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -143,6 +146,8 @@ export function TripDetail({
     [stats],
   );
 
+  const companions = useMemo(() => (trip ? tripCompanions(trip) : []), [trip]);
+
   const memo = trip?.memo ?? "";
   useEffect(() => {
     const el = memoRef.current;
@@ -167,6 +172,18 @@ export function TripDetail({
     }
     deleteTrip(tripId);
     onBack();
+  }
+
+  function addCompanion() {
+    const name = companionDraft.trim();
+    setCompanionDraft("");
+    if (!name || companions.includes(name)) return;
+    updateTrip(tripId, { companions: [...companions, name] });
+  }
+  function removeCompanion(index: number) {
+    updateTrip(tripId, {
+      companions: companions.filter((_, i) => i !== index),
+    });
   }
 
   function toggleItemExpand(id: string) {
@@ -463,17 +480,47 @@ export function TripDetail({
               </motion.div>
             )}
           </AnimatePresence>
-          {/* 누구와 — same hierarchy as the date line */}
-          <div className="mt-1.5 flex items-center gap-1.5">
-            <Users size={15} className="shrink-0 text-tertiary" />
-            <input
-              value={trip.companions ?? ""}
-              onChange={(e) =>
-                updateTrip(tripId, { companions: e.target.value })
-              }
-              placeholder="함께한 사람"
-              className="min-w-0 flex-1 bg-transparent text-[14px] text-secondary outline-none placeholder:text-tertiary"
-            />
+          {/* 누구와 — tag chips + inline input, same hierarchy as the date line */}
+          <div className="mt-1.5 flex items-start gap-1.5">
+            <Users size={15} className="mt-[4px] shrink-0 text-tertiary" />
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+              {companions.map((name, i) => (
+                <span
+                  key={`${name}-${i}`}
+                  className="flex h-[22px] items-center gap-0.5 rounded-full bg-fill pl-2 pr-1 text-[12.5px] font-medium text-secondary"
+                >
+                  {name}
+                  <button
+                    type="button"
+                    aria-label={`${name} 삭제`}
+                    onClick={() => removeCompanion(i)}
+                    className="grid h-[16px] w-[16px] touch-manipulation place-items-center rounded-full text-tertiary active:opacity-50"
+                  >
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+              <input
+                value={companionDraft}
+                onChange={(e) => setCompanionDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === ",") {
+                    e.preventDefault();
+                    addCompanion();
+                  } else if (
+                    e.key === "Backspace" &&
+                    !companionDraft &&
+                    companions.length > 0
+                  ) {
+                    removeCompanion(companions.length - 1);
+                  }
+                }}
+                onBlur={addCompanion}
+                placeholder={companions.length ? "" : "함께한 사람"}
+                enterKeyHint="done"
+                className="h-[22px] min-w-[72px] flex-1 bg-transparent text-[14px] text-secondary outline-none placeholder:text-tertiary"
+              />
+            </div>
           </div>
           <div className="mt-1.5 flex items-center gap-1.5">
             <MapPin size={15} className="shrink-0 text-tertiary" />
