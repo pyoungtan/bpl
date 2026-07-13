@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
@@ -29,6 +29,8 @@ export function RangeCalendar({
     y: init.getFullYear(),
     m: init.getMonth(),
   });
+  // "months" = quick year/month jump (tap the header to toggle).
+  const [mode, setMode] = useState<"days" | "months">("days");
 
   const firstDow = new Date(view.y, view.m, 1).getDay();
   const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
@@ -59,67 +61,112 @@ export function RangeCalendar({
       <div className="flex items-center justify-between px-1 pb-2">
         <button
           type="button"
-          aria-label="이전 달"
-          onClick={() => moveMonth(-1)}
+          aria-label={mode === "days" ? "이전 달" : "이전 해"}
+          onClick={() =>
+            mode === "days"
+              ? moveMonth(-1)
+              : setView((v) => ({ ...v, y: v.y - 1 }))
+          }
           className="grid h-8 w-8 place-items-center rounded-full text-tint active:bg-fill"
         >
           <ChevronLeft size={19} />
         </button>
-        <span className="text-[15px] font-semibold text-label">
-          {view.y}년 {view.m + 1}월
-        </span>
         <button
           type="button"
-          aria-label="다음 달"
-          onClick={() => moveMonth(1)}
+          aria-label="연·월 선택"
+          onClick={() => setMode((m) => (m === "days" ? "months" : "days"))}
+          className="flex items-center gap-1 text-[15px] font-semibold text-label active:opacity-60"
+        >
+          {mode === "days" ? `${view.y}년 ${view.m + 1}월` : `${view.y}년`}
+          <ChevronDown
+            size={14}
+            className={cn(
+              "text-tertiary transition-transform",
+              mode === "months" && "rotate-180",
+            )}
+          />
+        </button>
+        <button
+          type="button"
+          aria-label={mode === "days" ? "다음 달" : "다음 해"}
+          onClick={() =>
+            mode === "days"
+              ? moveMonth(1)
+              : setView((v) => ({ ...v, y: v.y + 1 }))
+          }
           className="grid h-8 w-8 place-items-center rounded-full text-tint active:bg-fill"
         >
           <ChevronRight size={19} />
         </button>
       </div>
 
-      <div className="grid grid-cols-7 pb-1">
-        {DOW.map((d, i) => (
-          <span
-            key={d}
-            className={cn(
-              "py-0.5 text-center text-[11px] font-medium",
-              i === 0 ? "text-red/70" : "text-tertiary",
-            )}
-          >
-            {d}
-          </span>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7 gap-y-0.5">
-        {cells.map((day, i) => {
-          if (day === null) return <span key={`e${i}`} />;
-          const iso = toISO(view.y, view.m, day);
-          const isStart = iso === start;
-          const isEnd = iso === end;
-          const inRange = !!start && !!end && iso > start && iso < end;
-          const isToday = iso === todayISO;
-          return (
+      {mode === "months" ? (
+        <div className="grid grid-cols-4 gap-1 pb-1">
+          {Array.from({ length: 12 }, (_, m) => (
             <button
-              key={iso}
+              key={m}
               type="button"
-              onClick={() => tap(iso)}
+              onClick={() => {
+                setView((v) => ({ ...v, m }));
+                setMode("days");
+              }}
               className={cn(
-                "relative mx-auto grid h-9 w-9 touch-manipulation place-items-center rounded-full text-[14px] tabular transition active:opacity-70",
-                isStart || isEnd
+                "h-10 touch-manipulation rounded-[10px] text-[14px] tabular transition active:opacity-70",
+                m === view.m
                   ? "bg-tint font-semibold text-white"
-                  : inRange
-                    ? "bg-tint-soft text-tint"
-                    : "text-label",
-                isToday && !isStart && !isEnd && "ring-1 ring-inset ring-tint",
+                  : "text-label active:bg-fill",
               )}
             >
-              {day}
+              {m + 1}월
             </button>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-7 pb-1">
+            {DOW.map((d, i) => (
+              <span
+                key={d}
+                className={cn(
+                  "py-0.5 text-center text-[11px] font-medium",
+                  i === 0 ? "text-red/70" : "text-tertiary",
+                )}
+              >
+                {d}
+              </span>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-y-0.5">
+            {cells.map((day, i) => {
+              if (day === null) return <span key={`e${i}`} />;
+              const iso = toISO(view.y, view.m, day);
+              const isStart = iso === start;
+              const isEnd = iso === end;
+              const inRange = !!start && !!end && iso > start && iso < end;
+              const isToday = iso === todayISO;
+              return (
+                <button
+                  key={iso}
+                  type="button"
+                  onClick={() => tap(iso)}
+                  className={cn(
+                    "relative mx-auto grid h-9 w-9 touch-manipulation place-items-center rounded-full text-[14px] tabular transition active:opacity-70",
+                    isStart || isEnd
+                      ? "bg-tint font-semibold text-white"
+                      : inRange
+                        ? "bg-tint-soft text-tint"
+                        : "text-label",
+                    isToday && !isStart && !isEnd && "ring-1 ring-inset ring-tint",
+                  )}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {start && (
         <button

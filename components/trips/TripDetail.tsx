@@ -82,6 +82,7 @@ export function TripDetail({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const memoRef = useRef<HTMLTextAreaElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const backSwipe = useRef<{ x: number; y: number; ok: boolean } | null>(null);
 
   const packed = useMemo(() => trip?.packed ?? [], [trip]);
@@ -365,28 +366,67 @@ export function TripDetail({
     );
   }
 
+  // Slide the whole screen with the finger during a left-edge back-swipe
+  // (Safari-style), so the gesture has visible feedback. Direct style writes —
+  // no per-move re-render.
+  function paintBackDrag(dx: number, transition = "none") {
+    const el = rootRef.current;
+    if (!el) return;
+    el.style.transition = transition;
+    el.style.transform = dx > 0 ? `translateX(${dx}px)` : "translateX(0px)";
+  }
+  function clearBackDrag() {
+    const el = rootRef.current;
+    if (el) {
+      el.style.transition = "";
+      el.style.transform = "";
+    }
+  }
+
   return (
-    <div className="pb-40">
+    <div ref={rootRef} className="pb-40">
       {/* Left-edge swipe-right to go back (iOS-style), below the header so it
-          doesn't block the back button. */}
+          doesn't block the back button. touch-action pan-y: vertical scrolls
+          stay with the browser (we get a pointercancel), horizontal is ours. */}
       <div
         className="fixed left-0 z-30 w-4"
-        style={{ top: "calc(env(safe-area-inset-top) + 48px)", bottom: 0 }}
+        style={{
+          top: "calc(env(safe-area-inset-top) + 48px)",
+          bottom: 0,
+          touchAction: "pan-y",
+        }}
         onPointerDown={(e) => {
           backSwipe.current = { x: e.clientX, y: e.clientY, ok: true };
+          e.currentTarget.setPointerCapture?.(e.pointerId);
         }}
         onPointerMove={(e) => {
           const s = backSwipe.current;
           if (!s || !s.ok) return;
-          if (Math.abs(e.clientY - s.y) > 45) s.ok = false; // vertical → cancel
+          const dx = e.clientX - s.x;
+          if (Math.abs(e.clientY - s.y) > 45 && dx < 30) {
+            s.ok = false; // vertical → cancel and snap back
+            paintBackDrag(0, "transform 0.2s ease");
+            return;
+          }
+          if (dx > 0) paintBackDrag(dx);
         }}
         onPointerUp={(e) => {
           const s = backSwipe.current;
           backSwipe.current = null;
-          if (s && s.ok && e.clientX - s.x > 70) onBack();
+          if (!s || !s.ok) return;
+          if (e.clientX - s.x > 70) {
+            // Commit: finish the slide off-screen, then navigate back.
+            paintBackDrag(window.innerWidth, "transform 0.18s ease-out");
+            window.setTimeout(onBack, 170);
+          } else {
+            paintBackDrag(0, "transform 0.22s ease");
+            window.setTimeout(clearBackDrag, 260);
+          }
         }}
         onPointerCancel={() => {
           backSwipe.current = null;
+          paintBackDrag(0, "transform 0.2s ease");
+          window.setTimeout(clearBackDrag, 260);
         }}
       />
       <div className="material sticky top-0 z-20 flex h-12 items-center justify-between border-b border-separator pt-safe">
@@ -504,7 +544,8 @@ export function TripDetail({
                 value={companionDraft}
                 onChange={(e) => setCompanionDraft(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === ",") {
+                  if (e.nativeEvent.isComposing) return; // mid-Hangul composition
+                  if (e.key === "Enter" || e.key === "," || e.key === " ") {
                     e.preventDefault();
                     addCompanion();
                   } else if (

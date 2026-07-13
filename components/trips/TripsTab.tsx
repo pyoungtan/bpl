@@ -152,6 +152,7 @@ function TripList({
                 <TripRow
                   key={id}
                   trip={t}
+                  showCompanions={sort === "companions"}
                   topHairline={i > 0}
                   onOpen={() => {
                     if (swipeOpenId) {
@@ -185,6 +186,7 @@ function TripList({
 
 function TripRow({
   trip,
+  showCompanions,
   topHairline,
   onOpen,
   onDelete,
@@ -192,6 +194,8 @@ function TripRow({
   onSwipeOpenChange,
 }: {
   trip: Trip;
+  /** 함께한 사람 sort active → subtitle shows companion tags instead of date/temp. */
+  showCompanions: boolean;
   topHairline: boolean;
   onOpen: () => void;
   onDelete: () => void;
@@ -227,14 +231,29 @@ function TripRow({
           <div className="truncate font-serif text-[18px] font-medium tracking-[-0.01em] text-label">
             {trip.name}
           </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[13px] text-secondary">
-            <span>{formatTripRange(tripStart(trip), trip.endDate)}</span>
-            {tempRange(trip.tempLow, trip.tempHigh) && (
-              <span className="tabular text-tertiary">
-                · {tempRange(trip.tempLow, trip.tempHigh)}
-              </span>
-            )}
-          </div>
+          {showCompanions ? (
+            tripCompanions(trip).length > 0 && (
+              <div className="mt-1 flex flex-wrap items-center gap-1">
+                {tripCompanions(trip).map((name, i) => (
+                  <span
+                    key={`${name}-${i}`}
+                    className="rounded-full bg-fill px-2 py-[1.5px] text-[12px] font-medium text-secondary"
+                  >
+                    {name}
+                  </span>
+                ))}
+              </div>
+            )
+          ) : (
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[13px] text-tertiary">
+              <span>{formatTripRange(tripStart(trip))}</span>
+              {tempRange(trip.tempLow, trip.tempHigh) && (
+                <span className="tabular">
+                  · {tempRange(trip.tempLow, trip.tempHigh)}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <span className="shrink-0 tabular text-[15px] font-medium text-label">
           {formatWeightSmart(totalG, unit)}
