@@ -187,8 +187,9 @@ export function useCloudSync(): CloudState {
         pendingLocal.current = false;
         ready.current = true;
         setStatus("synced");
-      } catch {
+      } catch (e) {
         if (cancelled) return;
+        console.error("[cloud sync] pull failed:", e);
         setStatus("error");
         retryTimer = window.setTimeout(pullOnce, 6_000);
       }
@@ -305,8 +306,9 @@ export function useCloudSync(): CloudState {
         lastSyncedAt.current = now;
         pendingLocal.current = false;
         setStatus("synced");
-      } catch {
+      } catch (e) {
         if (disposed) return;
+        console.error("[cloud sync] push failed:", e);
         setStatus("error");
         if (pushTimer.current !== undefined) clearTimeout(pushTimer.current);
         pushTimer.current = window.setTimeout(pushNow, 5_000);
