@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 export type TabKey = "shelf" | "trips";
 
 const TABS: { key: TabKey; icon: React.ReactNode; label: string }[] = [
-  { key: "shelf", icon: <Backpack size={23} strokeWidth={2} />, label: "Gear Shelf" },
+  { key: "shelf", icon: <Backpack size={23} strokeWidth={2} />, label: "Inventory" },
   { key: "trips", icon: <Map size={23} strokeWidth={2} />, label: "Trips" },
 ];
 

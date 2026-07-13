@@ -274,7 +274,7 @@ function EmptyTrips({ onCreate }: { onCreate: () => void }) {
         아직 트립이 없어요
       </h2>
       <p className="mt-1 max-w-[15rem] text-[15px] text-secondary">
-        Gear Shelf에서 장비를 골라 추가하거나, 새 트립을 만들어 기록을 남겨보세요.
+        Inventory에서 장비를 골라 추가하거나, 새 트립을 만들어 기록을 남겨보세요.
       </p>
       <button
         type="button"

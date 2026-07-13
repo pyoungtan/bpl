@@ -77,7 +77,7 @@ export function PresetsSheet({
             </div>
           ) : (
             <p className="px-1 text-[13px] leading-snug text-secondary">
-              Shelf에서 장비를 선택한 뒤 프리셋으로 저장할 수 있어요.
+              Inventory에서 장비를 선택한 뒤 프리셋으로 저장할 수 있어요.
             </p>
           )}
         </div>

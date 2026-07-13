@@ -243,12 +243,14 @@ export function GearEditorSheet({
     >
       <div className="pb-4">
         <FieldRow label="이름">
+          {/* No autoFocus: the keyboard popping during the sheet's open
+              animation shoved it far past the top on iOS. The user taps the
+              field when ready. */}
           <input
             className={inputCls}
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="예: Exos 48"
-            autoFocus={!isEdit}
           />
         </FieldRow>
         <FieldRow label="브랜드" divider>

@@ -290,7 +290,7 @@ export function GearShelf({
         className="sticky top-0 z-30 bg-bg transition-transform duration-300 ease-in-out will-change-transform"
       >
       <ScreenHeader
-        title="Gear Shelf"
+        title="Inventory"
         subtitle={
           selecting ? (
             <span className="font-medium text-tint">

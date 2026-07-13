@@ -105,6 +105,53 @@ function SyncConflictDialog({
   const { local, cloud } = conflict;
   // Compare ISO timestamps directly; a missing timestamp counts as oldest.
   const localNewer = (local.updatedAt ?? "") > (cloud.updatedAt ?? "");
+  // Picking the strictly-older side overwrites newer data — confirm once more.
+  const [pending, setPending] = useState<"local" | "cloud" | null>(null);
+  function isOlder(choice: "local" | "cloud") {
+    const mine = (choice === "local" ? local : cloud).updatedAt ?? "";
+    const other = (choice === "local" ? cloud : local).updatedAt ?? "";
+    return mine < other;
+  }
+  function pick(choice: "local" | "cloud") {
+    if (isOlder(choice)) setPending(choice);
+    else onChoose(choice);
+  }
+
+  if (pending) {
+    const chosen = pending === "local" ? local : cloud;
+    return (
+      <div className="fixed inset-0 z-[70] flex items-center justify-center p-6">
+        <div className="absolute inset-0 bg-black/40" />
+        <div className="relative w-full max-w-xs rounded-[16px] bg-card p-5 shadow-2xl">
+          <h3 className="text-[17px] font-semibold text-label">
+            예전 데이터로 덮어쓸까요?
+          </h3>
+          <p className="mt-1.5 text-[14px] leading-relaxed text-secondary">
+            선택한 {pending === "local" ? "이 기기" : "클라우드"} 데이터(
+            {formatDateTime(chosen.updatedAt)})가 더 예전 것입니다. 더 최신인{" "}
+            {pending === "local" ? "클라우드" : "이 기기"} 데이터가 삭제되며
+            되돌릴 수 없어요.
+          </p>
+          <div className="mt-4 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => onChoose(pending)}
+              className="h-11 rounded-[10px] bg-red text-[15px] font-semibold text-white active:opacity-80"
+            >
+              예전 데이터 사용
+            </button>
+            <button
+              type="button"
+              onClick={() => setPending(null)}
+              className="h-10 text-[14px] text-secondary active:opacity-60"
+            >
+              돌아가기
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const option = (
     choice: "local" | "cloud",
@@ -114,7 +161,7 @@ function SyncConflictDialog({
   ) => (
     <button
       type="button"
-      onClick={() => onChoose(choice)}
+      onClick={() => pick(choice)}
       className={cn(
         "w-full rounded-[12px] border p-3.5 text-left transition active:opacity-70",
         newer ? "border-tint bg-tint-soft" : "border-separator-opaque bg-fill",

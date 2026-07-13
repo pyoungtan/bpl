@@ -52,6 +52,9 @@ export function SettingsSheet({
   const [lpPending, setLpPending] = useState<{ cats: LpCategory[]; count: number } | null>(
     null,
   );
+  // Second-step guard for the destructive replace-import path.
+  const [lpReplaceConfirm, setLpReplaceConfirm] = useState(false);
+  const gearCount = useAppStore((s) => s.gearOrder.length);
   const [confirmReset, setConfirmReset] = useState(false);
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -73,6 +76,7 @@ export function SettingsSheet({
       setLpLoading(false);
       setLpMsg(null);
       setLpPending(null);
+      setLpReplaceConfirm(false);
     }
   }, [open]);
 
@@ -108,12 +112,13 @@ export function SettingsSheet({
     if (!lpPending) return;
     const n = importLighterpack(lpPending.cats, replace);
     setLpPending(null);
+    setLpReplaceConfirm(false);
     setLpUrl("");
     setLpMsg({
       ok: true,
       text: replace
         ? `기존 데이터를 지우고 ${n}개 장비를 가져왔어요.`
-        : `${n}개 장비를 가져왔어요. Gear Shelf에서 확인하세요.`,
+        : `${n}개 장비를 가져왔어요. Inventory에서 확인하세요.`,
     });
   }
 
@@ -354,40 +359,76 @@ export function SettingsSheet({
           <div className="fixed inset-0 z-[70] flex items-center justify-center p-6">
             <div
               className="absolute inset-0 bg-black/40"
-              onClick={() => setLpPending(null)}
+              onClick={() => {
+                setLpPending(null);
+                setLpReplaceConfirm(false);
+              }}
             />
             <div className="relative w-full max-w-xs rounded-[16px] bg-card p-5 shadow-2xl">
-              <h3 className="text-[17px] font-semibold text-label">
-                LighterPack 가져오기
-              </h3>
-              <p className="mt-1.5 text-[14px] leading-relaxed text-secondary">
-                <span className="font-medium text-label">{lpPending.count}개</span> 장비를
-                가져옵니다. 기존 데이터를{" "}
-                <span className="font-medium text-red">모두 삭제</span>하고 가져올까요?
-              </p>
-              <div className="mt-4 flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => finishImport(true)}
-                  className="h-11 rounded-[10px] bg-red text-[15px] font-semibold text-white active:opacity-80"
-                >
-                  삭제하고 가져오기
-                </button>
-                <button
-                  type="button"
-                  onClick={() => finishImport(false)}
-                  className="h-11 rounded-[10px] bg-fill text-[15px] font-medium text-label active:opacity-60"
-                >
-                  기존에 추가
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLpPending(null)}
-                  className="h-10 text-[14px] text-secondary active:opacity-60"
-                >
-                  취소
-                </button>
-              </div>
+              {lpReplaceConfirm ? (
+                <>
+                  <h3 className="text-[17px] font-semibold text-label">
+                    정말 모두 삭제할까요?
+                  </h3>
+                  <p className="mt-1.5 text-[14px] leading-relaxed text-secondary">
+                    지금 있는 장비{" "}
+                    <span className="font-medium text-red">{gearCount}개가 모두
+                    삭제</span>되고 가져온 {lpPending.count}개로 대체됩니다.
+                    되돌릴 수 없어요.
+                  </p>
+                  <div className="mt-4 flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => finishImport(true)}
+                      className="h-11 rounded-[10px] bg-red text-[15px] font-semibold text-white active:opacity-80"
+                    >
+                      삭제하고 가져오기
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLpReplaceConfirm(false)}
+                      className="h-10 text-[14px] text-secondary active:opacity-60"
+                    >
+                      돌아가기
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-[17px] font-semibold text-label">
+                    LighterPack 가져오기
+                  </h3>
+                  <p className="mt-1.5 text-[14px] leading-relaxed text-secondary">
+                    <span className="font-medium text-label">{lpPending.count}개</span>{" "}
+                    장비를 가져옵니다. 기존 데이터를{" "}
+                    <span className="font-medium text-red">모두 삭제</span>하고
+                    가져올까요?
+                  </p>
+                  <div className="mt-4 flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setLpReplaceConfirm(true)}
+                      className="h-11 rounded-[10px] bg-red text-[15px] font-semibold text-white active:opacity-80"
+                    >
+                      삭제하고 가져오기
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => finishImport(false)}
+                      className="h-11 rounded-[10px] bg-fill text-[15px] font-medium text-label active:opacity-60"
+                    >
+                      기존에 추가
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLpPending(null)}
+                      className="h-10 text-[14px] text-secondary active:opacity-60"
+                    >
+                      취소
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
