@@ -5,8 +5,15 @@ import { ChevronRight, Map, Plus, Settings } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { Trip } from "@/lib/types";
 import { formatWeightSmart } from "@/lib/units";
-import { formatTripRange, tripNights, tripStart } from "@/lib/dates";
+import { formatTripRange, tripStart } from "@/lib/dates";
 import { tripCompanions } from "@/lib/trips";
+
+/** "-5~12℃", a single bound like "12℃", or "" when no temps are set. */
+function tempRange(low?: string, high?: string): string {
+  if (low && high) return `${low}~${high}℃`;
+  if (low || high) return `${low ?? high}℃`;
+  return "";
+}
 import { cn } from "@/lib/cn";
 import { ScreenHeader } from "../ScreenHeader";
 import { Button } from "../ui/Button";
@@ -222,14 +229,9 @@ function TripRow({
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[13px] text-secondary">
             <span>{formatTripRange(tripStart(trip), trip.endDate)}</span>
-            {tripNights(tripStart(trip), trip.endDate) && (
-              <span className="text-tertiary">
-                · {tripNights(tripStart(trip), trip.endDate)}
-              </span>
-            )}
-            {tripCompanions(trip).length > 0 && (
-              <span className="truncate text-tertiary">
-                · {tripCompanions(trip).join(", ")}
+            {tempRange(trip.tempLow, trip.tempHigh) && (
+              <span className="tabular text-tertiary">
+                · {tempRange(trip.tempLow, trip.tempHigh)}
               </span>
             )}
           </div>

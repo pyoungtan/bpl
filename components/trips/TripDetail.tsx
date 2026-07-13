@@ -658,7 +658,9 @@ export function TripDetail({
               <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-tint">
                 {major}
               </span>
-              <span className="text-[12px] text-tertiary">{rows.length}개</span>
+              <span className="tabular text-[12px] font-semibold text-tint">
+                {rows.length}개, {formatWeightSmart(catTotals.get(major) ?? 0, unit)}
+              </span>
             </div>
             {rows.map(({ gear: g, quantity }, i) => {
               const addOns = g.addOnIds
@@ -683,15 +685,6 @@ export function TripDetail({
                 </Fragment>
               );
             })}
-            {/* Mirror the item row layout (same padding + font size) so this
-                subtotal aligns exactly under the per-item weights. */}
-            <div className="flex items-center gap-2.5 px-4 py-2.5">
-              <span className="flex-1" />
-              <span className="shrink-0 tabular text-[14px] font-semibold text-tint">
-                {formatWeightSmart(catTotals.get(major) ?? 0, unit)}
-              </span>
-              <span className="w-6 shrink-0" />
-            </div>
             {gi < groups.length - 1 && (
               <div className="ml-4 mt-2 h-px bg-separator" />
             )}
