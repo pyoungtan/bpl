@@ -53,6 +53,9 @@ export interface Trip {
   tempLow?: string;
   tempHigh?: string;
   memo: string;
+  /** Manual extra weight in grams, counted into totals without picking gear
+   *  (e.g. "I remember carrying ~2kg of misc"). */
+  extraWeightG?: number;
   packed: PackedEntry[];
   /** gearIds the user has checked off as packed (gear-check mode). */
   checked: string[];

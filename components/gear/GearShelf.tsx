@@ -21,6 +21,7 @@ import {
   ArrowRight,
   Bookmark,
   Check,
+  ChevronDown,
   GripVertical,
   Minus,
   Plus,
@@ -108,6 +109,31 @@ export function GearShelf({
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
+
+  // Collapsed 대분류, remembered per device — tap a category header to fold
+  // rarely-used groups away. Ignored while editing/searching/filtering.
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const raw = JSON.parse(localStorage.getItem("bpl-collapsed-cats") || "[]");
+      return new Set(Array.isArray(raw) ? raw.filter((x) => typeof x === "string") : []);
+    } catch {
+      return new Set();
+    }
+  });
+  function toggleCatCollapsed(c: string) {
+    setCollapsedCats((prev) => {
+      const n = new Set(prev);
+      if (n.has(c)) n.delete(c);
+      else n.add(c);
+      try {
+        localStorage.setItem("bpl-collapsed-cats", JSON.stringify([...n]));
+      } catch {
+        /* ignore */
+      }
+      return n;
+    });
+  }
 
   // Items that are an add-on of another item — hidden from the top-level list.
   const addOnIdSet = useMemo(() => {
@@ -418,15 +444,46 @@ export function GearShelf({
             ) : null;
           }}
         >
-        {visibleGroups.map(([major, items]) => (
+        {visibleGroups.map(([major, items]) => {
+          const collapsible = !editMode && !q && activeCat === "all";
+          const isCollapsed = collapsible && collapsedCats.has(major);
+          return (
           <section key={major}>
-            <div className="flex items-baseline justify-between px-4 pb-1 pt-5">
+            <button
+              type="button"
+              onClick={collapsible ? () => toggleCatCollapsed(major) : undefined}
+              disabled={!collapsible}
+              aria-expanded={!isCollapsed}
+              className="flex w-full touch-manipulation items-baseline justify-between px-4 pb-1 pt-5 text-left"
+            >
               <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-tint">
                 {major}
               </span>
-              <span className="text-[12px] text-tertiary">{items.length}개</span>
-            </div>
+              <span className="flex items-center gap-1 text-[12px] text-tertiary">
+                {items.length}개
+                {collapsible && (
+                  <ChevronDown
+                    size={13}
+                    className={cn(
+                      "transition-transform",
+                      isCollapsed && "-rotate-90",
+                    )}
+                  />
+                )}
+              </span>
+            </button>
 
+            {/* Always mounted; height animates between 0 and auto. (Avoids an
+                AnimatePresence unmount bug where the exit never ran.) */}
+            <motion.div
+              initial={false}
+              animate={{
+                height: isCollapsed ? 0 : "auto",
+                opacity: isCollapsed ? 0 : 1,
+              }}
+              transition={{ duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }}
+              className="overflow-hidden"
+            >
             {editMode ? (
               items.map((g, i) => (
                 <SortableGearRow
@@ -526,8 +583,10 @@ export function GearShelf({
                 );
               })
             )}
+            </motion.div>
           </section>
-        ))}
+          );
+        })}
         </DndArea>
 
         {editMode && addonItems.length > 0 && (

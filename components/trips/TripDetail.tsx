@@ -14,6 +14,7 @@ import {
   Thermometer,
   Trash2,
   Users,
+  Weight,
   X,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
@@ -41,6 +42,7 @@ function groupByMajor(
   packed: { gearId: string; quantity: number }[],
   gear: Record<string, GearItem>,
   gearOrder: string[],
+  categories: string[],
 ): [string, Row[]][] {
   const qtyById = new Map(packed.map((p) => [p.gearId, p.quantity]));
   const map = new Map<string, Row[]>();
@@ -51,7 +53,15 @@ function groupByMajor(
     if (!map.has(g.majorCategory)) map.set(g.majorCategory, []);
     map.get(g.majorCategory)!.push({ gear: g, quantity: qtyById.get(id)! });
   }
-  return [...map.entries()];
+  // Order groups by the Inventory's 대분류 order — first-occurrence order in
+  // gearOrder drifts when items are reordered/moved across categories, which
+  // made a category randomly sink to the bottom here. Unknown names go last,
+  // keeping their relative order (sort is stable).
+  const rank = (name: string) => {
+    const i = categories.indexOf(name);
+    return i === -1 ? categories.length : i;
+  };
+  return [...map.entries()].sort((a, b) => rank(a[0]) - rank(b[0]));
 }
 
 export function TripDetail({
@@ -64,6 +74,7 @@ export function TripDetail({
   const trip = useAppStore((s) => s.trips[tripId]);
   const gear = useAppStore((s) => s.gear);
   const gearOrder = useAppStore((s) => s.gearOrder);
+  const categories = useAppStore((s) => s.categories);
   const unit = useAppStore((s) => s.displayUnit);
   const updateTrip = useAppStore((s) => s.updateTrip);
   const deleteTrip = useAppStore((s) => s.deleteTrip);
@@ -75,6 +86,12 @@ export function TripDetail({
   const [catOpen, setCatOpen] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
   const [companionDraft, setCompanionDraft] = useState("");
+  // Draft for the manual extra-weight field (grams), synced per trip.
+  const [extraDraft, setExtraDraft] = useState("");
+  useEffect(() => {
+    const t = useAppStore.getState().trips[tripId];
+    setExtraDraft(t?.extraWeightG ? String(t.extraWeightG) : "");
+  }, [tripId]);
   const [mode, setMode] = useState<Mode>("none");
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -109,9 +126,10 @@ export function TripDetail({
             trip.packed.filter((p) => !nestedSet.has(p.gearId)),
             gear,
             gearOrder,
+            categories,
           )
         : [],
-    [trip, gear, gearOrder, nestedSet],
+    [trip, gear, gearOrder, categories, nestedSet],
   );
   // Stats count every packed item (parents + nested add-ons). A packed add-on
   // is logically part of its parent, so its weight is credited to the parent's
@@ -137,8 +155,23 @@ export function TripDetail({
         };
       })
       .filter((r): r is { gear: GearItem; quantity: number } => Boolean(r));
-    return computeStats(rows);
-  }, [packed, gear, packedQty]);
+    const s = computeStats(rows);
+    // Manual extra weight joins the totals (and base weight) as its own
+    // neutral-gray slice in the donut/breakdown.
+    const extra = trip?.extraWeightG ?? 0;
+    if (extra > 0) {
+      return {
+        ...s,
+        totalG: s.totalG + extra,
+        baseG: s.baseG + extra,
+        byCategory: [
+          ...s.byCategory,
+          { name: "무게 추가", color: "#9b958a", weightG: extra },
+        ].sort((a, b) => b.weightG - a.weightG),
+      };
+    }
+    return s;
+  }, [packed, gear, packedQty, trip?.extraWeightG]);
 
   // Per-category weight totals (add-ons credited to their parent's category,
   // same as the donut) — shown under each category group in the packed list.
@@ -693,6 +726,31 @@ export function TripDetail({
 
       {/* Packed gear — flat list */}
       <div className="mt-3">
+        {/* Manual extra weight — reflected in totals without picking gear */}
+        <div className="flex items-center gap-2.5 px-4 py-2.5">
+          <Weight size={16} className="shrink-0 text-tertiary" />
+          <span className="min-w-0 flex-1 text-[15px] font-semibold text-label">
+            무게 추가
+          </span>
+          <input
+            value={extraDraft}
+            onChange={(e) => {
+              const clean = e.target.value
+                .replace(/[^\d.]/g, "")
+                .replace(/(\..*)\./g, "$1")
+                .slice(0, 7);
+              setExtraDraft(clean);
+              const n = Math.round((parseFloat(clean) || 0) * 10) / 10;
+              updateTrip(tripId, { extraWeightG: n > 0 ? n : undefined });
+            }}
+            placeholder="0"
+            inputMode="decimal"
+            className="w-24 rounded-[8px] bg-fill px-2.5 py-1 text-right tabular text-[14px] text-label outline-none placeholder:text-tertiary"
+          />
+          <span className="shrink-0 text-[14px] text-secondary">g</span>
+          <span className="w-6 shrink-0" />
+        </div>
+        <div className="ml-4 h-px bg-separator" />
         {groups.map(([major, rows], gi) => (
           <section key={major}>
             <div className="flex items-baseline justify-between px-4 pb-1 pt-5">
@@ -836,6 +894,7 @@ function GearPickerSheet({
 }) {
   const gear = useAppStore((s) => s.gear);
   const gearOrder = useAppStore((s) => s.gearOrder);
+  const categories = useAppStore((s) => s.categories);
   const trip = useAppStore((s) => s.trips[tripId]);
   const unit = useAppStore((s) => s.displayUnit);
   const addEntries = useAppStore((s) => s.addEntriesToTrip);
@@ -882,8 +941,13 @@ function GearPickerSheet({
       if (!map.has(g.majorCategory)) map.set(g.majorCategory, []);
       map.get(g.majorCategory)!.push(g);
     }
-    return [...map.entries()];
-  }, [gear, gearOrder, alreadyIn, nestedSet]);
+    // Same Inventory 대분류 order as the packed list.
+    const rank = (name: string) => {
+      const i = categories.indexOf(name);
+      return i === -1 ? categories.length : i;
+    };
+    return [...map.entries()].sort((a, b) => rank(a[0]) - rank(b[0]));
+  }, [gear, gearOrder, categories, alreadyIn, nestedSet]);
 
   function toggle(id: string) {
     const willPick = !picked.has(id);

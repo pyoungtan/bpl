@@ -205,10 +205,11 @@ function TripRow({
   const gear = useAppStore((s) => s.gear);
   const unit = useAppStore((s) => s.displayUnit);
 
-  const totalG = trip.packed.reduce((sum, p) => {
-    const g = gear[p.gearId];
-    return g ? sum + g.weightG * p.quantity : sum;
-  }, 0);
+  const totalG =
+    trip.packed.reduce((sum, p) => {
+      const g = gear[p.gearId];
+      return g ? sum + g.weightG * p.quantity : sum;
+    }, 0) + (trip.extraWeightG ?? 0);
 
   return (
     <SwipeRow
