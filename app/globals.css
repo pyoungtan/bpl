@@ -208,3 +208,23 @@
     animation: none;
   }
 }
+
+/* Category-fold reveal: rows stay mounted and folding toggles display:none, so
+   this fade restarts automatically each time the block becomes visible again.
+   Opacity-only → compositor-driven, ProMotion-smooth. */
+@keyframes foldReveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.fold-reveal {
+  animation: foldReveal 0.18s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fold-reveal {
+    animation: none;
+  }
+}
