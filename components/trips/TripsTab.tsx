@@ -128,8 +128,8 @@ function TripList({
       {tripOrder.length === 0 ? (
         <EmptyTrips onCreate={() => onOpen(createTrip())} />
       ) : (
-        <div className="px-4 pt-2">
-          <div className="no-scrollbar mb-2 flex gap-1.5 overflow-x-auto">
+        <div className="pt-2">
+          <div className="no-scrollbar mb-1 flex gap-1.5 overflow-x-auto px-4 pb-1">
             {SORTS.map((s) => (
               <button
                 key={s.key}
@@ -145,7 +145,8 @@ function TripList({
               </button>
             ))}
           </div>
-          <div className="overflow-hidden rounded-[12px] bg-card">
+          {/* Dense flat list — hairline separators only, like the Inventory */}
+          <div>
             {sortedIds.map((id, i) => {
               const t = trips[id];
               return t ? (
@@ -218,7 +219,7 @@ function TripRow({
       onOpenChange={onSwipeOpenChange}
       rightWidth={56}
       topHairline={topHairline}
-      bgClassName="bg-card"
+      bgClassName="bg-bg"
       renderRight={(_close, rowOpen) => (
         <SwipeDeleteButton rowOpen={rowOpen} onDelete={onDelete} />
       )}
