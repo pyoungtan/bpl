@@ -16,7 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   ArrowRight,
   Bookmark,
@@ -448,7 +448,14 @@ export function GearShelf({
           const collapsible = !editMode && !q && activeCat === "all";
           const isCollapsed = collapsible && collapsedCats.has(major);
           return (
-          <section key={major}>
+          // layout="position": when a category above folds/unfolds, this
+          // section glides to its new spot via transform (GPU-composited,
+          // ProMotion-smooth) instead of being reflowed every frame.
+          <motion.section
+            key={major}
+            layout={collapsible ? "position" : false}
+            transition={{ type: "spring", stiffness: 550, damping: 45 }}
+          >
             <button
               type="button"
               onClick={collapsible ? () => toggleCatCollapsed(major) : undefined}
@@ -473,16 +480,15 @@ export function GearShelf({
               </span>
             </button>
 
-            {/* Always mounted; height animates between 0 and auto. (Avoids an
-                AnimatePresence unmount bug where the exit never ran.) */}
+            {/* Rows mount/unmount instantly (a per-frame height animation
+                reflowed hundreds of rows and dropped well below 60fps on
+                iPhone); the sections below glide via the FLIP transform above,
+                and the revealed rows get a quick fade. */}
+            {!isCollapsed && (
             <motion.div
-              initial={false}
-              animate={{
-                height: isCollapsed ? 0 : "auto",
-                opacity: isCollapsed ? 0 : 1,
-              }}
-              transition={{ duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }}
-              className="overflow-hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.15 }}
             >
             {editMode ? (
               items.map((g, i) => (
@@ -538,14 +544,15 @@ export function GearShelf({
                       swipeOpenId={swipeOpenId}
                       onSwipeOpenChange={setSwipeOpenId}
                     />
-                    <AnimatePresence initial={false}>
-                      {isExpanded && addOns.length > 0 && (
+                    {/* Mounts instantly with a quick fade; a height animation
+                        here reflowed the whole long list every frame. Sections
+                        below glide via their FLIP transforms instead. */}
+                    {isExpanded && addOns.length > 0 && (
                         <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.24, ease: [0.22, 0.61, 0.36, 1] }}
-                          className="overflow-hidden bg-[color-mix(in_srgb,var(--tint)_5%,transparent)]"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.15 }}
+                          className="bg-[color-mix(in_srgb,var(--tint)_5%,transparent)]"
                         >
                           {addOns.map((a) => (
                             <AddonRow
@@ -577,14 +584,14 @@ export function GearShelf({
                             />
                           ))}
                         </motion.div>
-                      )}
-                    </AnimatePresence>
+                    )}
                   </Fragment>
                 );
               })
             )}
             </motion.div>
-          </section>
+            )}
+          </motion.section>
           );
         })}
         </DndArea>
@@ -611,7 +618,10 @@ export function GearShelf({
         )}
 
         {!editMode && activeCat === "all" && hiddenItems.length > 0 && (
-          <section>
+          <motion.section
+            layout="position"
+            transition={{ type: "spring", stiffness: 550, damping: 45 }}
+          >
             <div className="flex items-baseline justify-between px-4 pb-1 pt-6">
               <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-tertiary">
                 숨겨짐
@@ -647,7 +657,7 @@ export function GearShelf({
                 onSwipeOpenChange={setSwipeOpenId}
               />
             ))}
-          </section>
+          </motion.section>
         )}
 
         {visibleGroups.length === 0 && (q || hiddenItems.length === 0) && (
