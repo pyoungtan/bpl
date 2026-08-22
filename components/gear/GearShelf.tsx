@@ -448,14 +448,7 @@ export function GearShelf({
           const collapsible = !editMode && !q && activeCat === "all";
           const isCollapsed = collapsible && collapsedCats.has(major);
           return (
-          // layout="position": when a category above folds/unfolds, this
-          // section glides to its new spot via transform (GPU-composited,
-          // ProMotion-smooth) instead of being reflowed every frame.
-          <motion.section
-            key={major}
-            layout={collapsible ? "position" : false}
-            transition={{ type: "spring", stiffness: 550, damping: 45 }}
-          >
+          <section key={major}>
             <button
               type="button"
               onClick={collapsible ? () => toggleCatCollapsed(major) : undefined}
@@ -480,16 +473,12 @@ export function GearShelf({
               </span>
             </button>
 
-            {/* Rows mount/unmount instantly (a per-frame height animation
-                reflowed hundreds of rows and dropped well below 60fps on
-                iPhone); the sections below glide via the FLIP transform above,
-                and the revealed rows get a quick fade. */}
-            {!isCollapsed && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.15 }}
-            >
+            {/* Rows stay mounted; folding just toggles display:none — an
+                instant cut. Every animated fold tried here dropped frames on
+                iPhone: a height tween reflows hundreds of rows per frame, and
+                FLIP glides rasterize several-thousand-px composited layers.
+                No animation frames = nothing to drop. */}
+            <div className={cn(isCollapsed && "hidden")}>
             {editMode ? (
               items.map((g, i) => (
                 <SortableGearRow
@@ -589,9 +578,8 @@ export function GearShelf({
                 );
               })
             )}
-            </motion.div>
-            )}
-          </motion.section>
+            </div>
+          </section>
           );
         })}
         </DndArea>
@@ -618,10 +606,7 @@ export function GearShelf({
         )}
 
         {!editMode && activeCat === "all" && hiddenItems.length > 0 && (
-          <motion.section
-            layout="position"
-            transition={{ type: "spring", stiffness: 550, damping: 45 }}
-          >
+          <section>
             <div className="flex items-baseline justify-between px-4 pb-1 pt-6">
               <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-tertiary">
                 숨겨짐
@@ -657,7 +642,7 @@ export function GearShelf({
                 onSwipeOpenChange={setSwipeOpenId}
               />
             ))}
-          </motion.section>
+          </section>
         )}
 
         {visibleGroups.length === 0 && (q || hiddenItems.length === 0) && (
