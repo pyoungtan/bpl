@@ -345,12 +345,12 @@ export function GearShelf({
       )}
 
       {!editMode && chipCats.length > 0 && (
-        <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-1 pt-2">
+        <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-2.5 pt-2">
           <button
             type="button"
             onClick={() => setPresetsOpen(true)}
             aria-label="프리셋"
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-fill text-label transition active:opacity-60"
+            className="glass-chip grid h-8 w-8 shrink-0 place-items-center rounded-full text-label transition active:opacity-60"
           >
             <Bookmark size={15} />
           </button>
@@ -363,7 +363,7 @@ export function GearShelf({
                 onClick={() => setActiveCat(c)}
                 className={cn(
                   "h-8 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[14px] font-medium transition active:opacity-60",
-                  active ? "bg-tint text-on-tint" : "bg-fill text-label",
+                  active ? "btn-ink" : "glass-chip text-label",
                 )}
               >
                 {c === "all" ? "전체" : c}
@@ -502,7 +502,6 @@ export function GearShelf({
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           transition={{ duration: 0.15 }}
-                          className="bg-[color-mix(in_srgb,var(--tint)_5%,transparent)]"
                         >
                           {addOns.map((a) => (
                             <AddonRow
@@ -821,7 +820,7 @@ function AddonRow({
       }}
       className={cn(
         "flex w-full cursor-pointer touch-manipulation select-none items-center gap-2.5 py-2 pl-9 pr-4 text-left outline-none transition",
-        selected && "bg-[color-mix(in_srgb,var(--tint)_8%,transparent)]",
+        selected && "bg-tint-soft",
       )}
     >
       <span className="min-w-0 flex-1 truncate text-[14px] text-secondary">

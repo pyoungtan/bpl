@@ -305,9 +305,7 @@ export function TripDetail({
         }}
         swipeDisabled={isChecking}
         rightWidth={56}
-        bgClassName={
-          nested ? "bg-[color-mix(in_srgb,var(--tint)_6%,var(--bg))]" : "bg-bg"
-        }
+        bgClassName="bg-bg"
         renderRight={(_close, rowOpen) => (
           <SwipeDeleteButton
             rowOpen={rowOpen}
@@ -466,7 +464,7 @@ export function TripDetail({
   }
 
   return (
-    <div ref={rootRef} className="pb-40">
+    <div ref={rootRef} data-no-tab-swipe className="pb-40">
       {/* Left-edge swipe-right to go back (iOS-style), below the header so it
           doesn't block the back button. touch-action pan-y: vertical scrolls
           stay with the browser (we get a pointercancel), horizontal is ours. */}
@@ -1034,9 +1032,7 @@ function GearPickerSheet({
         key={g.id}
         className={cn(
           "flex items-center gap-2.5 py-2.5",
-          nested
-            ? "bg-[color-mix(in_srgb,var(--tint)_5%,transparent)] pl-9 pr-4"
-            : "px-4",
+          nested ? "pl-9 pr-4" : "px-4",
         )}
       >
         <Checkbox

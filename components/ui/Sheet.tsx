@@ -201,7 +201,7 @@ export function Sheet({
                   onClick={rightAction.onClick}
                   onMouseDown={(e) => e.preventDefault()}
                   disabled={rightAction.disabled}
-                  className="h-10 justify-self-end whitespace-nowrap rounded-full bg-tint px-4 text-[15px] font-semibold text-on-tint shadow-[0_4px_12px_rgba(0,0,0,0.14)] transition-transform active:scale-95 disabled:opacity-30"
+                  className="h-10 justify-self-end whitespace-nowrap btn-ink rounded-full px-4 text-[15px] font-semibold transition-transform active:scale-95 disabled:opacity-30"
                 >
                   {rightAction.label}
                 </button>

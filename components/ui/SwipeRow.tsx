@@ -100,9 +100,7 @@ export function SwipeRow({
   }
 
   return (
-    <div
-      className="relative overflow-hidden"
-    >
+    <div data-swipe-row className="relative overflow-hidden">
       {swipeable && LEFT_W > 0 && renderLeft && (
         <motion.div className="absolute inset-y-0 left-0 flex" style={{ opacity: leftVis }}>
           {renderLeft(() => close(), open === "left")}

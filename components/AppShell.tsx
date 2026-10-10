@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useAppStore, useHydrated } from "@/lib/store";
 import {
   useCloudSync,
@@ -12,6 +13,7 @@ import { GearShelf } from "./gear/GearShelf";
 import { TripsTab } from "./trips/TripsTab";
 import { SettingsSheet } from "./SettingsSheet";
 import { PullToRefresh } from "./PullToRefresh";
+import { useTabSwipe } from "./useTabSwipe";
 import { cn } from "@/lib/cn";
 
 export function AppShell() {
@@ -21,30 +23,53 @@ export function AppShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tripToOpen, setTripToOpen] = useState<string | null>(null);
   const cloud = useCloudSync();
-  // Tabs stay mounted once visited (switching only toggles visibility, so
-  // the long Gear list is never rebuilt mid-transition) and each keeps its
-  // own scroll offset, like a native tab bar.
-  const [visited, setVisited] = useState<TabKey[]>(["shelf"]);
+  // Both tabs stay mounted (switching only toggles visibility, so the long
+  // Gear list is never rebuilt mid-transition, and a swipe can show the real
+  // neighbouring screen). Each keeps its own scroll offset, like a native tab
+  // bar.
   const tabRef = useRef<TabKey>("shelf");
   const tabScroll = useRef<Partial<Record<TabKey, number>>>({});
   const pendingScroll = useRef<number | null>(null);
+  const fadeIn = useRef(true);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const paneEls = useRef<Partial<Record<TabKey, HTMLDivElement | null>>>({});
 
-  const switchTab = useCallback((next: TabKey, scrollTo?: number) => {
-    const cur = tabRef.current;
-    if (next === cur) return;
-    tabScroll.current[cur] = window.scrollY;
-    pendingScroll.current = scrollTo ?? tabScroll.current[next] ?? 0;
-    tabRef.current = next;
-    setVisited((v) => (v.includes(next) ? v : [...v, next]));
-    setTab(next);
-  }, []);
+  const switchTab = useCallback(
+    (next: TabKey, opts?: { scrollTo?: number; fromScroll?: number; fade?: boolean }) => {
+      const cur = tabRef.current;
+      if (next === cur) return;
+      tabScroll.current[cur] = opts?.fromScroll ?? window.scrollY;
+      pendingScroll.current = opts?.scrollTo ?? tabScroll.current[next] ?? 0;
+      fadeIn.current = opts?.fade ?? true;
+      tabRef.current = next;
+      setTab(next);
+    },
+    [],
+  );
   const openTripFromShelf = useCallback(
     (id: string) => {
       setTripToOpen(id);
-      switchTab("trips", 0);
+      switchTab("trips", { scrollTo: 0 });
     },
     [switchTab],
   );
+  const consumeFade = useCallback(() => {
+    const fade = fadeIn.current;
+    fadeIn.current = true;
+    return fade;
+  }, []);
+  const registerPane = useCallback((pane: TabKey, el: HTMLDivElement | null) => {
+    paneEls.current[pane] = el;
+  }, []);
+  useTabSwipe({
+    enabled: hydrated,
+    rootRef,
+    panes: paneEls,
+    getTab: () => tabRef.current,
+    getScroll: (t) => tabScroll.current[t] ?? 0,
+    onCommit: (next, fromScroll) =>
+      flushSync(() => switchTab(next, { fromScroll, fade: false })),
+  });
   const consumeTripToOpen = useCallback(() => setTripToOpen(null), []);
   // Stable elements: a tab switch must not re-render the (hidden or shown)
   // screens — framer layout animations would measure the display:none state.
@@ -90,19 +115,27 @@ export function AppShell() {
   return (
     <TopBarProvider
       tab={tab}
-      onTabChange={switchTab}
+      onTabChange={(t) => switchTab(t)}
       onOpenSettings={() => setSettingsOpen(true)}
     >
-      <div className="mx-auto min-h-dvh w-full max-w-2xl">
+      <div ref={rootRef} className="mx-auto min-h-dvh w-full max-w-2xl">
         <PullToRefresh />
-        <TabPane pane="shelf" active={tab === "shelf"}>
+        <TabPane
+          pane="shelf"
+          active={tab === "shelf"}
+          shouldFade={consumeFade}
+          elRef={registerPane}
+        >
           {shelfScreen}
         </TabPane>
-        {visited.includes("trips") && (
-          <TabPane pane="trips" active={tab === "trips"}>
-            {tripsScreen}
-          </TabPane>
-        )}
+        <TabPane
+          pane="trips"
+          active={tab === "trips"}
+          shouldFade={consumeFade}
+          elRef={registerPane}
+        >
+          {tripsScreen}
+        </TabPane>
         <SettingsSheet
           open={settingsOpen}
           onClose={() => setSettingsOpen(false)}
@@ -124,23 +157,36 @@ export function AppShell() {
 function TabPane({
   pane,
   active,
+  shouldFade,
+  elRef,
   children,
 }: {
   pane: TabKey;
   active: boolean;
+  /** False when the switch was already animated (swipe). */
+  shouldFade: () => boolean;
+  elRef: (pane: TabKey, el: HTMLDivElement | null) => void;
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
-    if (!active || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!active || !shouldFade()) return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     ref.current?.animate([{ opacity: 0 }, { opacity: 1 }], {
       duration: 160,
       easing: "ease-out",
     });
-  }, [active]);
+  }, [active, shouldFade]);
   return (
     <TopBarPane value={pane}>
-      <div ref={ref} hidden={!active} className="pt-[calc(var(--bar-top)+60px)]">
+      <div
+        ref={(el) => {
+          ref.current = el;
+          elRef(pane, el);
+        }}
+        hidden={!active}
+        className="pt-[calc(var(--bar-top)+60px)]"
+      >
         {children}
       </div>
     </TopBarPane>

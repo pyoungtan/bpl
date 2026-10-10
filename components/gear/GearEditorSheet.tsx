@@ -47,7 +47,7 @@ function ChipToggle({
       aria-pressed={active}
       className={cn(
         "h-9 rounded-full px-4 text-[14px] font-medium transition active:opacity-60",
-        active ? "bg-tint text-on-tint" : "bg-fill text-secondary",
+        active ? "btn-ink" : "glass-chip text-secondary",
       )}
     >
       {label}
@@ -296,7 +296,7 @@ export function GearEditorSheet({
                   }}
                   className={cn(
                     "h-8 touch-manipulation rounded-full px-3 text-[14px] font-medium transition active:opacity-60",
-                    active ? "bg-tint text-on-tint" : "bg-fill text-secondary",
+                    active ? "btn-ink" : "glass-chip text-secondary",
                   )}
                 >
                   {c}

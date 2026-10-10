@@ -10,8 +10,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { Check, ChevronLeft, Search, Settings, X } from "lucide-react";
+import { Check, ChevronLeft, Moon, Search, Settings, Sun, X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useAppStore } from "@/lib/store";
 
 export type TabKey = "shelf" | "trips";
 
@@ -718,6 +719,17 @@ export function TopBarProvider({
   const owners = useRef<Partial<Record<TabKey, symbol>>>({});
   const [menuOpen, setMenuOpen] = useState(false);
   const config = configs[tab] ?? null;
+  const theme = useAppStore((s) => s.theme);
+  const setTheme = useAppStore((s) => s.setTheme);
+  const [systemDark, setSystemDark] = useState(false);
+  useEffect(() => {
+    const mq = matchMedia("(prefers-color-scheme: dark)");
+    const sync = () => setSystemDark(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  const isDark = theme === "dark" || (theme === "system" && systemDark);
 
   const set = useCallback<Setter>((c, owner, pane) => {
     if (c === null) {
@@ -768,10 +780,16 @@ export function TopBarProvider({
   const menu: TopBarMenuItem[] = [
     ...(config?.menu ?? []),
     {
+      id: "theme",
+      label: isDark ? "라이트 모드" : "다크 모드",
+      icon: isDark ? <Sun size={19} /> : <Moon size={19} />,
+      group: Boolean(config?.menu?.length),
+      onSelect: () => setTheme(isDark ? "light" : "dark"),
+    },
+    {
       id: "settings",
       label: "설정",
       icon: <Settings size={19} />,
-      group: Boolean(config?.menu?.length),
       onSelect: onOpenSettings,
     },
   ];

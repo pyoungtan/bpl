@@ -167,7 +167,7 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
         <EmptyTrips onCreate={() => onOpen(createTrip())} />
       ) : (
         <div>
-          <div className="no-scrollbar mb-1 flex gap-2 overflow-x-auto px-4 pb-1 pt-2">
+          <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-2.5 pt-2">
             {SORTS.map((s) => (
               <button
                 key={s.key}
@@ -176,7 +176,7 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
                 aria-pressed={sort === s.key}
                 className={cn(
                   "h-8 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[14px] font-medium transition active:opacity-60",
-                  sort === s.key ? "bg-tint text-on-tint" : "bg-fill text-label",
+                  sort === s.key ? "btn-ink" : "glass-chip text-label",
                 )}
               >
                 {s.label}

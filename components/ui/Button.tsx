@@ -7,7 +7,7 @@ type Variant = "filled" | "tinted" | "gray" | "plain" | "destructive";
 type Size = "sm" | "md" | "lg" | "icon";
 
 const variants: Record<Variant, string> = {
-  filled: "bg-tint text-on-tint font-semibold",
+  filled: "btn-ink font-semibold",
   tinted: "bg-tint-soft text-tint font-semibold",
   gray: "bg-fill text-label font-medium",
   plain: "text-tint font-normal",

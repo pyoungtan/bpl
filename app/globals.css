@@ -77,6 +77,24 @@
   --g-glow: rgba(255, 255, 255, 0.9);
   --g-solid: #ffffff;
   --g-hl: rgba(0, 0, 0, 0.07);
+  /* Ink (black prominent) glass */
+  --ink-fill: rgba(0, 0, 0, 0.86);
+  --ink-sheen: rgba(255, 255, 255, 0.17);
+  --ink-inner:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.38),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.1),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.1);
+  --ink-rim-hi: rgba(255, 255, 255, 0.62);
+  --ink-rim-bottom: rgba(255, 255, 255, 0.3);
+  --ink-rim-lo: rgba(255, 255, 255, 0.05);
+  --ink-edge-side: rgba(0, 0, 0, 0.55);
+  --ink-edge-cap: rgba(0, 0, 0, 0.25);
+  /* Chip glass (in-flow tags: volume without backdrop blur) */
+  --chip-fill: #f5f5f7;
+  --chip-sheen: rgba(255, 255, 255, 0.9);
+  --chip-inner:
+    inset 0 1px 0.5px rgba(255, 255, 255, 1),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.035);
 
   /* Springs — TopBarProvider swaps in physically-sampled linear() curves */
   --spring-press: cubic-bezier(0.3, 1.5, 0.5, 1);
@@ -136,6 +154,21 @@
   --g-glow: rgba(255, 255, 255, 0.35);
   --g-solid: #1c1c1e;
   --g-hl: rgba(255, 255, 255, 0.13);
+  --ink-fill: rgba(255, 255, 255, 0.92);
+  --ink-sheen: rgba(255, 255, 255, 0.7);
+  --ink-inner:
+    inset 0 1px 0.5px rgba(255, 255, 255, 1),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.14);
+  --ink-rim-hi: rgba(255, 255, 255, 1);
+  --ink-rim-bottom: rgba(255, 255, 255, 0.7);
+  --ink-rim-lo: rgba(0, 0, 0, 0.05);
+  --ink-edge-side: rgba(255, 255, 255, 0.3);
+  --ink-edge-cap: rgba(255, 255, 255, 0.12);
+  --chip-fill: rgba(255, 255, 255, 0.1);
+  --chip-sheen: rgba(255, 255, 255, 0.07);
+  --chip-inner:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.2);
 }
 
 @theme inline {
@@ -235,7 +268,9 @@
   }
   /* outer hairline: darkest on the left/right flanks, fading top and bottom */
   .glass::before,
-  .glass-strong::before {
+  .glass-strong::before,
+  .btn-ink::before,
+  .glass-chip::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -244,10 +279,10 @@
     padding: var(--g-edge-w);
     background: linear-gradient(
       90deg,
-      var(--g-edge-side) 0%,
-      var(--g-edge-cap) 32%,
-      var(--g-edge-cap) 68%,
-      var(--g-edge-side) 100%
+      var(--edge-side, var(--g-edge-side)) 0%,
+      var(--edge-cap, var(--g-edge-cap)) 32%,
+      var(--edge-cap, var(--g-edge-cap)) 68%,
+      var(--edge-side, var(--g-edge-side)) 100%
     );
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
@@ -257,7 +292,9 @@
   /* specular rim just inside the hairline: brightest across the top and
      bottom centres, falling off toward the darker left/right flanks */
   .glass::after,
-  .glass-strong::after {
+  .glass-strong::after,
+  .btn-ink::after,
+  .glass-chip::after {
     content: "";
     position: absolute;
     inset: var(--g-edge-w);
@@ -265,9 +302,13 @@
     border-radius: inherit;
     padding: 1.25px;
     background:
-      radial-gradient(ellipse 72% 70% at 50% 0%, var(--g-rim-hi), transparent),
-      radial-gradient(ellipse 72% 70% at 50% 100%, var(--g-rim-bottom), transparent),
-      var(--g-rim-lo);
+      radial-gradient(ellipse 72% 70% at 50% 0%, var(--rim-hi, var(--g-rim-hi)), transparent),
+      radial-gradient(
+        ellipse 72% 70% at 50% 100%,
+        var(--rim-bottom, var(--g-rim-bottom)),
+        transparent
+      ),
+      var(--rim-lo, var(--g-rim-lo));
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
@@ -297,11 +338,38 @@
     --t-dur: 0.16s;
     --t-ease: cubic-bezier(0.2, 0.8, 0.3, 1);
   }
-  /* Solid black (light) / white (dark) primary capsule, as in iOS 26 apps */
+  /* Prominent tinted glass: black (light) / white (dark) with the same
+     sheen, rim and flank edges as the clear glass */
   .btn-ink {
-    background: var(--tint);
+    position: relative;
+    isolation: isolate;
     color: var(--on-tint);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16), 0 1px 3px rgba(0, 0, 0, 0.12);
+    background-color: var(--ink-fill);
+    background-image: linear-gradient(180deg, var(--ink-sheen), transparent 55%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    backdrop-filter: blur(12px) saturate(180%);
+    box-shadow:
+      var(--ink-inner),
+      0 6px 18px rgba(0, 0, 0, 0.16),
+      0 1px 3px rgba(0, 0, 0, 0.12);
+    --rim-hi: var(--ink-rim-hi);
+    --rim-bottom: var(--ink-rim-bottom);
+    --rim-lo: var(--ink-rim-lo);
+    --edge-side: var(--ink-edge-side);
+    --edge-cap: var(--ink-edge-cap);
+  }
+  /* In-flow tags (category / sort chips): glass volume — sheen, rim, flank
+     edges — without backdrop blur, which would cost per chip for nothing on
+     the plain canvas behind them */
+  .glass-chip {
+    position: relative;
+    isolation: isolate;
+    background-color: var(--chip-fill);
+    background-image: linear-gradient(180deg, var(--chip-sheen), transparent 60%);
+    box-shadow:
+      var(--chip-inner),
+      0 1px 2px rgba(0, 0, 0, 0.05),
+      0 2px 6px rgba(0, 0, 0, 0.04);
   }
 }
 
@@ -311,6 +379,11 @@
   .glass-strong {
     background-color: var(--g-solid);
     background-image: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .btn-ink {
+    background-color: var(--tint);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
