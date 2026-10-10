@@ -69,7 +69,7 @@ export function PresetsSheet({
                   }
                 }}
                 placeholder={`선택한 ${selectedIds.length}개 장비`}
-                className="h-11 min-w-0 flex-1 rounded-[10px] border border-separator bg-card px-3.5 text-[15px] text-label outline-none transition focus:border-tint"
+                className="h-11 min-w-0 flex-1 rounded-full border border-separator bg-card px-3.5 text-[15px] text-label outline-none transition focus:border-tint"
               />
               <Button variant="filled" onClick={save} className="shrink-0">
                 저장
@@ -87,7 +87,7 @@ export function PresetsSheet({
             <h2 className="mb-1.5 px-1 text-[13px] font-medium uppercase tracking-wide text-secondary">
               내 프리셋
             </h2>
-            <div className="overflow-hidden rounded-[12px] bg-card">
+            <div className="overflow-hidden rounded-[22px] bg-card">
               {presets.map((p, i) => (
                 <div
                   key={p.id}

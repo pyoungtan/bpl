@@ -54,7 +54,7 @@ export function AddToTripSheet({
   return (
     <Sheet open={open} onClose={onClose} title="Trip에 추가">
       <div className="space-y-6 px-4">
-        <div className="rounded-[10px] bg-card p-4">
+        <div className="rounded-[22px] bg-card p-4">
           <div className="flex items-baseline justify-between">
             <span className="text-[15px] text-secondary">선택한 장비</span>
             <span className="tabular text-[15px] font-medium text-label">

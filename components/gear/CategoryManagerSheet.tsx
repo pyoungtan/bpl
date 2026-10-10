@@ -101,7 +101,7 @@ export function CategoryManagerSheet({
               }
             }}
             placeholder="새 대분류 이름"
-            className="h-11 min-w-0 flex-1 rounded-[10px] bg-card px-3.5 text-[15px] text-label outline-none"
+            className="h-11 min-w-0 flex-1 rounded-full bg-card px-3.5 text-[15px] text-label outline-none"
           />
           <Button variant="tinted" onClick={addNew} className="shrink-0">
             추가
@@ -147,7 +147,7 @@ function SortableCatRow({
       style={style}
       className={cn(
         "relative flex h-14 items-center gap-1.5 pr-1",
-        isDragging && "rounded-[10px] bg-card shadow-lg",
+        isDragging && "rounded-[16px] bg-card shadow-lg",
         topHairline &&
           !isDragging &&
           "before:pointer-events-none before:absolute before:left-10 before:right-0 before:top-0 before:h-px before:bg-separator",

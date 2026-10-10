@@ -156,7 +156,7 @@ export function SettingsSheet({
         {cloud.enabled && (
           <Field label="클라우드 동기화">
             {cloud.session ? (
-              <div className="flex items-center justify-between gap-3 rounded-[12px] bg-card px-4 py-3">
+              <div className="flex items-center justify-between gap-3 rounded-[22px] bg-card px-4 py-3">
                 <div className="min-w-0">
                   <div className="truncate text-[15px] text-label">
                     {cloud.session.user.email}
@@ -196,7 +196,7 @@ export function SettingsSheet({
                       setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
                     }
                     placeholder="6자리 코드"
-                    className="h-11 min-w-0 flex-1 rounded-[10px] bg-card px-3.5 text-[16px] tracking-[0.3em] tabular text-label outline-none placeholder:tracking-normal"
+                    className="h-11 min-w-0 flex-1 rounded-full bg-card px-3.5 text-[16px] tracking-[0.3em] tabular text-label outline-none placeholder:tracking-normal"
                   />
                   <Button
                     variant="filled"
@@ -230,7 +230,7 @@ export function SettingsSheet({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="이메일 주소"
-                    className="h-11 min-w-0 flex-1 rounded-[10px] bg-card px-3.5 text-[15px] text-label outline-none"
+                    className="h-11 min-w-0 flex-1 rounded-full bg-card px-3.5 text-[15px] text-label outline-none"
                   />
                   <Button
                     variant="filled"
@@ -302,7 +302,7 @@ export function SettingsSheet({
                 }
               }}
               placeholder="lighterpack.com/r/… 링크"
-              className="h-11 min-w-0 flex-1 rounded-[10px] bg-card px-3.5 text-[16px] text-label outline-none"
+              className="h-11 min-w-0 flex-1 rounded-full bg-card px-3.5 text-[16px] text-label outline-none"
             />
             <Button
               variant="filled"
@@ -346,7 +346,7 @@ export function SettingsSheet({
               setConfirmReset(false);
               onClose();
             }}
-            className="flex h-12 w-full items-center justify-center rounded-[12px] bg-card text-[17px] text-red active:opacity-60"
+            className="flex h-[52px] w-full items-center justify-center rounded-full bg-fill text-[17px] text-red active:opacity-60"
           >
             {confirmReset ? "한 번 더 눌러 초기화" : "샘플 데이터로 초기화"}
           </button>
@@ -364,7 +364,7 @@ export function SettingsSheet({
                 setLpReplaceConfirm(false);
               }}
             />
-            <div className="relative w-full max-w-xs rounded-[16px] bg-card p-5 shadow-2xl">
+            <div className="glass-strong relative w-full max-w-xs rounded-[32px] p-6 text-center">
               {lpReplaceConfirm ? (
                 <>
                   <h3 className="text-[17px] font-semibold text-label">
@@ -380,7 +380,7 @@ export function SettingsSheet({
                     <button
                       type="button"
                       onClick={() => finishImport(true)}
-                      className="h-11 rounded-[10px] bg-red text-[15px] font-semibold text-white active:opacity-80"
+                      className="h-12 rounded-full bg-red text-[15px] font-semibold text-white active:opacity-80"
                     >
                       삭제하고 가져오기
                     </button>
@@ -408,14 +408,14 @@ export function SettingsSheet({
                     <button
                       type="button"
                       onClick={() => setLpReplaceConfirm(true)}
-                      className="h-11 rounded-[10px] bg-red text-[15px] font-semibold text-white active:opacity-80"
+                      className="h-12 rounded-full bg-red text-[15px] font-semibold text-white active:opacity-80"
                     >
                       삭제하고 가져오기
                     </button>
                     <button
                       type="button"
                       onClick={() => finishImport(false)}
-                      className="h-11 rounded-[10px] bg-fill text-[15px] font-medium text-label active:opacity-60"
+                      className="h-12 rounded-full bg-fill text-[15px] font-medium text-label active:opacity-60"
                     >
                       기존에 추가
                     </button>

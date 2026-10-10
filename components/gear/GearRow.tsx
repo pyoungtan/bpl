@@ -119,7 +119,7 @@ export function GearRow({
                     swipeActions.onEdit();
                     close();
                   }}
-                  className="grid w-14 touch-manipulation place-items-center bg-tint text-white active:opacity-80"
+                  className="grid w-14 touch-manipulation place-items-center bg-tint text-on-tint active:opacity-80"
                 >
                   <SquarePen size={19} />
                 </button>
@@ -139,8 +139,8 @@ export function GearRow({
                   close();
                 }}
                 className={cn(
-                  "grid w-14 touch-manipulation place-items-center text-white active:opacity-80",
-                  swipeActions.hidden ? "bg-tint" : "bg-[#9b958a]",
+                  "grid w-14 touch-manipulation place-items-center active:opacity-80",
+                  swipeActions.hidden ? "bg-tint text-on-tint" : "bg-[#8e8e93] text-white",
                 )}
               >
                 {swipeActions.hidden ? <Eye size={20} /> : <EyeOff size={20} />}

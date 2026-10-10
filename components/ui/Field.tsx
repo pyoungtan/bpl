@@ -28,7 +28,7 @@ export function Field({
 }
 
 const inputBase =
-  "w-full h-11 rounded-[10px] border border-separator bg-card px-3.5 text-[17px] text-label placeholder:text-tertiary outline-none transition focus:border-tint focus:ring-2 focus:ring-tint/25";
+  "w-full h-11 rounded-[14px] border border-separator bg-card px-4 text-[17px] text-label placeholder:text-tertiary outline-none transition focus:border-tint focus:ring-2 focus:ring-tint/25";
 
 export const TextField = forwardRef<
   HTMLInputElement,

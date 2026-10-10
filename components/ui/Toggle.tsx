@@ -22,7 +22,7 @@ export function Toggle({
       onClick={() => onChange(!checked)}
       className={cn(
         "relative h-[31px] w-[51px] shrink-0 rounded-full transition-colors duration-200",
-        checked ? "bg-tint" : "bg-[rgba(120,120,128,0.32)]",
+        checked ? "bg-green" : "bg-[rgba(120,120,128,0.32)]",
         className,
       )}
     >

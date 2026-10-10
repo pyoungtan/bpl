@@ -2,67 +2,136 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* iOS-style black & glass system: white canvas, black ink, black (light) /
+   white (dark) as the single accent, and Liquid Glass for floating controls. */
 :root {
-  /* Cream canvas + surfaces */
-  --bg: #faf9f5;
+  /* Canvas + surfaces */
+  --bg: #ffffff;
   --bg-elevated: #ffffff;
-  --card: #ffffff;
-  --card-2: #f5f0e8;
-  --fill: #f0ebe2;
-  --fill-2: #e8e0d2;
-  /* Warm ink text */
-  --label: #141413;
-  --secondary: #6c6a64;
-  --tertiary: #8e8b82;
+  --card: #f4f4f6;
+  --card-2: #ececf0;
+  --fill: rgba(120, 120, 128, 0.12);
+  --fill-2: rgba(120, 120, 128, 0.2);
+  /* Ink */
+  --label: #000000;
+  --secondary: #8a8a8e;
+  --tertiary: #aeaeb2;
   /* Hairlines */
-  --separator: rgba(20, 20, 19, 0.07);
-  --separator-opaque: #ddd5c9;
-  /* Brand coral */
-  --tint: #cc785c;
-  --tint-active: #a9583e;
-  --tint-soft: rgba(204, 120, 92, 0.13);
-  /* Companions / semantic */
-  --green: #5db872;
-  --red: #c64545;
-  --orange: #e8a55a;
-  --orange-strong: #9c5d18;
-  --teal: #5db8a6;
-  /* Dark navy product surfaces */
-  --navy: #181715;
-  --navy-elevated: #252320;
-  --on-dark: #faf9f5;
-  --on-dark-soft: #a09d96;
-  /* Glass */
-  --material: rgba(250, 249, 245, 0.82);
-  --material-border: rgba(20, 20, 19, 0.08);
+  --separator: rgba(60, 60, 67, 0.14);
+  --separator-opaque: #d1d1d6;
+  /* Accent: black in light, white in dark; --on-tint is text drawn on it */
+  --tint: #000000;
+  --tint-active: #2c2c2e;
+  --tint-soft: rgba(0, 0, 0, 0.06);
+  --on-tint: #ffffff;
+  /* Semantic */
+  --green: #34c759;
+  --red: #ff3b30;
+  --orange: #ff9500;
+  --orange-strong: #c25e00;
+  --teal: #30b0c7;
+  /* Legacy dark-surface tokens (kept for any remaining references) */
+  --navy: #1c1c1e;
+  --navy-elevated: #2c2c2e;
+  --on-dark: #ffffff;
+  --on-dark-soft: #98989f;
+  /* Plain frosted material (full-width bars) */
+  --material: rgba(255, 255, 255, 0.72);
+  --material-border: rgba(0, 0, 0, 0.08);
+
+  /* Liquid Glass — light: slightly translucent white body, a faint grey dim
+     pooled in the centre, a soft white glow at the inner edge, a grey hairline
+     darker on the flanks, a directional white rim, and a wide faint shadow. */
+  --g-tint: rgba(255, 255, 255, 0.52);
+  --g-tint-strong: rgba(255, 255, 255, 0.78);
+  --g-blur: 12px;
+  --g-blur-strong: 28px;
+  --g-sat: 180%;
+  --g-bright: 1.05;
+  --g-sheen: rgba(255, 255, 255, 0.12);
+  --g-dim: radial-gradient(
+    ellipse 90% 90% at 50% 50%,
+    rgba(0, 0, 0, 0.075) 0%,
+    rgba(0, 0, 0, 0.04) 50%,
+    rgba(0, 0, 0, 0) 85%
+  );
+  --g-inner:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.9),
+    inset 0 0 4px rgba(255, 255, 255, 0.8),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.03);
+  --g-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.05),
+    0 4px 14px rgba(0, 0, 0, 0.06),
+    0 14px 36px rgba(0, 0, 0, 0.05);
+  --g-edge-side: rgba(0, 0, 0, 0.15);
+  --g-edge-cap: rgba(0, 0, 0, 0.05);
+  --g-edge-w: 0.75px;
+  --g-rim-hi: rgba(255, 255, 255, 0.95);
+  --g-rim-mid: rgba(255, 255, 255, 0.55);
+  --g-rim-lo: rgba(255, 255, 255, 0.12);
+  --g-glow: rgba(255, 255, 255, 0.9);
+  --g-solid: #ffffff;
+  --g-hl: rgba(0, 0, 0, 0.07);
+
+  /* Springs — TopBarProvider swaps in physically-sampled linear() curves */
+  --spring-press: cubic-bezier(0.3, 1.5, 0.5, 1);
+  --dur-press: 0.42s;
+  --spring-morph: cubic-bezier(0.3, 1.35, 0.55, 1);
+  --dur-morph: 0.5s;
 }
 
 .dark {
-  --bg: #181715;
-  --bg-elevated: #252320;
-  --card: #252320;
-  --card-2: #1f1e1b;
-  --fill: rgba(255, 255, 255, 0.07);
-  --fill-2: rgba(255, 255, 255, 0.12);
-  --label: #faf9f5;
-  --secondary: #a09d96;
-  --tertiary: #79766f;
-  --separator: rgba(255, 255, 255, 0.07);
-  --separator-opaque: #3a372f;
-  --tint: #d4856a;
-  --tint-active: #cc785c;
-  --tint-soft: rgba(212, 133, 106, 0.2);
-  --green: #5db872;
-  --red: #e0735a;
-  --orange: #e8a55a;
-  --orange-strong: #efb472;
-  --teal: #5db8a6;
-  --navy: #0f0e0d;
-  --navy-elevated: #252320;
-  --on-dark: #faf9f5;
-  --on-dark-soft: #a09d96;
-  --material: rgba(31, 30, 27, 0.82);
+  --bg: #000000;
+  --bg-elevated: #1c1c1e;
+  --card: #1c1c1e;
+  --card-2: #2c2c2e;
+  --fill: rgba(118, 118, 128, 0.24);
+  --fill-2: rgba(118, 118, 128, 0.32);
+  --label: #ffffff;
+  --secondary: #98989f;
+  --tertiary: #636366;
+  --separator: rgba(84, 84, 88, 0.45);
+  --separator-opaque: #38383a;
+  --tint: #ffffff;
+  --tint-active: #d1d1d6;
+  --tint-soft: rgba(255, 255, 255, 0.12);
+  --on-tint: #000000;
+  --green: #30d158;
+  --red: #ff453a;
+  --orange: #ff9f0a;
+  --orange-strong: #ffb340;
+  --teal: #40c8e0;
+  --navy: #000000;
+  --navy-elevated: #1c1c1e;
+  --on-dark: #ffffff;
+  --on-dark-soft: #98989f;
+  --material: rgba(28, 28, 30, 0.72);
   --material-border: rgba(255, 255, 255, 0.1);
+
+  /* Liquid Glass — dark */
+  --g-tint: rgba(44, 44, 48, 0.3);
+  --g-tint-strong: rgba(30, 30, 34, 0.72);
+  --g-blur: 10px;
+  --g-blur-strong: 28px;
+  --g-sat: 170%;
+  --g-bright: 0.92;
+  --g-sheen: rgba(255, 255, 255, 0.08);
+  --g-dim: linear-gradient(transparent, transparent);
+  --g-inner:
+    inset 0 1px 1px rgba(255, 255, 255, 0.3),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.08),
+    inset 0 0 16px rgba(255, 255, 255, 0.05);
+  --g-shadow: 0 10px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35);
+  --g-edge-side: rgba(255, 255, 255, 0.06);
+  --g-edge-cap: rgba(255, 255, 255, 0.06);
+  --g-edge-w: 0.5px;
+  --g-rim-hi: rgba(255, 255, 255, 0.6);
+  --g-rim-mid: rgba(255, 255, 255, 0.3);
+  --g-rim-lo: rgba(255, 255, 255, 0.07);
+  --g-glow: rgba(255, 255, 255, 0.35);
+  --g-solid: #1c1c1e;
+  --g-hl: rgba(255, 255, 255, 0.13);
 }
 
 @theme inline {
@@ -80,6 +149,7 @@
   --color-tint: var(--tint);
   --color-tint-active: var(--tint-active);
   --color-tint-soft: var(--tint-soft);
+  --color-on-tint: var(--on-tint);
   --color-green: var(--green);
   --color-red: var(--red);
   --color-orange: var(--orange);
@@ -90,10 +160,13 @@
   --color-on-dark: var(--on-dark);
   --color-on-dark-soft: var(--on-dark-soft);
 
-  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI",
-    "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-  --font-serif: var(--font-newsreader), "Iowan Old Style", Georgia,
-    "Nanum Myeongjo", "AppleMyungjo", "Batang", serif;
+  /* System font first: SF Pro / Apple SD Gothic Neo on Apple devices. The
+     serif token maps to the same stack so existing font-serif titles read as
+     SF display text. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Apple SD Gothic Neo", var(--font-inter), "Segoe UI", "Malgun Gothic", sans-serif;
+  --font-serif: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "Apple SD Gothic Neo", var(--font-inter), "Segoe UI", "Malgun Gothic", sans-serif;
   --font-mono: var(--font-jbmono), ui-monospace, SFMono-Regular, monospace;
 }
 
@@ -131,6 +204,119 @@
   }
 }
 
+/* Liquid Glass. In the components layer so Tailwind utilities on the same
+   element (position, size, colours) still win. Use only on a handful of
+   floating controls — never on list rows (backdrop-filter is per-element). */
+@layer components {
+  .glass,
+  .glass-strong {
+    position: relative;
+    isolation: isolate;
+    background-color: var(--g-tint);
+    background-image: linear-gradient(180deg, var(--g-sheen), transparent 55%), var(--g-dim);
+    -webkit-backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat)) brightness(var(--g-bright));
+    backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat)) brightness(var(--g-bright));
+    box-shadow: var(--g-inner), var(--g-shadow);
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  /* menus, sheets and alerts: more frost (legibility) instead of more white */
+  .glass-strong {
+    background-color: var(--g-tint-strong);
+    -webkit-backdrop-filter: blur(var(--g-blur-strong)) saturate(var(--g-sat)) brightness(var(--g-bright));
+    backdrop-filter: blur(var(--g-blur-strong)) saturate(var(--g-sat)) brightness(var(--g-bright));
+    -webkit-user-select: auto;
+    user-select: auto;
+  }
+  /* outer hairline: darkest on the left/right flanks, fading top and bottom */
+  .glass::before,
+  .glass-strong::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    border-radius: inherit;
+    padding: var(--g-edge-w);
+    background: linear-gradient(
+      90deg,
+      var(--g-edge-side) 0%,
+      var(--g-edge-cap) 32%,
+      var(--g-edge-cap) 68%,
+      var(--g-edge-side) 100%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    pointer-events: none;
+  }
+  /* directional specular rim just inside the hairline */
+  .glass::after,
+  .glass-strong::after {
+    content: "";
+    position: absolute;
+    inset: var(--g-edge-w);
+    z-index: 3;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(
+      from -45deg,
+      var(--g-rim-hi) 0deg,
+      var(--g-rim-lo) 65deg,
+      var(--g-rim-lo) 115deg,
+      var(--g-rim-mid) 180deg,
+      var(--g-rim-lo) 245deg,
+      var(--g-rim-lo) 295deg,
+      var(--g-rim-hi) 360deg
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    pointer-events: none;
+  }
+  /* touch light that follows the finger (see usePressFx) */
+  .g-glow {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: radial-gradient(
+      circle at var(--gx, 50%) var(--gy, 50%),
+      var(--g-glow),
+      transparent 62%
+    );
+    opacity: var(--go, 0);
+    transition: opacity 0.28s ease;
+    pointer-events: none;
+  }
+  /* press physics: swell + elastic stretch toward the finger */
+  .press-fx {
+    transform: translate(var(--tx, 0px), var(--ty, 0px)) scale(var(--sx, 1), var(--sy, 1));
+    transition: transform var(--t-dur, var(--dur-press)) var(--t-ease, var(--spring-press));
+  }
+  .press-fx.is-pressed {
+    --t-dur: 0.16s;
+    --t-ease: cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+  /* Solid black (light) / white (dark) primary capsule, as in iOS 26 apps */
+  .btn-ink {
+    background: var(--tint);
+    color: var(--on-tint);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16), 0 1px 3px rgba(0, 0, 0, 0.12);
+  }
+}
+
+/* Reduce Transparency: keep the shape, edges and shadow, drop the see-through */
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-strong {
+    background-color: var(--g-solid);
+    background-image: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 @layer utilities {
   .font-serif {
     font-family: var(--font-serif);
@@ -144,8 +330,8 @@
      cast a downward shadow that gets clipped against the mobile browser chrome. */
   .shadow-float {
     box-shadow:
-      0 0 1rem rgba(20, 20, 19, 0.17),
-      0 0 0.25rem rgba(20, 20, 19, 0.08);
+      0 0 1rem rgba(0, 0, 0, 0.12),
+      0 0 0.25rem rgba(0, 0, 0, 0.06);
   }
   .dark .shadow-float {
     box-shadow:
@@ -171,6 +357,27 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+}
+
+/* iOS 26 scroll-edge effect: content softly fades out under the floating top
+   controls instead of colliding with them. One fixed element, masked blur. */
+.scroll-edge-top {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 35;
+  height: calc(env(safe-area-inset-top) + 76px);
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--bg) 88%, transparent) 0%,
+    color-mix(in srgb, var(--bg) 55%, transparent) 55%,
+    color-mix(in srgb, var(--bg) 0%, transparent) 100%
+  );
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent);
+  mask-image: linear-gradient(to bottom, #000 45%, transparent);
 }
 
 /* Tab screen slide-in. Uses fill-mode:none (default) so the transform reverts
@@ -202,12 +409,6 @@
 .tab-from-left {
   animation: tabFromLeft 0.26s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
-@media (prefers-reduced-motion: reduce) {
-  .tab-from-right,
-  .tab-from-left {
-    animation: none;
-  }
-}
 
 /* Category-fold reveal: rows stay mounted and folding toggles display:none, so
    this fade restarts automatically each time the block becomes visible again.
@@ -223,8 +424,14 @@
 .fold-reveal {
   animation: foldReveal 0.18s ease-out;
 }
+
 @media (prefers-reduced-motion: reduce) {
+  .tab-from-right,
+  .tab-from-left,
   .fold-reveal {
     animation: none;
+  }
+  .press-fx {
+    transition-duration: 0.01s;
   }
 }

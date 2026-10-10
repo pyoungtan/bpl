@@ -7,7 +7,7 @@ import {
   type SyncConflict,
   type SyncSummary,
 } from "@/lib/useCloudSync";
-import { NavIsland, type TabKey } from "./NavIsland";
+import { TopBarProvider, type TabKey } from "./TopBar";
 import { GearShelf } from "./gear/GearShelf";
 import { TripsTab } from "./trips/TripsTab";
 import { SettingsSheet } from "./SettingsSheet";
@@ -40,51 +40,58 @@ export function AppShell() {
     return (
       <div className="mx-auto w-full max-w-2xl px-4 pt-12">
         <div className="h-10 w-48 animate-pulse rounded-xl bg-card" />
-        <div className="mt-6 h-40 animate-pulse rounded-[14px] bg-card" />
-        <div className="mt-4 h-40 animate-pulse rounded-[14px] bg-card" />
+        <div className="mt-6 h-40 animate-pulse rounded-[22px] bg-card" />
+        <div className="mt-4 h-40 animate-pulse rounded-[22px] bg-card" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto min-h-dvh w-full max-w-2xl">
-      <PullToRefresh />
-      {/* Re-keyed per tab so the CSS slide-in replays on switch. The animation
-          ends at transform:none (fill-mode none), so sticky headers / fixed
-          FABs inside each tab are unaffected at rest. */}
-      <div
-        key={tab}
-        className={cn(tab === "trips" ? "tab-from-right" : "tab-from-left")}
-      >
-        {tab === "shelf" ? (
-          <GearShelf
-            onOpenSettings={() => setSettingsOpen(true)}
-            onOpenTrip={(id) => {
-              setTripToOpen(id);
-              setTab("trips");
-            }}
-          />
-        ) : (
-          <TripsTab
-            onOpenSettings={() => setSettingsOpen(true)}
-            openTripId={tripToOpen}
-            onConsumeOpen={() => setTripToOpen(null)}
+    <TopBarProvider
+      tab={tab}
+      onTabChange={setTab}
+      onOpenSettings={() => setSettingsOpen(true)}
+    >
+      <div className="mx-auto min-h-dvh w-full max-w-2xl">
+        <PullToRefresh />
+        {/* Re-keyed per tab so the CSS slide-in replays on switch. The animation
+            ends at transform:none (fill-mode none), so fixed controls inside
+            each tab are unaffected at rest. Top padding clears the floating
+            glass bar; content scrolls underneath it. */}
+        <div
+          key={tab}
+          className={cn(
+            "pt-[calc(env(safe-area-inset-top)+60px)]",
+            tab === "trips" ? "tab-from-right" : "tab-from-left",
+          )}
+        >
+          {tab === "shelf" ? (
+            <GearShelf
+              onOpenTrip={(id) => {
+                setTripToOpen(id);
+                setTab("trips");
+              }}
+            />
+          ) : (
+            <TripsTab
+              openTripId={tripToOpen}
+              onConsumeOpen={() => setTripToOpen(null)}
+            />
+          )}
+        </div>
+        <SettingsSheet
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          cloud={cloud}
+        />
+        {cloud.conflict && (
+          <SyncConflictDialog
+            conflict={cloud.conflict}
+            onChoose={cloud.resolveConflict}
           />
         )}
       </div>
-      <NavIsland tab={tab} onChange={setTab} />
-      <SettingsSheet
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        cloud={cloud}
-      />
-      {cloud.conflict && (
-        <SyncConflictDialog
-          conflict={cloud.conflict}
-          onChoose={cloud.resolveConflict}
-        />
-      )}
-    </div>
+    </TopBarProvider>
   );
 }
 
@@ -121,8 +128,8 @@ function SyncConflictDialog({
     const chosen = pending === "local" ? local : cloud;
     return (
       <div className="fixed inset-0 z-[70] flex items-center justify-center p-6">
-        <div className="absolute inset-0 bg-black/40" />
-        <div className="relative w-full max-w-xs rounded-[16px] bg-card p-5 shadow-2xl">
+        <div className="absolute inset-0 bg-black/30" />
+        <div className="glass-strong relative w-full max-w-[19rem] rounded-[32px] p-6 text-center">
           <h3 className="text-[17px] font-semibold text-label">
             예전 데이터로 덮어쓸까요?
           </h3>
@@ -132,18 +139,18 @@ function SyncConflictDialog({
             {pending === "local" ? "클라우드" : "이 기기"} 데이터가 삭제되며
             되돌릴 수 없어요.
           </p>
-          <div className="mt-4 flex flex-col gap-2">
+          <div className="mt-5 flex flex-col gap-2">
             <button
               type="button"
               onClick={() => onChoose(pending)}
-              className="h-11 rounded-[10px] bg-red text-[15px] font-semibold text-white active:opacity-80"
+              className="h-12 rounded-full bg-red text-[16px] font-semibold text-white active:opacity-80"
             >
               예전 데이터 사용
             </button>
             <button
               type="button"
               onClick={() => setPending(null)}
-              className="h-10 text-[14px] text-secondary active:opacity-60"
+              className="h-12 rounded-full bg-fill text-[16px] font-medium text-label active:opacity-60"
             >
               돌아가기
             </button>
@@ -163,14 +170,14 @@ function SyncConflictDialog({
       type="button"
       onClick={() => pick(choice)}
       className={cn(
-        "w-full rounded-[12px] border p-3.5 text-left transition active:opacity-70",
-        newer ? "border-tint bg-tint-soft" : "border-separator-opaque bg-fill",
+        "w-full rounded-[20px] border p-4 text-left transition active:opacity-70",
+        newer ? "border-tint bg-tint-soft" : "border-transparent bg-fill",
       )}
     >
       <div className="flex items-center gap-2">
         <span className="text-[15px] font-semibold text-label">{title}</span>
         {newer && (
-          <span className="rounded-full bg-tint px-1.5 py-0.5 text-[11px] font-semibold text-white">
+          <span className="rounded-full bg-tint px-2 py-0.5 text-[11px] font-semibold text-on-tint">
             최신
           </span>
         )}
@@ -186,10 +193,10 @@ function SyncConflictDialog({
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-6">
-      <div className="absolute inset-0 bg-black/40" />
-      <div className="relative w-full max-w-xs rounded-[16px] bg-card p-5 shadow-2xl">
-        <h3 className="text-[17px] font-semibold text-label">동기화 데이터 선택</h3>
-        <p className="mt-1.5 text-[14px] leading-relaxed text-secondary">
+      <div className="absolute inset-0 bg-black/30" />
+      <div className="glass-strong relative w-full max-w-[19rem] rounded-[32px] p-6">
+        <h3 className="text-center text-[17px] font-semibold text-label">동기화 데이터 선택</h3>
+        <p className="mt-1.5 text-center text-[14px] leading-relaxed text-secondary">
           이 기기와 클라우드의 데이터가 서로 다릅니다. 어느 쪽 데이터를 사용할까요?
           선택하지 않은 쪽은 덮어써집니다.
         </p>

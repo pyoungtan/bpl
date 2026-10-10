@@ -1,5 +1,7 @@
 "use client";
 
+/** iOS large title. The floating glass bar sits above it (AppShell pads the
+ *  content so the title starts below the bar and scrolls underneath it). */
 export function ScreenHeader({
   title,
   subtitle,
@@ -10,9 +12,9 @@ export function ScreenHeader({
   trailing?: React.ReactNode;
 }) {
   return (
-    <header className="px-4 pb-1 pt-safe">
-      <div className="mt-2 flex min-h-[40px] items-end justify-between gap-2">
-        <h1 className="min-w-0 flex-1 truncate font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-label">
+    <header className="px-4 pb-1">
+      <div className="mt-2 flex min-h-[41px] items-end justify-between gap-2">
+        <h1 className="min-w-0 flex-1 truncate text-[34px] font-bold leading-[1.1] tracking-[-0.025em] text-label">
           {title}
         </h1>
         {trailing && (

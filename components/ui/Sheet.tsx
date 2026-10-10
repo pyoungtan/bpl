@@ -3,6 +3,7 @@
 import { AnimatePresence, motion, useDragControls } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 interface SheetAction {
@@ -19,7 +20,7 @@ interface SheetProps {
   leftLabel?: string;
   rightAction?: SheetAction;
   children: React.ReactNode;
-  /** grouped = systemGroupedBackground body (default); else card. */
+  /** Kept for call-site compatibility; every sheet is now a glass panel. */
   grouped?: boolean;
 }
 
@@ -30,7 +31,6 @@ export function Sheet({
   leftLabel = "취소",
   rightAction,
   children,
-  grouped = true,
 }: SheetProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -141,7 +141,7 @@ export function Sheet({
           style={{ bottom: kbInset }}
         >
           <motion.div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/25"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -152,17 +152,12 @@ export function Sheet({
             role="dialog"
             aria-modal="true"
             className={cn(
-              // min(…, 100%) caps the panel to the visible area above the
-              // keyboard (the container shrinks by kbInset), so the top isn't
-              // pushed off-screen and the bottom fields stay scrollable.
-              "relative flex max-h-[min(92dvh,100%)] w-full flex-col overflow-hidden rounded-t-[14px]",
-              "sm:max-w-md sm:rounded-[14px] sm:max-h-[88dvh] sm:shadow-2xl",
-              // On mobile the sheet sits at the bottom; a same-colour fill below
-              // the panel covers any gap that appears when the keyboard pushes
-              // the sheet up, so the page never shows through. (+ a top edge shadow)
-              grouped
-                ? "bg-bg max-sm:shadow-[0_40vh_0_40vh_var(--bg),0_-6px_28px_rgba(0,0,0,0.16)]"
-                : "bg-card max-sm:shadow-[0_40vh_0_40vh_var(--card),0_-6px_28px_rgba(0,0,0,0.16)]",
+              // iOS 26 sheet: a floating glass panel, rounded on every corner
+              // and inset from the screen edges. min(…, 100%) caps it to the
+              // visible area above the keyboard (the container shrinks by
+              // kbInset), so the top isn't pushed off-screen.
+              "glass-strong relative mx-2 mb-[max(8px,env(safe-area-inset-bottom))] flex max-h-[min(92dvh,calc(100%-8px))] w-[calc(100%-16px)] flex-col overflow-hidden rounded-[32px]",
+              "sm:mb-0 sm:max-h-[88dvh] sm:max-w-md",
             )}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
@@ -180,21 +175,22 @@ export function Sheet({
             }}
           >
             <div
-              className="flex shrink-0 cursor-grab touch-none justify-center pb-1 pt-2.5 active:cursor-grabbing sm:hidden"
+              className="flex shrink-0 cursor-grab touch-none justify-center pb-0.5 pt-2 active:cursor-grabbing sm:hidden"
               onPointerDown={(e) => dragControls.start(e)}
             >
-              <div className="h-1 w-9 rounded-full bg-separator-opaque" />
+              <div className="h-[5px] w-9 rounded-full bg-label/15" />
             </div>
-            <div className="grid h-12 shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-separator px-4">
+            <div className="grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center px-3">
               <button
                 type="button"
                 onClick={onClose}
                 // Fire even when a field inside the sheet is focused: don't let
                 // the press steal focus / dismiss the keyboard before the click.
                 onMouseDown={(e) => e.preventDefault()}
-                className="justify-self-start text-[17px] text-tint active:opacity-50"
+                aria-label={leftLabel === "취소" ? "닫기" : leftLabel}
+                className="glass grid h-10 w-10 justify-self-start place-items-center rounded-full text-label transition-transform active:scale-90"
               >
-                {leftLabel}
+                <X size={20} strokeWidth={2.2} />
               </button>
               <h2 className="justify-self-center truncate px-2 text-[17px] font-semibold text-label">
                 {title}
@@ -205,10 +201,7 @@ export function Sheet({
                   onClick={rightAction.onClick}
                   onMouseDown={(e) => e.preventDefault()}
                   disabled={rightAction.disabled}
-                  className={cn(
-                    "justify-self-end text-[17px] text-tint active:opacity-50 disabled:opacity-40",
-                    rightAction.prominent ? "font-semibold" : "font-normal",
-                  )}
+                  className="h-10 justify-self-end whitespace-nowrap rounded-full bg-tint px-4 text-[15px] font-semibold text-on-tint shadow-[0_4px_12px_rgba(0,0,0,0.14)] transition-transform active:scale-95 disabled:opacity-30"
                 >
                   {rightAction.label}
                 </button>
@@ -218,7 +211,7 @@ export function Sheet({
             </div>
             <div
               ref={scrollRef}
-              className="grow overflow-y-auto overscroll-contain py-4"
+              className="grow overflow-y-auto overscroll-contain pb-5 pt-2"
             >
               {children}
             </div>

@@ -52,7 +52,7 @@ function ChipToggle({
       aria-pressed={active}
       className={cn(
         "h-9 rounded-full px-4 text-[14px] font-medium transition active:opacity-60",
-        active ? "bg-tint text-white" : "bg-fill text-secondary",
+        active ? "bg-tint text-on-tint" : "bg-fill text-secondary",
       )}
     >
       {label}
@@ -265,7 +265,7 @@ export function GearEditorSheet({
               placeholder="예: Osprey"
             />
             {brandFocused && brandMatches.length > 0 && (
-              <div className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-[12px] bg-card shadow-float ring-1 ring-separator">
+              <div className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-[20px] bg-bg shadow-float ring-1 ring-separator">
                 {brandMatches.map((b, i) => (
                   <button
                     key={b}
@@ -302,7 +302,7 @@ export function GearEditorSheet({
                   }}
                   className={cn(
                     "h-8 touch-manipulation rounded-full px-3 text-[14px] font-medium transition active:opacity-60",
-                    active ? "bg-tint text-white" : "bg-fill text-secondary",
+                    active ? "bg-tint text-on-tint" : "bg-fill text-secondary",
                   )}
                 >
                   {c}
@@ -451,7 +451,7 @@ export function GearEditorSheet({
               );
             })}
 
-            <div className="flex h-10 items-center gap-2.5 rounded-[12px] bg-fill px-3.5">
+            <div className="flex h-10 items-center gap-2.5 rounded-full bg-fill px-3.5">
               <Search size={16} className="shrink-0 text-tertiary" />
               <input
                 className="min-w-0 flex-1 bg-transparent text-[16px] text-label outline-none placeholder:text-tertiary"

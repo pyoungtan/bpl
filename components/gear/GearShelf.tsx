@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -26,7 +26,6 @@ import {
   Minus,
   Plus,
   Search,
-  Settings,
   SlidersHorizontal,
   SquarePen,
   X,
@@ -37,7 +36,8 @@ import { computeStats } from "@/lib/calc";
 import { formatPrice, formatWeight, formatWeightSmart } from "@/lib/units";
 import { cn } from "@/lib/cn";
 import { ScreenHeader } from "../ScreenHeader";
-import { Button } from "../ui/Button";
+import { useTopBar } from "../TopBar";
+import { GlassButton, InkButton } from "../ui/Glass";
 import { NotePopup } from "../NotePopup";
 import { GearRow } from "./GearRow";
 import { GearEditorSheet } from "./GearEditorSheet";
@@ -46,10 +46,8 @@ import { CategoryManagerSheet } from "./CategoryManagerSheet";
 import { PresetsSheet } from "./PresetsSheet";
 
 export function GearShelf({
-  onOpenSettings,
   onOpenTrip,
 }: {
-  onOpenSettings: () => void;
   onOpenTrip: (tripId: string) => void;
 }) {
   const gear = useAppStore((s) => s.gear);
@@ -87,24 +85,48 @@ export function GearShelf({
     rect: DOMRect;
   } | null>(null);
 
-  // Auto-hiding top bar: hide on scroll-down, reveal on scroll-up (iOS-style).
-  // Drive the transform directly on the element (with a CSS transition) so it
-  // doesn't depend on React re-renders.
-  const headerRef = useRef<HTMLDivElement>(null);
-  const lastScroll = useRef(0);
-  useEffect(() => {
-    const onScroll = () => {
-      const el = headerRef.current;
-      if (!el) return;
-      const y = window.scrollY;
-      if (y < 120) el.style.transform = "translateY(0)";
-      else if (y - lastScroll.current > 6) el.style.transform = "translateY(-100%)";
-      else if (y - lastScroll.current < -6) el.style.transform = "translateY(0)";
-      lastScroll.current = y;
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  function toggleEditMode() {
+    setEditMode((e) => !e);
+    clearSelection();
+    setSwipeOpenId(null);
+    setSearchOpen(false);
+    setQuery("");
+  }
+
+  // Screen actions live in the floating glass bar's ⋯ menu.
+  useTopBar({
+    menu: [
+      {
+        id: "search",
+        label: searchOpen ? "검색 닫기" : "검색",
+        icon: <Search size={19} />,
+        onSelect: () => {
+          if (editMode) toggleEditMode();
+          setSearchOpen((o) => !o);
+          if (searchOpen) setQuery("");
+        },
+      },
+      {
+        id: "edit",
+        label: editMode ? "편집 완료" : "순서·분류 편집",
+        icon: editMode ? <Check size={19} /> : <SquarePen size={18} />,
+        onSelect: toggleEditMode,
+      },
+      {
+        id: "presets",
+        label: "프리셋",
+        icon: <Bookmark size={18} />,
+        group: true,
+        onSelect: () => setPresetsOpen(true),
+      },
+      {
+        id: "categories",
+        label: "대분류 추가·정렬",
+        icon: <SlidersHorizontal size={18} />,
+        onSelect: () => setCatMgrOpen(true),
+      },
+    ],
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -311,61 +333,23 @@ export function GearShelf({
 
   return (
     <div className="pb-40">
-      <div
-        ref={headerRef}
-        className="sticky top-0 z-30 bg-bg transition-transform duration-300 ease-in-out will-change-transform"
-      >
+      <div>
       <ScreenHeader
         title="Inventory"
         subtitle={
           selecting ? (
-            <span className="font-medium text-tint">
+            <span className="font-medium text-label">
               {selected.size}개 선택 · {formatWeightSmart(selectedStats.totalG, unit)}
             </span>
           ) : (
             `${totals.itemCount}개 장비 · ${formatWeightSmart(totals.totalG, unit)}`
           )
         }
-        trailing={
-          <>
-            {!editMode && (
-              <Button
-                variant="plain"
-                size="icon"
-                aria-label="검색"
-                onClick={() => {
-                  setSearchOpen((o) => !o);
-                  if (searchOpen) setQuery("");
-                }}
-              >
-                <Search size={20} />
-              </Button>
-            )}
-            <Button
-              variant="plain"
-              size="icon"
-              aria-label={editMode ? "편집 완료" : "편집"}
-              onClick={() => {
-                setEditMode((e) => !e);
-                clearSelection();
-                setSwipeOpenId(null);
-                setSearchOpen(false);
-                setQuery("");
-              }}
-              className={cn(editMode && "bg-tint-soft")}
-            >
-              {editMode ? <Check size={21} /> : <SquarePen size={19} />}
-            </Button>
-            <Button variant="plain" size="icon" aria-label="설정" onClick={onOpenSettings}>
-              <Settings size={20} />
-            </Button>
-          </>
-        }
       />
 
       {!editMode && searchOpen && (
-        <div className="px-4 pb-1 pt-1">
-          <div className="flex h-10 items-center gap-2.5 rounded-[12px] bg-fill px-3.5">
+        <div className="px-4 pb-1 pt-2">
+          <div className="flex h-11 items-center gap-2.5 rounded-full bg-fill px-4">
             <Search size={17} className="shrink-0 text-tertiary" />
             <input
               autoFocus
@@ -394,7 +378,7 @@ export function GearShelf({
             type="button"
             onClick={() => setPresetsOpen(true)}
             aria-label="프리셋"
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-tint/40 bg-tint-soft text-tint transition active:opacity-60"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-fill text-label transition active:opacity-60"
           >
             <Bookmark size={15} />
           </button>
@@ -407,8 +391,8 @@ export function GearShelf({
                 type="button"
                 onClick={() => setActiveCat(c)}
                 className={cn(
-                  "h-8 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[13px] font-medium transition active:opacity-60",
-                  active ? "bg-tint text-white" : "bg-fill text-secondary",
+                  "h-8 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[14px] font-medium transition active:opacity-60",
+                  active ? "bg-tint text-on-tint" : "bg-fill text-label",
                 )}
               >
                 {c === "all" ? "전체" : c}
@@ -423,7 +407,7 @@ export function GearShelf({
           <button
             type="button"
             onClick={() => setCatMgrOpen(true)}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-[12px] bg-card text-[15px] font-medium text-tint active:opacity-60"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-fill text-[15px] font-medium text-label active:opacity-60"
           >
             <SlidersHorizontal size={17} /> 대분류 추가·정렬
           </button>
@@ -663,11 +647,11 @@ export function GearShelf({
         )}
       </div>
 
-      {/* Pack-quantity stepper for the most recently selected item (above GNB) */}
+      {/* Pack-quantity stepper for the most recently selected item */}
       {selecting && !editMode && lastSelectedId && selected.has(lastSelectedId) && gear[lastSelectedId] && (
         <div
-          className="material shadow-float fixed left-1/2 z-40 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-[var(--material-border)] p-1.5"
-          style={{ bottom: "calc(env(safe-area-inset-bottom) + 82px)" }}
+          className="glass fixed left-1/2 z-40 flex -translate-x-1/2 items-center gap-1.5 rounded-full p-1.5"
+          style={{ bottom: "calc(env(safe-area-inset-bottom) + 84px)" }}
         >
           <button
             type="button"
@@ -691,43 +675,36 @@ export function GearShelf({
         </div>
       )}
 
-      {/* Add-gear FAB (hidden while selecting so the Trip action takes its place) */}
-      {!selecting && (
-        <button
-          type="button"
-          aria-label="장비 추가"
-          onClick={() => setEditor({ open: true, gear: null })}
-          className="shadow-float fixed right-4 z-40 grid h-14 w-14 place-items-center rounded-full bg-tint text-white transition active:scale-95"
-          style={{ bottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
-        >
-          <Plus size={26} />
-        </button>
-      )}
-
-      {selecting && !editMode && (
-        <div
-          className="fixed right-4 z-40 flex items-center gap-2"
-          style={{ bottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
-        >
-          <button
-            type="button"
-            onClick={clearSelection}
-            aria-label="선택 해제"
-            className="material shadow-float grid h-14 w-14 place-items-center rounded-full border border-[var(--material-border)] text-label active:opacity-60"
-          >
-            <X size={20} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setAddTripOpen(true)}
-            aria-label={`선택한 ${selected.size}개 Trip에 추가`}
-            className="shadow-float flex h-14 items-center gap-1.5 rounded-full bg-tint px-5 font-semibold text-white active:opacity-80"
-          >
-            <ArrowRight size={20} />
-            <span className="tabular text-[17px]">{selected.size}</span>
-          </button>
-        </div>
-      )}
+      {/* Primary action: add gear · finish editing · send the selection to a trip */}
+      <div
+        className="fixed right-4 z-40 flex items-center gap-2"
+        style={{ bottom: "calc(env(safe-area-inset-bottom) + 18px)" }}
+      >
+        {editMode ? (
+          <InkButton onClick={toggleEditMode} className="pl-5">
+            <Check size={20} strokeWidth={2.4} /> 완료
+          </InkButton>
+        ) : selecting ? (
+          <>
+            <GlassButton onClick={clearSelection} aria-label="선택 해제" className="w-[52px]">
+              <X size={21} />
+            </GlassButton>
+            <InkButton
+              onClick={() => setAddTripOpen(true)}
+              aria-label={`선택한 ${selected.size}개 Trip에 추가`}
+              className="pl-5"
+            >
+              <ArrowRight size={20} />
+              트립에 추가
+              <span className="tabular opacity-60">{selected.size}</span>
+            </InkButton>
+          </>
+        ) : (
+          <InkButton onClick={() => setEditor({ open: true, gear: null })} className="pl-5">
+            <Plus size={21} strokeWidth={2.4} /> 장비 추가
+          </InkButton>
+        )}
+      </div>
 
       {peek && (
         <NotePopup note={peek.note} priceText={peek.priceText} rect={peek.rect} />
@@ -806,7 +783,7 @@ function DndArea({
       </SortableContext>
       <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
         {activeId ? (
-          <div className="shadow-float rounded-[10px] bg-card">
+          <div className="shadow-float rounded-[20px] bg-card">
             {renderOverlay(activeId)}
           </div>
         ) : null}

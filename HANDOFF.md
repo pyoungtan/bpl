@@ -24,11 +24,17 @@
 | 아이콘 | lucide-react |
 | 클라우드 | Supabase (env 없으면 완전 로컬 모드로 동작) |
 
-## 3. 디자인 시스템 — "Anthropic 웜 에디토리얼"
+## 3. 디자인 시스템 — "iOS 블랙 & Liquid Glass" (브랜치 `claude/ios27-glass`)
 
-- 크림 캔버스 `#faf9f5`, 다크 모드는 네이비 잉크 계열. 토큰은 전부 `app/globals.css`.
-- **코랄 `#cc785c` = 포인트/CTA 전용** (`--tint`). 카테고리 색상 팔레트(`lib/colors.ts`)에서는 의도적으로 제외 — 산뜻한 톤(아쿠아/마리골드/스카이블루 등) 12색을 이름 해시로 안정 매핑(`colorForCategory`).
-- 서체: **Newsreader(serif) = 화면 타이틀·트립 이름** (브랜드 시그널), Inter 본문, JetBrains Mono 숫자 아님(숫자는 `tabular` 유틸).
+> 이전 "Anthropic 웜 에디토리얼"(크림 `#faf9f5` + 코랄 `#cc785c` + Newsreader serif) UI는 `master` / `codex/claude-original`에 그대로 있다.
+
+- 흰 캔버스 `#fff` / 다크 `#000`. 토큰은 전부 `app/globals.css`. **`--tint` = 검정(라이트) / 흰색(다크)**, 그 위 글자는 반드시 `text-on-tint`(`text-white` 금지 — 다크에서 흰 바탕 흰 글씨가 됨).
+- Glass 재질: `.glass`(컨트롤), `.glass-strong`(메뉴·시트·다이얼로그) + `.press-fx`/`.g-glow`(눌림 swell·stretch, 터치 글로우). `backdrop-filter`는 떠 있는 소수 요소에만. `prefers-reduced-transparency`면 불투명 `--g-solid`로 폴백(형태·테두리 유지).
+- 상단 바(`components/TopBar.tsx`): 좌 ≡(설정)/‹(뒤로) · 가운데 Inventory|Trips 세그먼트(또는 상세 화면의 상태 캡슐) · 우 ⋯ 모프 메뉴. 각 화면은 `useTopBar({ onBack?, center?, menu? })`로 등록 — 화면별 액션(검색·편집·정렬·점검·삭제 등)은 전부 ⋯ 메뉴로.
+- 주 액션 버튼: `InkButton`(검정 캡슐), 보조: `GlassButton` (`components/ui/Glass.tsx`). 둘 다 `touch-none`이라 **스크롤 영역 안의 인라인 버튼에는 쓰지 말 것**(fixed 플로팅 전용).
+- 시트(`ui/Sheet.tsx`): 화면 가장자리에서 띄운 glass-strong 패널, radius 32, 좌 × 글래스 원형 · 우 검정 캡슐 액션.
+- 카테고리 색상 팔레트(`lib/colors.ts`)는 그대로 — 12색 이름 해시 매핑(`colorForCategory`).
+- 서체: 시스템 SF 스택(`--font-sans`, `--font-serif` 둘 다 동일). 타이틀은 bold, 숫자는 `tabular` 유틸.
 - 리스트는 카드 박스 없이 **flat + 좌측 인셋 헤어라인**(`bg-separator`)으로만 구분 — Inventory·Trips 목록 공통.
 - 플로팅 요소 그림자는 `.shadow-float`(수직 오프셋 0 앰비언트 — 모바일 브라우저 크롬에 그림자가 잘리는 문제 회피).
 

@@ -7,7 +7,7 @@ type Variant = "filled" | "tinted" | "gray" | "plain" | "destructive";
 type Size = "sm" | "md" | "lg" | "icon";
 
 const variants: Record<Variant, string> = {
-  filled: "bg-tint text-white font-semibold",
+  filled: "bg-tint text-on-tint font-semibold",
   tinted: "bg-tint-soft text-tint font-semibold",
   gray: "bg-fill text-label font-medium",
   plain: "text-tint font-normal",
@@ -15,9 +15,9 @@ const variants: Record<Variant, string> = {
 };
 
 const sizes: Record<Size, string> = {
-  sm: "h-9 px-3.5 text-[15px] rounded-xl gap-1.5",
-  md: "h-11 px-4 text-[16px] rounded-xl gap-2",
-  lg: "h-[50px] px-5 text-[17px] rounded-2xl gap-2",
+  sm: "h-9 px-4 text-[15px] rounded-full gap-1.5",
+  md: "h-11 px-5 text-[16px] rounded-full gap-2",
+  lg: "h-[52px] px-6 text-[17px] rounded-full gap-2",
   icon: "h-9 w-9 rounded-full",
 };
 

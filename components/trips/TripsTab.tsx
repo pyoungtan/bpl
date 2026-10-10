@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Map, Plus, Settings } from "lucide-react";
+import { ChevronRight, Map, Plus } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { Trip } from "@/lib/types";
 import { formatWeightSmart } from "@/lib/units";
@@ -16,7 +16,8 @@ function tempRange(low?: string, high?: string): string {
 }
 import { cn } from "@/lib/cn";
 import { ScreenHeader } from "../ScreenHeader";
-import { Button } from "../ui/Button";
+import { useTopBar } from "../TopBar";
+import { InkButton } from "../ui/Glass";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
 import { TripDetail } from "./TripDetail";
 
@@ -31,11 +32,9 @@ const SORTS: { key: TripSort; label: string }[] = [
 const SORT_KEY = "bpl-trip-sort";
 
 export function TripsTab({
-  onOpenSettings,
   openTripId,
   onConsumeOpen,
 }: {
-  onOpenSettings: () => void;
   openTripId: string | null;
   onConsumeOpen: () => void;
 }) {
@@ -52,16 +51,10 @@ export function TripsTab({
   if (activeId && trips[activeId]) {
     return <TripDetail tripId={activeId} onBack={() => setActiveId(null)} />;
   }
-  return <TripList onOpen={setActiveId} onOpenSettings={onOpenSettings} />;
+  return <TripList onOpen={setActiveId} />;
 }
 
-function TripList({
-  onOpen,
-  onOpenSettings,
-}: {
-  onOpen: (id: string) => void;
-  onOpenSettings: () => void;
-}) {
+function TripList({ onOpen }: { onOpen: (id: string) => void }) {
   const trips = useAppStore((s) => s.trips);
   const tripOrder = useAppStore((s) => s.tripOrder);
   const createTrip = useAppStore((s) => s.createTrip);
@@ -108,28 +101,33 @@ function TripList({
     });
   }, [tripOrder, trips, sort]);
 
+  useTopBar({
+    menu: [
+      {
+        id: "new",
+        label: "새 트립",
+        icon: <Plus size={20} />,
+        onSelect: () => onOpen(createTrip()),
+      },
+      ...SORTS.map((s, i) => ({
+        id: `sort-${s.key}`,
+        label: `${s.label} 순`,
+        checked: sort === s.key,
+        group: i === 0,
+        onSelect: () => changeSort(s.key),
+      })),
+    ],
+  });
+
   return (
     <div className="pb-40">
-      <ScreenHeader
-        title="Trips"
-        subtitle={`${tripOrder.length}개의 여행 기록`}
-        trailing={
-          <Button
-            variant="plain"
-            size="icon"
-            aria-label="설정"
-            onClick={onOpenSettings}
-          >
-            <Settings size={20} />
-          </Button>
-        }
-      />
+      <ScreenHeader title="Trips" subtitle={`${tripOrder.length}개의 여행 기록`} />
 
       {tripOrder.length === 0 ? (
         <EmptyTrips onCreate={() => onOpen(createTrip())} />
       ) : (
         <div className="pt-2">
-          <div className="no-scrollbar mb-1 flex gap-1.5 overflow-x-auto px-4 pb-1">
+          <div className="no-scrollbar mb-1 flex gap-2 overflow-x-auto px-4 pb-1">
             {SORTS.map((s) => (
               <button
                 key={s.key}
@@ -137,8 +135,8 @@ function TripList({
                 onClick={() => changeSort(s.key)}
                 aria-pressed={sort === s.key}
                 className={cn(
-                  "h-7 shrink-0 whitespace-nowrap rounded-full px-3 text-[12.5px] font-medium transition active:opacity-60",
-                  sort === s.key ? "bg-tint text-white" : "bg-fill text-secondary",
+                  "h-8 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[14px] font-medium transition active:opacity-60",
+                  sort === s.key ? "bg-tint text-on-tint" : "bg-fill text-label",
                 )}
               >
                 {s.label}
@@ -172,15 +170,16 @@ function TripList({
         </div>
       )}
 
-      <button
-        type="button"
-        aria-label="새 트립"
-        onClick={() => onOpen(createTrip())}
-        className="shadow-float fixed right-4 z-40 grid h-14 w-14 place-items-center rounded-full bg-tint text-white transition active:scale-95"
-        style={{ bottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
-      >
-        <Plus size={26} />
-      </button>
+      {tripOrder.length > 0 && (
+        <div
+          className="fixed right-4 z-40"
+          style={{ bottom: "calc(env(safe-area-inset-bottom) + 18px)" }}
+        >
+          <InkButton onClick={() => onOpen(createTrip())} className="pl-5">
+            <Plus size={21} strokeWidth={2.4} /> 새 트립
+          </InkButton>
+        </div>
+      )}
     </div>
   );
 }
@@ -230,7 +229,7 @@ function TripRow({
         className="flex w-full touch-manipulation items-center gap-3 px-4 py-3 text-left transition active:bg-fill"
       >
         <div className="min-w-0 flex-1">
-          <div className="truncate font-serif text-[18px] font-medium tracking-[-0.01em] text-label">
+          <div className="truncate text-[17px] font-semibold tracking-[-0.01em] text-label">
             {trip.name}
           </div>
           {showCompanions ? (
@@ -269,22 +268,18 @@ function TripRow({
 function EmptyTrips({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="flex min-h-[55dvh] flex-col items-center justify-center px-8 text-center">
-      <div className="grid h-16 w-16 place-items-center rounded-[18px] bg-tint-soft text-tint">
+      <div className="grid h-16 w-16 place-items-center rounded-[20px] bg-fill text-label">
         <Map size={28} />
       </div>
-      <h2 className="mt-4 font-serif text-[26px] font-medium text-label">
+      <h2 className="mt-4 text-[24px] font-bold tracking-[-0.02em] text-label">
         아직 트립이 없어요
       </h2>
       <p className="mt-1 max-w-[15rem] text-[15px] text-secondary">
         Inventory에서 장비를 골라 추가하거나, 새 트립을 만들어 기록을 남겨보세요.
       </p>
-      <button
-        type="button"
-        onClick={onCreate}
-        className="mt-5 h-11 rounded-full bg-tint px-5 font-semibold text-white active:opacity-80"
-      >
+      <InkButton onClick={onCreate} className="mt-5">
         새 트립 만들기
-      </button>
+      </InkButton>
     </div>
   );
 }

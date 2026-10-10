@@ -27,7 +27,7 @@ export function Checkbox({
       className={cn(
         "grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full border-[1.5px] transition active:scale-90",
         checked
-          ? "border-tint bg-tint text-white"
+          ? "border-tint bg-tint text-on-tint"
           : "border-separator-opaque text-transparent",
         className,
       )}

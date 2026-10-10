@@ -21,7 +21,7 @@ export function Segmented<T extends string>({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-[9px] bg-fill p-0.5",
+        "inline-flex items-center gap-0.5 rounded-full bg-fill p-0.5",
         className,
       )}
     >
@@ -33,7 +33,7 @@ export function Segmented<T extends string>({
             type="button"
             onClick={() => onChange(o.value)}
             className={cn(
-              "h-8 flex-1 whitespace-nowrap rounded-[7px] px-3 text-[13px] font-medium transition",
+              "h-8 flex-1 whitespace-nowrap rounded-full px-3 text-[13px] font-medium transition",
               active
                 ? "bg-white text-black shadow-sm dark:bg-[#636366] dark:text-white"
                 : "text-label active:opacity-50",

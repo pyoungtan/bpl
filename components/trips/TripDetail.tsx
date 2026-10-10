@@ -5,11 +5,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   CalendarDays,
   ChevronDown,
-  ChevronLeft,
   CircleCheck,
   ListChecks,
   MapPin,
   Minus,
+  NotebookPen,
   Plus,
   Thermometer,
   Trash2,
@@ -25,6 +25,7 @@ import { formatTripRange, tripNights, tripStart } from "@/lib/dates";
 import { tripCompanions } from "@/lib/trips";
 import { cn } from "@/lib/cn";
 import { Donut } from "../Donut";
+import { useTopBar } from "../TopBar";
 import { RangeCalendar } from "../ui/RangeCalendar";
 import { Sheet } from "../ui/Sheet";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
@@ -99,6 +100,7 @@ export function TripDetail({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const memoRef = useRef<HTMLTextAreaElement>(null);
+  const deleteBtnRef = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const backSwipe = useRef<{ x: number; y: number; ok: boolean } | null>(null);
 
@@ -191,12 +193,61 @@ export function TripDetail({
     }
   }, [memo, memoOpen]);
 
+  const packedCount = trip?.packed.length ?? 0;
+  const checkedTotal = (trip?.checked ?? []).filter((id) =>
+    packedQty.has(id),
+  ).length;
+  useTopBar({
+    onBack,
+    center: mode === "check" ? `${checkedTotal}/${packedCount} 챙김` : undefined,
+    menu: [
+      {
+        id: "check",
+        label: mode === "check" ? "점검 끝내기" : "장비 점검",
+        icon: <ListChecks size={20} />,
+        checked: mode === "check",
+        onSelect: () => {
+          setSwipeOpenId(null);
+          setSelectedId(null);
+          setMode((m) => (m === "check" ? "none" : "check"));
+        },
+      },
+      {
+        id: "add",
+        label: "장비 추가",
+        icon: <Plus size={20} />,
+        onSelect: () => setPickerOpen(true),
+      },
+      {
+        id: "memo",
+        label: memoOpen ? "메모 접기" : "메모 열기",
+        icon: <NotebookPen size={20} />,
+        onSelect: () => setMemoOpen((o) => !o),
+      },
+      {
+        id: "delete",
+        label: "트립 삭제",
+        icon: <Trash2 size={20} />,
+        danger: true,
+        group: true,
+        onSelect: () => {
+          setConfirmDelete(true);
+          window.setTimeout(
+            () =>
+              deleteBtnRef.current?.scrollIntoView({
+                block: "center",
+                behavior: "smooth",
+              }),
+            50,
+          );
+        },
+      },
+    ],
+  });
+
   if (!trip) return null;
 
   const checkedSet = new Set(trip.checked ?? []);
-  const checkedCount = (trip.checked ?? []).filter((id) =>
-    trip.packed.some((p) => p.gearId === id),
-  ).length;
   const isChecking = mode === "check";
 
   function handleDelete() {
@@ -424,7 +475,7 @@ export function TripDetail({
       <div
         className="fixed left-0 z-30 w-4"
         style={{
-          top: "calc(env(safe-area-inset-top) + 48px)",
+          top: "calc(env(safe-area-inset-top) + 64px)",
           bottom: 0,
           touchAction: "pan-y",
         }}
@@ -462,46 +513,13 @@ export function TripDetail({
           window.setTimeout(clearBackDrag, 260);
         }}
       />
-      <div className="material sticky top-0 z-20 flex h-12 items-center justify-between border-b border-separator pt-safe">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center gap-0.5 pl-1.5 pr-2 text-tint active:opacity-50"
-        >
-          <ChevronLeft size={26} />
-          <span className="text-[17px]">Trips</span>
-        </button>
-        {isChecking && (
-          <span className="tabular text-[15px] font-medium text-secondary">
-            {checkedCount}/{trip.packed.length} 챙김
-          </span>
-        )}
-        <div className="flex items-center gap-1 pr-2">
-          <button
-            type="button"
-            onClick={() => {
-              setSwipeOpenId(null);
-              setSelectedId(null);
-              setMode((m) => (m === "check" ? "none" : "check"));
-            }}
-            aria-label="장비 점검"
-            className={cn(
-              "grid h-9 w-9 place-items-center rounded-full transition active:opacity-50",
-              isChecking ? "bg-tint-soft text-tint" : "text-tint",
-            )}
-          >
-            <ListChecks size={20} />
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-4 px-4 pt-3">
+      <div className="space-y-4 px-4 pt-2">
         <div className="px-1">
           <input
             value={trip.name}
             onChange={(e) => updateTrip(tripId, { name: e.target.value })}
             placeholder="트립 이름"
-            className="w-full bg-transparent font-serif text-[28px] font-medium tracking-[-0.02em] text-label outline-none placeholder:text-tertiary"
+            className="w-full bg-transparent text-[30px] font-bold tracking-[-0.025em] text-label outline-none placeholder:text-tertiary"
           />
           {/* Date range — tap to open the calendar; first tap = start, second = end */}
           <button
@@ -624,7 +642,7 @@ export function TripDetail({
         </div>
 
         {/* Collapsible memo — full text when expanded */}
-        <div className="overflow-hidden rounded-[14px] bg-card">
+        <div className="overflow-hidden rounded-[24px] bg-card">
           <button
             type="button"
             onClick={() => setMemoOpen((o) => !o)}
@@ -654,7 +672,7 @@ export function TripDetail({
         </div>
 
         {/* Summary — tap to expand the per-category weight breakdown */}
-        <div className="overflow-hidden rounded-[14px] bg-card">
+        <div className="overflow-hidden rounded-[24px] bg-card">
           <button
             type="button"
             onClick={() => setCatOpen((o) => !o)}
@@ -745,7 +763,7 @@ export function TripDetail({
             }}
             placeholder="0"
             inputMode="decimal"
-            className="w-24 rounded-[8px] bg-fill px-2.5 py-1 text-right tabular text-[14px] text-label outline-none placeholder:text-tertiary"
+            className="w-24 rounded-full bg-fill px-3 py-1 text-right tabular text-[14px] text-label outline-none placeholder:text-tertiary"
           />
           <span className="shrink-0 text-[14px] text-secondary">g</span>
           <span className="w-6 shrink-0" />
@@ -754,10 +772,10 @@ export function TripDetail({
         {groups.map(([major, rows], gi) => (
           <section key={major}>
             <div className="flex items-baseline justify-between px-4 pb-1 pt-5">
-              <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-tint">
+              <span className="text-[13px] font-semibold tracking-[0.01em] text-secondary">
                 {major}
               </span>
-              <span className="tabular text-[12px] font-semibold text-tint">
+              <span className="tabular text-[13px] font-medium text-secondary">
                 {rows.length}개, {formatWeightSmart(catTotals.get(major) ?? 0, unit)}
               </span>
             </div>
@@ -801,14 +819,18 @@ export function TripDetail({
         <button
           type="button"
           onClick={() => setPickerOpen(true)}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-[12px] bg-card text-[15px] font-medium text-tint active:opacity-60"
+          className="btn-ink flex h-[52px] w-full items-center justify-center gap-1.5 rounded-full text-[17px] font-semibold transition-transform active:scale-[0.97]"
         >
-          <Plus size={19} /> 장비 추가
+          <Plus size={20} strokeWidth={2.4} /> 장비 추가
         </button>
         <button
+          ref={deleteBtnRef}
           type="button"
           onClick={handleDelete}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-[12px] bg-card text-[15px] text-red active:opacity-60"
+          className={cn(
+            "flex h-[52px] w-full items-center justify-center gap-2 rounded-full text-[17px] font-medium transition active:scale-[0.97]",
+            confirmDelete ? "bg-red text-white" : "bg-fill text-red",
+          )}
         >
           <Trash2 size={17} />
           {confirmDelete ? "한 번 더 눌러 삭제" : "트립 삭제"}
@@ -1130,7 +1152,7 @@ function GearPickerSheet({
           {groups.map(([major, items]) => (
             <section key={major}>
               <div className="flex items-baseline justify-between px-4 pb-1 pt-4">
-                <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-tint">
+                <span className="text-[13px] font-semibold tracking-[0.01em] text-secondary">
                   {major}
                 </span>
                 <span className="text-[12px] text-tertiary">{items.length}개</span>

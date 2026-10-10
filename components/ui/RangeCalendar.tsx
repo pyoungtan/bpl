@@ -57,7 +57,7 @@ export function RangeCalendar({
   ];
 
   return (
-    <div className="rounded-[14px] bg-card p-3">
+    <div className="rounded-[24px] bg-card p-3">
       <div className="flex items-center justify-between px-1 pb-2">
         <button
           type="button"
@@ -111,9 +111,9 @@ export function RangeCalendar({
                 setMode("days");
               }}
               className={cn(
-                "h-10 touch-manipulation rounded-[10px] text-[14px] tabular transition active:opacity-70",
+                "h-10 touch-manipulation rounded-full text-[14px] tabular transition active:opacity-70",
                 m === view.m
-                  ? "bg-tint font-semibold text-white"
+                  ? "bg-tint font-semibold text-on-tint"
                   : "text-label active:bg-fill",
               )}
             >
@@ -153,7 +153,7 @@ export function RangeCalendar({
                   className={cn(
                     "relative mx-auto grid h-9 w-9 touch-manipulation place-items-center rounded-full text-[14px] tabular transition active:opacity-70",
                     isStart || isEnd
-                      ? "bg-tint font-semibold text-white"
+                      ? "bg-tint font-semibold text-on-tint"
                       : inRange
                         ? "bg-tint-soft text-tint"
                         : "text-label",

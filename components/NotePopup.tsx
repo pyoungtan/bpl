@@ -34,7 +34,7 @@ export function NotePopup({
         initial={{ opacity: 0, scale: 0.92, y: placeBelow ? -6 : 6 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.13, ease: "easeOut" }}
-        className="max-w-[16rem] rounded-[12px] bg-navy px-3.5 py-2.5 text-on-dark shadow-2xl"
+        className="max-w-[16rem] glass-strong rounded-[20px] px-4 py-3 text-label"
       >
         <div className="text-[13px] leading-relaxed">
           {hasNote ? note : <span className="opacity-70">메모 없음</span>}
