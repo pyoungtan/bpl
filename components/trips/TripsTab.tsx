@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Map, Plus } from "lucide-react";
+import { ChevronRight, Map, Plus, Search, X } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { Trip } from "@/lib/types";
 import { formatWeightSmart } from "@/lib/units";
@@ -15,7 +15,6 @@ function tempRange(low?: string, high?: string): string {
   return "";
 }
 import { cn } from "@/lib/cn";
-import { ScreenHeader } from "../ScreenHeader";
 import { useTopBar } from "../TopBar";
 import { InkButton } from "../ui/Glass";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
@@ -60,6 +59,8 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
   const createTrip = useAppStore((s) => s.createTrip);
   const deleteTrip = useAppStore((s) => s.deleteTrip);
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
   // Sort preference, remembered across sessions. Safe to read directly: the
   // list only mounts client-side (AppShell gates on hydration).
   const [sort, setSort] = useState<TripSort>(() => {
@@ -101,7 +102,23 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
     });
   }, [tripOrder, trips, sort]);
 
+  const q = query.trim().toLowerCase();
+  const shownIds = useMemo(() => {
+    if (!q) return sortedIds;
+    return sortedIds.filter((id) => {
+      const t = trips[id];
+      return [t.name, t.place ?? "", ...tripCompanions(t)].some((v) =>
+        v.toLowerCase().includes(q),
+      );
+    });
+  }, [sortedIds, trips, q]);
+
   useTopBar({
+    searching: searchOpen,
+    onSearch: () => {
+      setSearchOpen((o) => !o);
+      setQuery("");
+    },
     menu: [
       {
         id: "new",
@@ -121,13 +138,36 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
 
   return (
     <div className="pb-40">
-      <ScreenHeader title="Trips" subtitle={`${tripOrder.length}개의 여행 기록`} />
+      {searchOpen && (
+        <div className="px-4 pb-1 pt-1">
+          <div className="flex h-11 items-center gap-2.5 rounded-full bg-fill px-4">
+            <Search size={17} className="shrink-0 text-tertiary" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="트립·장소·함께한 사람 검색…"
+              className="min-w-0 flex-1 bg-transparent text-[16px] text-label outline-none placeholder:text-tertiary"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="검색 지우기"
+                className="shrink-0 text-tertiary active:opacity-50"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {tripOrder.length === 0 ? (
         <EmptyTrips onCreate={() => onOpen(createTrip())} />
       ) : (
-        <div className="pt-2">
-          <div className="no-scrollbar mb-1 flex gap-2 overflow-x-auto px-4 pb-1">
+        <div>
+          <div className="no-scrollbar mb-1 flex gap-2 overflow-x-auto px-4 pb-1 pt-2">
             {SORTS.map((s) => (
               <button
                 key={s.key}
@@ -145,7 +185,7 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
           </div>
           {/* Dense flat list — hairline separators only, like the Inventory */}
           <div>
-            {sortedIds.map((id, i) => {
+            {shownIds.map((id, i) => {
               const t = trips[id];
               return t ? (
                 <TripRow
@@ -166,6 +206,11 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
                 />
               ) : null;
             })}
+            {q && shownIds.length === 0 && (
+              <p className="px-4 py-12 text-center text-[15px] text-secondary">
+                검색 결과가 없습니다.
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -173,9 +218,9 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
       {tripOrder.length > 0 && (
         <div
           className="fixed right-4 z-40"
-          style={{ bottom: "calc(env(safe-area-inset-bottom) + 18px)" }}
+          style={{ bottom: "var(--bar-bottom)" }}
         >
-          <InkButton onClick={() => onOpen(createTrip())} className="pl-5">
+          <InkButton onClick={() => onOpen(createTrip())}>
             <Plus size={21} strokeWidth={2.4} /> 새 트립
           </InkButton>
         </div>

@@ -34,7 +34,7 @@ export function InkButton({
       aria-label={ariaLabel}
       disabled={disabled}
       className={cn(
-        "btn-ink press-fx relative isolate flex h-[52px] touch-none items-center justify-center gap-1.5 rounded-full px-6 text-[17px] font-semibold disabled:opacity-40",
+        "btn-ink press-fx relative isolate flex h-[46px] touch-none items-center justify-center gap-2.5 rounded-full px-5 text-[17px] font-semibold disabled:opacity-40",
         className,
       )}
       style={{ "--g-glow": "rgba(255,255,255,0.28)" } as React.CSSProperties}
@@ -68,7 +68,7 @@ export function GlassButton({
       type="button"
       aria-label={ariaLabel}
       className={cn(
-        "glass press-fx flex h-[52px] touch-none items-center justify-center gap-1.5 rounded-full text-label",
+        "glass press-fx flex h-[46px] touch-none items-center justify-center gap-2.5 rounded-full text-label",
         className,
       )}
       {...handlers}

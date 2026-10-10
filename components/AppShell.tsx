@@ -61,7 +61,7 @@ export function AppShell() {
         <div
           key={tab}
           className={cn(
-            "pt-[calc(env(safe-area-inset-top)+60px)]",
+            "pt-[calc(var(--bar-top)+60px)]",
             tab === "trips" ? "tab-from-right" : "tab-from-left",
           )}
         >

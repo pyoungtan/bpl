@@ -5,6 +5,10 @@
 /* iOS-style black & glass system: white canvas, black ink, black (light) /
    white (dark) as the single accent, and Liquid Glass for floating controls. */
 :root {
+  /* Top of the floating glass bar: flush with the status-bar safe area
+     (iOS standalone), with a small gutter in a regular browser tab. */
+  --bar-top: max(env(safe-area-inset-top), 10px);
+  --bar-bottom: max(calc(env(safe-area-inset-bottom) + 4px), 16px);
   /* Canvas + surfaces */
   --bg: #ffffff;
   --bg-elevated: #ffffff;
@@ -366,7 +370,7 @@
   inset-inline: 0;
   top: 0;
   z-index: 35;
-  height: calc(env(safe-area-inset-top) + 76px);
+  height: calc(var(--bar-top) + 68px);
   pointer-events: none;
   background: linear-gradient(
     to bottom,

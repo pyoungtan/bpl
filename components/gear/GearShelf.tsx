@@ -35,7 +35,6 @@ import type { GearItem, WeightUnit } from "@/lib/types";
 import { computeStats } from "@/lib/calc";
 import { formatPrice, formatWeight, formatWeightSmart } from "@/lib/units";
 import { cn } from "@/lib/cn";
-import { ScreenHeader } from "../ScreenHeader";
 import { useTopBar } from "../TopBar";
 import { GlassButton, InkButton } from "../ui/Glass";
 import { NotePopup } from "../NotePopup";
@@ -95,17 +94,13 @@ export function GearShelf({
 
   // Screen actions live in the floating glass bar's ⋯ menu.
   useTopBar({
+    searching: searchOpen,
+    onSearch: () => {
+      if (editMode) toggleEditMode();
+      setSearchOpen((o) => !o);
+      if (searchOpen) setQuery("");
+    },
     menu: [
-      {
-        id: "search",
-        label: searchOpen ? "검색 닫기" : "검색",
-        icon: <Search size={19} />,
-        onSelect: () => {
-          if (editMode) toggleEditMode();
-          setSearchOpen((o) => !o);
-          if (searchOpen) setQuery("");
-        },
-      },
       {
         id: "edit",
         label: editMode ? "편집 완료" : "순서·분류 편집",
@@ -229,17 +224,6 @@ export function GearShelf({
       .filter(([, items]) => items.length > 0);
   }, [allGroups, activeCat, editMode, q]);
 
-  const totals = useMemo(
-    () =>
-      computeStats(
-        gearOrder
-          .map((id) => gear[id])
-          .filter((g): g is GearItem => Boolean(g) && !g.hidden)
-          .map((g) => ({ gear: g, quantity: 1 })),
-      ),
-    [gear, gearOrder],
-  );
-
   const selectedStats = useMemo(
     () =>
       computeStats(
@@ -334,21 +318,8 @@ export function GearShelf({
   return (
     <div className="pb-40">
       <div>
-      <ScreenHeader
-        title="Inventory"
-        subtitle={
-          selecting ? (
-            <span className="font-medium text-label">
-              {selected.size}개 선택 · {formatWeightSmart(selectedStats.totalG, unit)}
-            </span>
-          ) : (
-            `${totals.itemCount}개 장비 · ${formatWeightSmart(totals.totalG, unit)}`
-          )
-        }
-      />
-
       {!editMode && searchOpen && (
-        <div className="px-4 pb-1 pt-2">
+        <div className="px-4 pb-1 pt-1">
           <div className="flex h-11 items-center gap-2.5 rounded-full bg-fill px-4">
             <Search size={17} className="shrink-0 text-tertiary" />
             <input
@@ -650,9 +621,12 @@ export function GearShelf({
       {/* Pack-quantity stepper for the most recently selected item */}
       {selecting && !editMode && lastSelectedId && selected.has(lastSelectedId) && gear[lastSelectedId] && (
         <div
-          className="glass fixed left-1/2 z-40 flex -translate-x-1/2 items-center gap-1.5 rounded-full p-1.5"
-          style={{ bottom: "calc(env(safe-area-inset-bottom) + 84px)" }}
+          className="glass fixed left-1/2 z-40 flex h-[46px] -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full py-1.5 pl-[18px] pr-1.5"
+          style={{ bottom: "calc(var(--bar-bottom) + 58px)" }}
         >
+          <span className="mr-2 tabular text-[15px] font-medium text-label">
+            {selected.size}개 · {formatWeightSmart(selectedStats.totalG, unit)}
+          </span>
           <button
             type="button"
             aria-label="수량 감소"
@@ -678,21 +652,21 @@ export function GearShelf({
       {/* Primary action: add gear · finish editing · send the selection to a trip */}
       <div
         className="fixed right-4 z-40 flex items-center gap-2"
-        style={{ bottom: "calc(env(safe-area-inset-bottom) + 18px)" }}
+        style={{ bottom: "var(--bar-bottom)" }}
       >
         {editMode ? (
-          <InkButton onClick={toggleEditMode} className="pl-5">
+          <InkButton onClick={toggleEditMode}>
             <Check size={20} strokeWidth={2.4} /> 완료
           </InkButton>
         ) : selecting ? (
           <>
-            <GlassButton onClick={clearSelection} aria-label="선택 해제" className="w-[52px]">
+            <GlassButton onClick={clearSelection} aria-label="선택 해제" className="w-[46px]">
               <X size={21} />
             </GlassButton>
             <InkButton
               onClick={() => setAddTripOpen(true)}
               aria-label={`선택한 ${selected.size}개 Trip에 추가`}
-              className="pl-5"
+             
             >
               <ArrowRight size={20} />
               트립에 추가
@@ -700,7 +674,7 @@ export function GearShelf({
             </InkButton>
           </>
         ) : (
-          <InkButton onClick={() => setEditor({ open: true, gear: null })} className="pl-5">
+          <InkButton onClick={() => setEditor({ open: true, gear: null })}>
             <Plus size={21} strokeWidth={2.4} /> 장비 추가
           </InkButton>
         )}

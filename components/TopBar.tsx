@@ -10,7 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Check, ChevronLeft } from "lucide-react";
+import { Check, ChevronLeft, Search, Settings, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 export type TabKey = "shelf" | "trips";
@@ -27,10 +27,13 @@ export interface TopBarMenuItem {
 }
 
 export interface TopBarConfig {
-  /** Detail screens: the settings button becomes a back button and the tab
+  /** Detail screens: the search button becomes a back button and the tab
    *  switcher is replaced by the optional `center` capsule. */
   onBack?: () => void;
   center?: string;
+  /** Left glass button toggles this screen's search. */
+  onSearch?: () => void;
+  searching?: boolean;
   menu?: TopBarMenuItem[];
 }
 
@@ -50,6 +53,8 @@ export function useTopBar(config: TopBarConfig) {
   const sig = JSON.stringify({
     back: Boolean(config.onBack),
     center: config.center ?? null,
+    search: Boolean(config.onSearch),
+    searching: Boolean(config.searching),
     menu: config.menu?.map((i) => [i.id, i.label, !!i.checked, !!i.danger, !!i.group]),
   });
   useEffect(() => {
@@ -59,6 +64,8 @@ export function useTopBar(config: TopBarConfig) {
       {
         onBack: c.onBack ? () => ref.current.onBack?.() : undefined,
         center: c.center,
+        onSearch: c.onSearch ? () => ref.current.onSearch?.() : undefined,
+        searching: c.searching,
         menu: c.menu?.map((item) => ({
           ...item,
           onSelect: () => ref.current.menu?.find((x) => x.id === item.id)?.onSelect(),
@@ -251,7 +258,6 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "shelf", label: "Inventory" },
   { key: "trips", label: "Trips" },
 ];
-const SEG_W = 100;
 
 function TabSegment({
   tab,
@@ -264,42 +270,110 @@ function TabSegment({
   blocked: () => boolean;
 }) {
   const idx = Math.max(0, TABS.findIndex((t) => t.key === tab));
+  const idxRef = useRef(idx);
+  idxRef.current = idx;
   const segRef = useRef<HTMLDivElement>(null);
   const pillRef = useRef<HTMLSpanElement>(null);
-  const d = useRef({ pid: -1, startX: 0, startPx: 0, moved: false, lifted: false, px: 0, quiet: false });
+  const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const d = useRef({ pid: -1, startX: 0, startPx: 0, moved: false, lifted: false, px: 0, w: 0, quiet: false });
   const prevIdx = useRef(idx);
   const [lifted, setLifted] = useState(false);
 
-  const setPill = useCallback((px: number, sx = 1, sy = 1, fast = false) => {
+  // Items are sized to their labels, so the platter takes each item's own
+  // offset and width (relative to its resting origin at the 4px inset).
+  const slot = useCallback((i: number) => {
+    const b = btnRefs.current[i];
+    return b ? { x: b.offsetLeft - 4, w: b.offsetWidth } : { x: 0, w: 0 };
+  }, []);
+
+  const setPill = useCallback((px: number, w: number, sx = 1, sy = 1, fast = false) => {
     const p = pillRef.current;
     if (!p) return;
     d.current.px = px;
+    d.current.w = w;
     p.style.setProperty("--px", `${px}px`);
+    p.style.width = `${w}px`;
     p.style.setProperty("--psx", String(sx));
     p.style.setProperty("--psy", String(sy));
-    p.style.transitionDuration = fast ? "0.12s, 0.2s, 0.2s" : "";
+    p.style.transitionDuration = fast ? "0.12s, 0.12s, 0.2s, 0.2s" : "";
   }, []);
+
+  const rest = useCallback(
+    (i: number, sx = 1, sy = 1) => {
+      const s = slot(i);
+      setPill(s.x, s.w, sx, sy);
+    },
+    [slot, setPill],
+  );
 
   useLayoutEffect(() => {
     if (prevIdx.current === idx) {
-      setPill(idx * SEG_W);
+      rest(idx);
       return;
     }
     prevIdx.current = idx;
     if (d.current.quiet) {
       d.current.quiet = false;
-      setPill(idx * SEG_W);
+      rest(idx);
       return;
     }
     // the platter stretches as it travels, then settles — liquid, not sliding
-    setPill(idx * SEG_W, 1.22, 0.9);
-    const t = window.setTimeout(() => setPill(idx * SEG_W), 110);
+    rest(idx, 1.16, 0.9);
+    const t = window.setTimeout(() => rest(idx), 110);
     return () => window.clearTimeout(t);
-  }, [idx, setPill]);
+  }, [idx, rest]);
+
+  // Label widths shift once the web font loads; keep the platter on its item.
+  useEffect(() => {
+    const el = segRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      if (d.current.pid === -1) rest(idxRef.current);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [rest]);
 
   const under = (clientX: number) => {
-    const r = segRef.current!.getBoundingClientRect();
-    return clamp(Math.floor((clientX - r.left - 4) / SEG_W), 0, TABS.length - 1);
+    let best = 0;
+    let dist = Infinity;
+    btnRefs.current.forEach((b, i) => {
+      if (!b) return;
+      const r = b.getBoundingClientRect();
+      const dd = clientX < r.left ? r.left - clientX : clientX > r.right ? clientX - r.right : 0;
+      if (dd < dist) {
+        dist = dd;
+        best = i;
+      }
+    });
+    return best;
+  };
+  // Width while dragging: interpolate between the neighbouring items' widths.
+  const widthAt = (px: number) => {
+    const n = TABS.length;
+    for (let i = 0; i < n - 1; i++) {
+      const a = slot(i);
+      const b = slot(i + 1);
+      if (px <= b.x || i === n - 2) {
+        const t = clamp((px - a.x) / Math.max(1, b.x - a.x), 0, 1);
+        return a.w + (b.w - a.w) * t;
+      }
+    }
+    return slot(0).w;
+  };
+  const nearest = (px: number, w: number) => {
+    const c = px + w / 2;
+    let best = 0;
+    let dist = Infinity;
+    TABS.forEach((_, i) => {
+      const s = slot(i);
+      const dd = Math.abs(s.x + s.w / 2 - c);
+      if (dd < dist) {
+        dist = dd;
+        best = i;
+      }
+    });
+    return best;
   };
   const glow = (e: React.PointerEvent, on: boolean) => {
     const el = segRef.current;
@@ -315,7 +389,7 @@ function TabSegment({
       ref={segRef}
       role="tablist"
       aria-label="화면 전환"
-      className="glass flex h-12 touch-none rounded-full p-1"
+      className="glass relative flex h-12 touch-none rounded-full p-1"
       onPointerDown={(e) => {
         if (blocked()) return;
         if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -327,14 +401,14 @@ function TabSegment({
           /* ignore */
         }
         s.startX = e.clientX;
-        s.startPx = idx * SEG_W;
+        s.startPx = slot(idx).x;
         s.moved = false;
         glow(e, true);
         if (under(e.clientX) === idx) {
           // pressing the selected tab lifts its platter into a lens to drag
           s.lifted = true;
           setLifted(true);
-          setPill(s.startPx, 1.1, 1.08);
+          rest(idx, 1.08, 1.08);
         }
       }}
       onPointerMove={(e) => {
@@ -345,10 +419,11 @@ function TabSegment({
         glow(e, true);
         if (!s.lifted || !s.moved) return;
         let px = s.startPx + dx;
-        const max = (TABS.length - 1) * SEG_W;
-        if (px < 0) px *= 0.3; // rubber-band past the ends
+        const min = slot(0).x;
+        const max = slot(TABS.length - 1).x;
+        if (px < min) px = min + (px - min) * 0.3; // rubber-band past the ends
         if (px > max) px = max + (px - max) * 0.3;
-        setPill(px, 1.14, 1.06, true);
+        setPill(px, widthAt(px), 1.1, 1.06, true);
       }}
       onPointerUp={(e) => {
         const s = d.current;
@@ -360,12 +435,12 @@ function TabSegment({
         setLifted(false);
         let next = under(e.clientX);
         if (wasLifted && s.moved) {
-          next = clamp(Math.round(s.px / SEG_W), 0, TABS.length - 1);
+          next = nearest(s.px, s.w);
           s.quiet = true; // already travelled under the finger — no stretch
         }
         if (next === idx) {
           s.quiet = false;
-          setPill(idx * SEG_W);
+          rest(idx);
         } else onChange(TABS[next].key);
       }}
       onPointerCancel={(e) => {
@@ -374,7 +449,7 @@ function TabSegment({
         s.lifted = false;
         setLifted(false);
         glow(e, false);
-        setPill(idx * SEG_W);
+        rest(idx);
       }}
     >
       <span className="g-glow" />
@@ -388,16 +463,18 @@ function TabSegment({
             : "bg-black/[0.075] dark:bg-white/[0.14]",
         )}
         style={{
-          width: SEG_W,
           transform: "translateX(var(--px, 0px)) scale(var(--psx, 1), var(--psy, 1))",
-          transitionProperty: "transform, background-color, box-shadow",
-          transitionDuration: "var(--dur-press), 0.2s, 0.2s",
-          transitionTimingFunction: "var(--spring-press), ease, ease",
+          transitionProperty: "transform, width, background-color, box-shadow",
+          transitionDuration: "var(--dur-press), var(--dur-press), 0.2s, 0.2s",
+          transitionTimingFunction: "var(--spring-press), var(--spring-press), ease, ease",
         }}
       />
       {TABS.map((t, i) => (
         <button
           key={t.key}
+          ref={(el) => {
+            btnRefs.current[i] = el;
+          }}
           type="button"
           role="tab"
           aria-selected={i === idx}
@@ -411,8 +488,7 @@ function TabSegment({
             const n = clamp(idx + (e.key === "ArrowRight" ? 1 : -1), 0, TABS.length - 1);
             onChange(TABS[n].key);
           }}
-          className="relative z-10 h-10 rounded-full text-[17px] font-medium tracking-[-0.01em] text-label"
-          style={{ width: SEG_W }}
+          className="relative z-10 h-10 whitespace-nowrap rounded-full px-[18px] text-[17px] font-medium tracking-[-0.01em] text-label"
         >
           {t.label}
         </button>
@@ -678,7 +754,16 @@ export function TopBarProvider({
     setMenuOpen(false);
     return true;
   };
-  const menu = config?.menu ?? [];
+  const menu: TopBarMenuItem[] = [
+    ...(config?.menu ?? []),
+    {
+      id: "settings",
+      label: "설정",
+      icon: <Settings size={19} />,
+      group: Boolean(config?.menu?.length),
+      onSelect: onOpenSettings,
+    },
+  ];
 
   return (
     <TopBarCtx.Provider value={set}>
@@ -696,7 +781,7 @@ export function TopBarProvider({
       )}
       <nav
         aria-label="상단 바"
-        className="pointer-events-none fixed inset-x-0 top-0 z-50 mx-auto flex h-[calc(env(safe-area-inset-top)+56px)] max-w-2xl items-end justify-between px-4 pb-0"
+        className="pointer-events-none fixed inset-x-0 top-0 z-50 mx-auto flex max-w-2xl items-center justify-between px-4 pt-[var(--bar-top)]"
       >
         <div className="pointer-events-auto flex h-12 items-center">
           {config?.onBack ? (
@@ -708,32 +793,27 @@ export function TopBarProvider({
             >
               <ChevronLeft size={26} strokeWidth={2.2} className="-ml-0.5" />
             </GlassCircle>
-          ) : (
+          ) : config?.onSearch ? (
             <GlassCircle
-              label="설정"
+              label={config.searching ? "검색 닫기" : "검색"}
               onTap={() => {
-                if (!closeIfOpen()) onOpenSettings();
+                if (!closeIfOpen()) config.onSearch?.();
               }}
             >
-              <svg
-                viewBox="0 0 24 24"
-                width="24"
-                height="24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                aria-hidden="true"
-              >
-                <path d="M4.5 9h15M4.5 15h9" />
-              </svg>
+              {config.searching ? (
+                <X size={22} strokeWidth={2.2} />
+              ) : (
+                <Search size={21} strokeWidth={2.2} />
+              )}
             </GlassCircle>
+          ) : (
+            <span className="block w-11" aria-hidden="true" />
           )}
         </div>
         <div className="pointer-events-auto flex h-12 items-center">
           {config?.onBack ? (
             config.center ? (
-              <span className="glass flex h-9 items-center rounded-full px-4 text-[14px] font-semibold tabular text-label">
+              <span className="glass flex h-11 items-center rounded-full px-[18px] text-[17px] font-medium tabular tracking-[-0.01em] text-label">
                 {config.center}
               </span>
             ) : null

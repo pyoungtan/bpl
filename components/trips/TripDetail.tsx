@@ -475,7 +475,7 @@ export function TripDetail({
       <div
         className="fixed left-0 z-30 w-4"
         style={{
-          top: "calc(env(safe-area-inset-top) + 64px)",
+          top: "calc(var(--bar-top) + 56px)",
           bottom: 0,
           touchAction: "pan-y",
         }}
