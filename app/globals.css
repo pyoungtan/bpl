@@ -384,34 +384,16 @@
   mask-image: linear-gradient(to bottom, #000 45%, transparent);
 }
 
-/* Tab screen slide-in. Uses fill-mode:none (default) so the transform reverts
-   to none once the animation ends — keeping sticky headers / fixed FABs inside
-   each tab correctly positioned at rest. */
-@keyframes tabFromRight {
+/* Tab switch: a quick crossfade, like iOS segmented/tab switches. Opacity
+   only — a transform here would make the tab's fixed floating buttons follow
+   the moving wrapper mid-animation. */
+@keyframes tabFade {
   from {
     opacity: 0;
-    transform: translateX(22px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
   }
 }
-@keyframes tabFromLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-22px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-.tab-from-right {
-  animation: tabFromRight 0.26s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-.tab-from-left {
-  animation: tabFromLeft 0.26s cubic-bezier(0.22, 0.61, 0.36, 1);
+.tab-fade {
+  animation: tabFade 0.16s ease-out;
 }
 
 /* Category-fold reveal: rows stay mounted and folding toggles display:none, so
@@ -430,8 +412,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tab-from-right,
-  .tab-from-left,
+  .tab-fade,
   .fold-reveal {
     animation: none;
   }

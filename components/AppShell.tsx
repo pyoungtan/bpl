@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAppStore, useHydrated } from "@/lib/store";
 import {
   useCloudSync,
@@ -21,6 +21,22 @@ export function AppShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tripToOpen, setTripToOpen] = useState<string | null>(null);
   const cloud = useCloudSync();
+  // Each tab keeps its own scroll offset, like a native tab bar.
+  const tabScroll = useRef<Partial<Record<TabKey, number>>>({});
+  const pendingScroll = useRef<number | null>(null);
+
+  function switchTab(next: TabKey, scrollTo?: number) {
+    if (next === tab) return;
+    tabScroll.current[tab] = window.scrollY;
+    pendingScroll.current = scrollTo ?? tabScroll.current[next] ?? 0;
+    setTab(next);
+  }
+
+  useLayoutEffect(() => {
+    if (pendingScroll.current === null) return;
+    window.scrollTo(0, pendingScroll.current);
+    pendingScroll.current = null;
+  }, [tab]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -49,27 +65,19 @@ export function AppShell() {
   return (
     <TopBarProvider
       tab={tab}
-      onTabChange={setTab}
+      onTabChange={(t) => switchTab(t)}
       onOpenSettings={() => setSettingsOpen(true)}
     >
       <div className="mx-auto min-h-dvh w-full max-w-2xl">
         <PullToRefresh />
-        {/* Re-keyed per tab so the CSS slide-in replays on switch. The animation
-            ends at transform:none (fill-mode none), so fixed controls inside
-            each tab are unaffected at rest. Top padding clears the floating
-            glass bar; content scrolls underneath it. */}
-        <div
-          key={tab}
-          className={cn(
-            "pt-[calc(var(--bar-top)+60px)]",
-            tab === "trips" ? "tab-from-right" : "tab-from-left",
-          )}
-        >
+        {/* Re-keyed per tab so the crossfade replays on switch. Top padding
+            clears the floating glass bar; content scrolls underneath it. */}
+        <div key={tab} className="tab-fade pt-[calc(var(--bar-top)+60px)]">
           {tab === "shelf" ? (
             <GearShelf
               onOpenTrip={(id) => {
                 setTripToOpen(id);
-                setTab("trips");
+                switchTab("trips", 0);
               }}
             />
           ) : (

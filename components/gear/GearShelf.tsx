@@ -18,7 +18,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { motion } from "framer-motion";
 import {
-  ArrowRight,
+  Backpack,
   Bookmark,
   Check,
   ChevronDown,
@@ -612,37 +612,44 @@ export function GearShelf({
         )}
       </div>
 
-      {/* Primary action: add gear · finish editing · send the selection to a trip */}
-      <div
-        className="fixed right-4 z-40 flex items-center gap-2"
-        style={{ bottom: "var(--bar-bottom)" }}
-      >
-        {editMode ? (
-          <InkButton onClick={toggleEditMode}>
-            <Check size={20} strokeWidth={2.4} /> 완료
+      {/* Primary action: add gear · finish editing · pack the selection */}
+      {selecting && !editMode ? (
+        <div
+          className="pointer-events-none fixed inset-x-0 z-40 flex flex-col items-center gap-3"
+          style={{ bottom: "var(--bar-bottom)" }}
+        >
+          <GlassButton
+            onClick={clearSelection}
+            aria-label="선택 해제"
+            className="pointer-events-auto w-[46px]"
+          >
+            <X size={21} />
+          </GlassButton>
+          <InkButton
+            onClick={() => setAddTripOpen(true)}
+            aria-label={`선택한 ${selected.size}개 Trip에 담기`}
+            className="pointer-events-auto"
+          >
+            <Backpack size={20} />
+            Pack
+            <span className="tabular font-medium opacity-60">
+              {formatWeightSmart(selectedStats.totalG, unit)}
+            </span>
           </InkButton>
-        ) : selecting ? (
-          <>
-            <GlassButton onClick={clearSelection} aria-label="선택 해제" className="w-[46px]">
-              <X size={21} />
-            </GlassButton>
-            <InkButton
-              onClick={() => setAddTripOpen(true)}
-              aria-label={`선택한 ${selected.size}개 Trip에 추가`}
-            >
-              <ArrowRight size={20} />
-              트립에 추가
-              <span className="tabular font-medium opacity-60">
-                {formatWeightSmart(selectedStats.totalG, unit)}
-              </span>
+        </div>
+      ) : (
+        <div className="fixed right-4 z-40" style={{ bottom: "var(--bar-bottom)" }}>
+          {editMode ? (
+            <InkButton onClick={toggleEditMode}>
+              <Check size={20} strokeWidth={2.4} /> 완료
             </InkButton>
-          </>
-        ) : (
-          <InkButton onClick={() => setEditor({ open: true, gear: null })}>
-            <Plus size={21} strokeWidth={2.4} /> 장비 추가
-          </InkButton>
-        )}
-      </div>
+          ) : (
+            <InkButton onClick={() => setEditor({ open: true, gear: null })}>
+              <Plus size={21} strokeWidth={2.4} /> Add
+            </InkButton>
+          )}
+        </div>
+      )}
 
       {peek && (
         <NotePopup note={peek.note} priceText={peek.priceText} rect={peek.rect} />
