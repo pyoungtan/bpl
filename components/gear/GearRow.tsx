@@ -26,7 +26,6 @@ export interface GearRowProps {
   onToggleExpand?: () => void;
   editMode?: boolean;
   dragHandle?: React.ReactNode;
-  topHairline?: boolean;
   dimmed?: boolean;
   onNotePeek?: (rect: DOMRect) => void;
   onNotePeekEnd?: () => void;
@@ -49,7 +48,6 @@ export function GearRow({
   onToggleExpand,
   editMode,
   dragHandle,
-  topHairline,
   dimmed,
   onNotePeek,
   onNotePeekEnd,
@@ -107,7 +105,6 @@ export function GearRow({
       swipeDisabled={!hasSwipe}
       rightWidth={112}
       leftWidth={56}
-      topHairline={topHairline}
       selected={Boolean(selected) && !editMode}
       renderRight={
         swipeActions

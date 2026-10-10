@@ -354,7 +354,6 @@ export function GearShelf({
           >
             <Bookmark size={15} />
           </button>
-          <span className="my-1 w-px shrink-0 bg-separator" />
           {["all", ...chipCats].map((c) => {
             const active = c === activeCat;
             return (
@@ -396,7 +395,7 @@ export function GearShelf({
           renderOverlay={(id) => {
             const g = gear[id];
             return g ? (
-              <GearRow gear={g} unit={unit} editMode topHairline={false} onTap={() => {}} />
+              <GearRow gear={g} unit={unit} editMode onTap={() => {}} />
             ) : null;
           }}
         >
@@ -444,18 +443,17 @@ export function GearShelf({
                 above — every animation frame is compositor-only. */}
             <div className={cn("fold-reveal", isCollapsed && "hidden")}>
             {editMode ? (
-              items.map((g, i) => (
+              items.map((g) => (
                 <SortableGearRow
                   key={g.id}
                   id={g.id}
                   gear={g}
                   unit={unit}
-                  topHairline={i > 0}
                   onEdit={() => setEditor({ open: true, gear: g })}
                 />
               ))
             ) : (
-              items.map((g, i) => {
+              items.map((g) => {
                 const addOns = resolveAddOns(g);
                 const autoOpen =
                   selected.has(g.id) || addOns.some((a) => selected.has(a.id));
@@ -478,7 +476,6 @@ export function GearShelf({
                       hasAddOns={addOns.length > 0}
                       expanded={isExpanded}
                       onToggleExpand={() => toggleExpand(g.id, isExpanded)}
-                      topHairline={i > 0}
                       onNotePeek={(rect) =>
                         setPeek({
                           note: g.note ?? "",
@@ -554,13 +551,12 @@ export function GearShelf({
               </span>
               <span className="text-[12px] text-tertiary">{addonItems.length}개</span>
             </div>
-            {addonItems.map((g, i) => (
+            {addonItems.map((g) => (
               <GearRow
                 key={g.id}
                 gear={g}
                 unit={unit}
                 editMode
-                topHairline={i > 0}
                 onTap={() => setEditor({ open: true, gear: g })}
               />
             ))}
@@ -578,7 +574,7 @@ export function GearShelf({
               </span>
               <span className="text-[12px] text-tertiary">{hiddenItems.length}개</span>
             </div>
-            {hiddenItems.map((g, i) => (
+            {hiddenItems.map((g) => (
               <GearRow
                 key={g.id}
                 gear={g}
@@ -586,7 +582,6 @@ export function GearShelf({
                 onTap={() => {
                   if (swipeOpenId) setSwipeOpenId(null);
                 }}
-                topHairline={i > 0}
                 dimmed
                 onNotePeek={(rect) =>
                   setPeek({
@@ -840,13 +835,11 @@ function SortableGearRow({
   id,
   gear,
   unit,
-  topHairline,
   onEdit,
 }: {
   id: string;
   gear: GearItem;
   unit: WeightUnit;
-  topHairline: boolean;
   onEdit: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -870,7 +863,7 @@ function SortableGearRow({
         gear={gear}
         unit={unit}
         editMode
-        topHairline={topHairline && !isDragging}
+        
         onTap={onEdit}
         dragHandle={
           <button

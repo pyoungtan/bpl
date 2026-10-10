@@ -183,16 +183,15 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
               </button>
             ))}
           </div>
-          {/* Dense flat list — hairline separators only, like the Gear */}
+          {/* Dense flat list, like the Gear */}
           <div>
-            {shownIds.map((id, i) => {
+            {shownIds.map((id) => {
               const t = trips[id];
               return t ? (
                 <TripRow
                   key={id}
                   trip={t}
                   showCompanions={sort === "companions"}
-                  topHairline={i > 0}
                   onOpen={() => {
                     if (swipeOpenId) {
                       setSwipeOpenId(null);
@@ -232,7 +231,6 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
 function TripRow({
   trip,
   showCompanions,
-  topHairline,
   onOpen,
   onDelete,
   swipeOpenId,
@@ -241,7 +239,6 @@ function TripRow({
   trip: Trip;
   /** 함께한 사람 sort active → subtitle shows companion tags instead of date/temp. */
   showCompanions: boolean;
-  topHairline: boolean;
   onOpen: () => void;
   onDelete: () => void;
   swipeOpenId: string | null;
@@ -262,7 +259,6 @@ function TripRow({
       openId={swipeOpenId}
       onOpenChange={onSwipeOpenChange}
       rightWidth={56}
-      topHairline={topHairline}
       bgClassName="bg-bg"
       renderRight={(_close, rowOpen) => (
         <SwipeDeleteButton rowOpen={rowOpen} onDelete={onDelete} />

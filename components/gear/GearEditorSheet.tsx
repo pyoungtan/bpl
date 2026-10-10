@@ -16,20 +16,15 @@ function round3(n: number): number {
 const inputCls =
   "w-full bg-transparent text-[16px] text-label outline-none placeholder:text-tertiary";
 
-const HAIR =
-  "relative before:pointer-events-none before:absolute before:left-4 before:right-0 before:top-0 before:h-px before:bg-separator";
-
 function FieldRow({
   label,
-  divider,
   children,
 }: {
   label: string;
-  divider?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div className={cn("px-4 py-2.5", divider && HAIR)}>
+    <div className={"px-4 py-2.5"}>
       <div className="text-[12px] font-medium text-secondary">{label}</div>
       <div className="mt-0.5">{children}</div>
     </div>
@@ -253,7 +248,7 @@ export function GearEditorSheet({
             placeholder="예: Exos 48"
           />
         </FieldRow>
-        <FieldRow label="브랜드" divider>
+        <FieldRow label="브랜드">
           <div className="relative">
             <input
               className={inputCls}
@@ -266,7 +261,7 @@ export function GearEditorSheet({
             />
             {brandFocused && brandMatches.length > 0 && (
               <div className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-[20px] bg-bg shadow-float ring-1 ring-separator">
-                {brandMatches.map((b, i) => (
+                {brandMatches.map((b) => (
                   <button
                     key={b}
                     type="button"
@@ -278,7 +273,6 @@ export function GearEditorSheet({
                     }}
                     className={cn(
                       "flex w-full items-center px-3.5 py-2.5 text-left text-[15px] text-label active:bg-fill",
-                      i > 0 && HAIR,
                     )}
                   >
                     {b}
@@ -288,7 +282,7 @@ export function GearEditorSheet({
             )}
           </div>
         </FieldRow>
-        <FieldRow label="대분류" divider>
+        <FieldRow label="대분류">
           <div className="flex flex-wrap gap-1.5 pt-0.5">
             {majorOptions.map((c) => {
               const active = major === c && !addingMajor;
@@ -338,7 +332,7 @@ export function GearEditorSheet({
             )}
           </div>
         </FieldRow>
-        <FieldRow label="소분류" divider>
+        <FieldRow label="소분류">
           <input
             className={inputCls}
             list="minor-cats"
@@ -353,7 +347,7 @@ export function GearEditorSheet({
           </datalist>
         </FieldRow>
 
-        <FieldRow label="무게" divider>
+        <FieldRow label="무게">
           <div className="flex items-center gap-2">
             <input
               className={cn(inputCls, "tabular")}
@@ -373,7 +367,7 @@ export function GearEditorSheet({
             />
           </div>
         </FieldRow>
-        <FieldRow label="기준 수량" divider>
+        <FieldRow label="기준 수량">
           <input
             className={cn(inputCls, "tabular")}
             type="number"
@@ -385,7 +379,7 @@ export function GearEditorSheet({
             step={1}
           />
         </FieldRow>
-        <FieldRow label={`가격 (${currency})`} divider>
+        <FieldRow label={`가격 (${currency})`}>
           <input
             className={cn(inputCls, "tabular")}
             type="number"
@@ -398,7 +392,7 @@ export function GearEditorSheet({
           />
         </FieldRow>
 
-        <div className={cn("px-4 py-3", HAIR)}>
+        <div className={"px-4 py-3"}>
           <div className="mb-2 text-[12px] font-medium text-secondary">유형</div>
           <div className="flex gap-2">
             <ChipToggle label="착용" active={worn} onClick={() => setWorn((v) => !v)} />
@@ -416,7 +410,6 @@ export function GearEditorSheet({
           onClick={() => setAddonOpen((o) => !o)}
           className={cn(
             "flex w-full items-center justify-between px-4 py-3 active:opacity-60",
-            HAIR,
           )}
         >
           <span className="text-[13px] font-bold uppercase tracking-[0.06em] text-secondary">
@@ -501,7 +494,7 @@ export function GearEditorSheet({
           </div>
         )}
 
-        <FieldRow label="메모" divider>
+        <FieldRow label="메모">
           <textarea
             className={cn(inputCls, "min-h-[56px] resize-none py-0.5 leading-relaxed")}
             value={note}
@@ -510,7 +503,7 @@ export function GearEditorSheet({
             rows={2}
           />
         </FieldRow>
-        <FieldRow label="링크" divider>
+        <FieldRow label="링크">
           <input
             className={inputCls}
             type="url"
@@ -526,7 +519,6 @@ export function GearEditorSheet({
             onClick={handleDelete}
             className={cn(
               "mt-3 flex h-12 w-full items-center justify-center gap-2 text-[15px] text-red active:opacity-60",
-              HAIR,
             )}
           >
             <Trash2 size={17} />

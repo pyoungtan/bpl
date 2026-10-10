@@ -285,13 +285,12 @@ export function TripDetail({
     quantity: number,
     opts: {
       nested?: boolean;
-      topHairline?: boolean;
       hasAddOns?: boolean;
       expanded?: boolean;
       major?: string;
     },
   ) {
-    const { nested, topHairline, hasAddOns, expanded, major } = opts;
+    const { nested, hasAddOns, expanded, major } = opts;
     const checked = checkedSet.has(g.id);
     const dim = isChecking && checked;
     const selected = !isChecking && selectedId === g.id;
@@ -306,7 +305,6 @@ export function TripDetail({
         }}
         swipeDisabled={isChecking}
         rightWidth={56}
-        topHairline={topHairline}
         bgClassName={
           nested ? "bg-[color-mix(in_srgb,var(--tint)_6%,var(--bg))]" : "bg-bg"
         }
@@ -768,8 +766,7 @@ export function TripDetail({
           <span className="shrink-0 text-[14px] text-secondary">g</span>
           <span className="w-6 shrink-0" />
         </div>
-        <div className="ml-4 h-px bg-separator" />
-        {groups.map(([major, rows], gi) => (
+        {groups.map(([major, rows]) => (
           <section key={major}>
             <div className="flex items-baseline justify-between px-4 pb-1 pt-5">
               <span className="text-[13px] font-semibold tracking-[0.01em] text-secondary">
@@ -779,7 +776,7 @@ export function TripDetail({
                 {rows.length}개, {formatWeightSmart(catTotals.get(major) ?? 0, unit)}
               </span>
             </div>
-            {rows.map(({ gear: g, quantity }, i) => {
+            {rows.map(({ gear: g, quantity }) => {
               const addOns = g.addOnIds
                 .filter((aid) => packedQty.has(aid))
                 .map((aid) => ({ gear: gear[aid], quantity: packedQty.get(aid) ?? 1 }))
@@ -790,7 +787,6 @@ export function TripDetail({
               return (
                 <Fragment key={g.id}>
                   {renderRow(g, quantity, {
-                    topHairline: i > 0,
                     hasAddOns: addOns.length > 0,
                     expanded,
                     major,
@@ -802,9 +798,6 @@ export function TripDetail({
                 </Fragment>
               );
             })}
-            {gi < groups.length - 1 && (
-              <div className="ml-4 mt-2 h-px bg-separator" />
-            )}
           </section>
         ))}
 
@@ -1029,13 +1022,12 @@ function GearPickerSheet({
     g: GearItem,
     opts: {
       nested?: boolean;
-      topHairline?: boolean;
       major?: string;
       hasAddOns?: boolean;
       expanded?: boolean;
     },
   ) {
-    const { nested, topHairline, major, hasAddOns, expanded } = opts;
+    const { nested, major, hasAddOns, expanded } = opts;
     const isPicked = picked.has(g.id);
     return (
       <div
@@ -1045,8 +1037,6 @@ function GearPickerSheet({
           nested
             ? "bg-[color-mix(in_srgb,var(--tint)_5%,transparent)] pl-9 pr-4"
             : "px-4",
-          topHairline &&
-            "relative before:pointer-events-none before:absolute before:left-4 before:right-0 before:top-0 before:h-px before:bg-separator",
         )}
       >
         <Checkbox
@@ -1157,7 +1147,7 @@ function GearPickerSheet({
                 </span>
                 <span className="text-[12px] text-tertiary">{items.length}개</span>
               </div>
-              {items.map((g, i) => {
+              {items.map((g) => {
                 const addOns = g.addOnIds
                   .map((aid) => gear[aid])
                   .filter(
@@ -1170,7 +1160,6 @@ function GearPickerSheet({
                 return (
                   <Fragment key={g.id}>
                     {renderPickRow(g, {
-                      topHairline: i > 0,
                       major,
                       hasAddOns: addOns.length > 0,
                       expanded: isExpanded,

@@ -81,7 +81,6 @@ export function CategoryManagerSheet({
                   index={i}
                   name={c}
                   count={counts.get(c) ?? 0}
-                  topHairline={i > 0}
                   onRename={(v) => renameCategoryAt(i, v)}
                   onDelete={() => deleteCategoryAt(i)}
                 />
@@ -121,14 +120,12 @@ function SortableCatRow({
   index,
   name,
   count,
-  topHairline,
   onRename,
   onDelete,
 }: {
   index: number;
   name: string;
   count: number;
-  topHairline: boolean;
   onRename: (value: string) => void;
   onDelete: () => void;
 }) {
@@ -148,9 +145,6 @@ function SortableCatRow({
       className={cn(
         "relative flex h-14 items-center gap-1.5 pr-1",
         isDragging && "rounded-[16px] bg-card shadow-lg",
-        topHairline &&
-          !isDragging &&
-          "before:pointer-events-none before:absolute before:left-10 before:right-0 before:top-0 before:h-px before:bg-separator",
       )}
     >
       <button

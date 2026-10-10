@@ -24,7 +24,6 @@ export interface SwipeRowProps {
   /** Actions anchored to the left edge (revealed on swipe-right). */
   renderLeft?: (close: () => void, rowOpen: boolean) => React.ReactNode;
   swipeDisabled?: boolean;
-  topHairline?: boolean;
   selected?: boolean;
   /** Overlay class for the selection highlight (kept above the opaque body). */
   selectedClassName?: string;
@@ -49,7 +48,6 @@ export function SwipeRow({
   renderRight,
   renderLeft,
   swipeDisabled,
-  topHairline,
   selected,
   selectedClassName,
   bgClassName,
@@ -103,11 +101,7 @@ export function SwipeRow({
 
   return (
     <div
-      className={cn(
-        "relative overflow-hidden",
-        topHairline &&
-          "before:pointer-events-none before:absolute before:left-4 before:right-0 before:top-0 before:z-20 before:h-px before:bg-separator",
-      )}
+      className="relative overflow-hidden"
     >
       {swipeable && LEFT_W > 0 && renderLeft && (
         <motion.div className="absolute inset-y-0 left-0 flex" style={{ opacity: leftVis }}>

@@ -1,11 +1,11 @@
 "use client";
 
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 /**
- * Compact in-row quantity control for a selected item (cart-style): at 1 the
- * minus becomes a trash icon that removes the item from the selection.
+ * Compact in-row quantity control for a selected item (cart-style): minus at
+ * 1 removes the item from the selection.
  * Swallows its own pointer/click events so the row underneath doesn't toggle.
  */
 export function QtyStepper({
@@ -36,7 +36,7 @@ export function QtyStepper({
         onClick={() => (value <= 1 ? onRemove() : onChange(value - 1))}
         className="grid h-8 w-8 touch-manipulation place-items-center rounded-full text-label active:opacity-50"
       >
-        {value <= 1 ? <Trash2 size={15} /> : <Minus size={16} strokeWidth={2.4} />}
+        <Minus size={16} strokeWidth={2.4} />
       </button>
       <span className="min-w-5 text-center tabular text-[15px] font-semibold text-label">
         {value}

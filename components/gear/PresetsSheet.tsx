@@ -88,12 +88,11 @@ export function PresetsSheet({
               내 프리셋
             </h2>
             <div className="overflow-hidden rounded-[22px] bg-card">
-              {presets.map((p, i) => (
+              {presets.map((p) => (
                 <div
                   key={p.id}
                   className={cn(
                     "flex items-center gap-2 px-4 py-3",
-                    i > 0 && "border-t border-separator",
                   )}
                 >
                   <button

@@ -35,7 +35,7 @@
 - 시트(`ui/Sheet.tsx`): 화면 가장자리에서 띄운 glass-strong 패널, radius 32, 좌 × 글래스 원형 · 우 검정 캡슐 액션.
 - 카테고리 색상 팔레트(`lib/colors.ts`)는 그대로 — 12색 이름 해시 매핑(`colorForCategory`).
 - 서체: 시스템 SF 스택(`--font-sans`, `--font-serif` 둘 다 동일). 타이틀은 bold, 숫자는 `tabular` 유틸.
-- 리스트는 카드 박스 없이 **flat + 좌측 인셋 헤어라인**(`bg-separator`)으로만 구분 — Gear·Trip 목록 공통.
+- 리스트는 카드 박스 없이 **flat, 항목 사이 구분선 없음**(여백만으로 구분) — Gear·Trip·시트·설정 공통. 남은 구분선은 ⋯ 메뉴의 그룹 구분선뿐.
 - 플로팅 요소 그림자는 `.shadow-float`(수직 오프셋 0 앰비언트 — 모바일 브라우저 크롬에 그림자가 잘리는 문제 회피).
 
 ## 4. 데이터 모델 (`lib/types.ts`)

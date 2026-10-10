@@ -27,7 +27,7 @@ export function ListSection({
         </div>
       )}
       <div className="overflow-hidden rounded-[22px] bg-card">
-        <div className="divide-y divide-separator">{children}</div>
+        <div>{children}</div>
       </div>
       {footer && (
         <p className="mt-1.5 px-4 text-[13px] leading-snug text-secondary">
