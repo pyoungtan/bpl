@@ -23,7 +23,6 @@ import {
   Check,
   ChevronDown,
   GripVertical,
-  Minus,
   Plus,
   Search,
   SlidersHorizontal,
@@ -37,6 +36,7 @@ import { formatPrice, formatWeight, formatWeightSmart } from "@/lib/units";
 import { cn } from "@/lib/cn";
 import { useTopBar } from "../TopBar";
 import { GlassButton, InkButton } from "../ui/Glass";
+import { QtyStepper } from "../ui/QtyStepper";
 import { NotePopup } from "../NotePopup";
 import { GearRow } from "./GearRow";
 import { GearEditorSheet } from "./GearEditorSheet";
@@ -67,10 +67,8 @@ export function GearShelf({
   // Rows the user explicitly collapsed, overriding auto-open (e.g. when selected).
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
-  // Per-selection pack quantity (default 1); only the last-selected item's
-  // count is adjustable via the floating stepper.
+  // Per-selection pack quantity, adjusted with each selected row's stepper.
   const [packQty, setPackQty] = useState<Record<string, number>>({});
-  const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
   const [editor, setEditor] = useState<{ open: boolean; gear: GearItem | null }>({
     open: false,
     gear: null,
@@ -244,8 +242,8 @@ export function GearShelf({
       return n;
     });
     if (willSelect) {
-      setLastSelectedId(id);
-      setPackQty((q) => (q[id] ? q : { ...q, [id]: 1 }));
+      // Seed from the gear's base quantity (e.g. 2 stakes → starts at 2).
+      setPackQty((q) => (q[id] ? q : { ...q, [id]: gear[id]?.quantity || 1 }));
       // Selecting a row re-enables its auto-open (clears any manual collapse).
       if (collapsed.has(id)) {
         setCollapsed((prev) => {
@@ -256,19 +254,24 @@ export function GearShelf({
       }
     } else {
       setPackQty((q) => {
-        const { [id]: _drop, ...rest } = q;
+        const rest = { ...q };
+        delete rest[id];
         return rest;
       });
-      setLastSelectedId((cur) => (cur === id ? null : cur));
     }
   }
 
-  function setLastQty(delta: number) {
-    if (!lastSelectedId) return;
-    setPackQty((q) => ({
-      ...q,
-      [lastSelectedId]: Math.max(1, (q[lastSelectedId] ?? 1) + delta),
-    }));
+  function setQty(id: string, n: number) {
+    setPackQty((q) => ({ ...q, [id]: Math.max(1, n) }));
+  }
+  function stepperFor(id: string) {
+    return selected.has(id)
+      ? {
+          value: packQty[id] ?? 1,
+          onChange: (n: number) => setQty(id, n),
+          onRemove: () => toggleSelect(id),
+        }
+      : undefined;
   }
   function toggleExpand(id: string, currentlyExpanded: boolean) {
     if (currentlyExpanded) {
@@ -291,13 +294,11 @@ export function GearShelf({
     setSelected(new Set());
     setCollapsed(new Set());
     setPackQty({});
-    setLastSelectedId(null);
   }
   function applyPreset(gearIds: string[]) {
     const ids = gearIds.filter((id) => gear[id]);
     setSelected(new Set(ids));
-    setPackQty(Object.fromEntries(ids.map((id) => [id, 1])));
-    setLastSelectedId(null);
+    setPackQty(Object.fromEntries(ids.map((id) => [id, gear[id]?.quantity || 1])));
   }
   function resolveAddOns(g: GearItem) {
     return g.addOnIds
@@ -466,7 +467,7 @@ export function GearShelf({
                       gear={g}
                       unit={unit}
                       selected={selected.has(g.id)}
-                      packCount={selected.has(g.id) ? packQty[g.id] ?? 1 : undefined}
+                      stepper={stepperFor(g.id)}
                       onTap={() => {
                         if (swipeOpenId) {
                           setSwipeOpenId(null);
@@ -512,9 +513,7 @@ export function GearShelf({
                               gear={a}
                               unit={unit}
                               selected={selected.has(a.id)}
-                              packCount={
-                                selected.has(a.id) ? packQty[a.id] ?? 1 : undefined
-                              }
+                              stepper={stepperFor(a.id)}
                               onTap={() => {
                                 if (swipeOpenId) {
                                   setSwipeOpenId(null);
@@ -618,37 +617,6 @@ export function GearShelf({
         )}
       </div>
 
-      {/* Pack-quantity stepper for the most recently selected item */}
-      {selecting && !editMode && lastSelectedId && selected.has(lastSelectedId) && gear[lastSelectedId] && (
-        <div
-          className="glass fixed left-1/2 z-40 flex h-[46px] -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full py-1.5 pl-[18px] pr-1.5"
-          style={{ bottom: "calc(var(--bar-bottom) + 58px)" }}
-        >
-          <span className="mr-2 tabular text-[15px] font-medium text-label">
-            {selected.size}개 · {formatWeightSmart(selectedStats.totalG, unit)}
-          </span>
-          <button
-            type="button"
-            aria-label="수량 감소"
-            onClick={() => setLastQty(-1)}
-            className="grid h-8 w-8 touch-manipulation place-items-center rounded-full bg-fill text-label active:opacity-60"
-          >
-            <Minus size={16} />
-          </button>
-          <span className="w-5 text-center tabular text-[15px] font-semibold text-label">
-            {packQty[lastSelectedId] ?? 1}
-          </span>
-          <button
-            type="button"
-            aria-label="수량 증가"
-            onClick={() => setLastQty(1)}
-            className="grid h-8 w-8 touch-manipulation place-items-center rounded-full bg-fill text-label active:opacity-60"
-          >
-            <Plus size={16} />
-          </button>
-        </div>
-      )}
-
       {/* Primary action: add gear · finish editing · send the selection to a trip */}
       <div
         className="fixed right-4 z-40 flex items-center gap-2"
@@ -666,11 +634,12 @@ export function GearShelf({
             <InkButton
               onClick={() => setAddTripOpen(true)}
               aria-label={`선택한 ${selected.size}개 Trip에 추가`}
-             
             >
               <ArrowRight size={20} />
               트립에 추가
-              <span className="tabular opacity-60">{selected.size}</span>
+              <span className="tabular font-medium opacity-60">
+                {formatWeightSmart(selectedStats.totalG, unit)}
+              </span>
             </InkButton>
           </>
         ) : (
@@ -776,7 +745,7 @@ function AddonRow({
   gear,
   unit,
   selected,
-  packCount,
+  stepper,
   onTap,
   onNotePeek,
   onNotePeekEnd,
@@ -784,7 +753,7 @@ function AddonRow({
   gear: GearItem;
   unit: WeightUnit;
   selected: boolean;
-  packCount?: number;
+  stepper?: { value: number; onChange: (n: number) => void; onRemove: () => void };
   onTap: () => void;
   onNotePeek?: (rect: DOMRect) => void;
   onNotePeekEnd?: () => void;
@@ -793,7 +762,7 @@ function AddonRow({
   const moved = useRef(false);
   const timer = useRef<number | undefined>(undefined);
   const longPressed = useRef(false);
-  const btnRef = useRef<HTMLButtonElement>(null);
+  const btnRef = useRef<HTMLDivElement>(null);
   const sub = gear.brand ? ` · ${gear.brand}` : "";
 
   function clearTimer() {
@@ -803,9 +772,10 @@ function AddonRow({
     }
   }
   return (
-    <button
+    <div
       ref={btnRef}
-      type="button"
+      role="button"
+      tabIndex={0}
       onPointerDown={(e) => {
         start.current = { x: e.clientX, y: e.clientY };
         moved.current = false;
@@ -838,10 +808,17 @@ function AddonRow({
       }}
       onContextMenu={(e) => e.preventDefault()}
       onClick={(e) => {
-        if (e.detail === 0) onTap(); // keyboard / programmatic activation
+        if (e.detail === 0) onTap(); // programmatic activation
+      }}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onTap();
+        }
       }}
       className={cn(
-        "flex w-full touch-manipulation select-none items-center gap-2.5 py-2.5 pl-9 pr-4 text-left transition active:opacity-60",
+        "flex w-full cursor-pointer touch-manipulation select-none items-center gap-2.5 py-2 pl-9 pr-4 text-left outline-none transition",
         selected && "bg-[color-mix(in_srgb,var(--tint)_8%,transparent)]",
       )}
     >
@@ -849,17 +826,13 @@ function AddonRow({
         {gear.name}
         {sub && <span className="text-[12px] text-tertiary">{sub}</span>}
       </span>
-      {packCount != null && packCount > 1 && (
-        <span className="shrink-0 tabular text-[13px] font-semibold text-tint">
-          ×{packCount}
-        </span>
-      )}
+      {stepper && <QtyStepper {...stepper} />}
       <span className="shrink-0 tabular text-[13px] text-tertiary">
         {formatWeight(gear.weightG, unit)}
         {gear.quantity > 1 && <span> ×{gear.quantity}</span>}
       </span>
       <span className="w-6 shrink-0" />
-    </button>
+    </div>
   );
 }
 

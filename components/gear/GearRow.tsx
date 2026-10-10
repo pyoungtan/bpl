@@ -6,6 +6,7 @@ import type { GearItem, WeightUnit } from "@/lib/types";
 import { formatWeight } from "@/lib/units";
 import { cn } from "@/lib/cn";
 import { Badge } from "../ui/Badge";
+import { QtyStepper } from "../ui/QtyStepper";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
 
 export interface SwipeActions {
@@ -32,8 +33,8 @@ export interface GearRowProps {
   swipeActions?: SwipeActions;
   swipeOpenId?: string | null;
   onSwipeOpenChange?: (id: string | null) => void;
-  /** Pack quantity to show as "×N" (coral) left of the weight when > 1. */
-  packCount?: number;
+  /** In-row pack-quantity stepper, shown while the row is selected. */
+  stepper?: { value: number; onChange: (n: number) => void; onRemove: () => void };
 }
 
 const LONG_PRESS_MS = 420;
@@ -55,7 +56,7 @@ export function GearRow({
   swipeActions,
   swipeOpenId,
   onSwipeOpenChange,
-  packCount,
+  stepper,
 }: GearRowProps) {
   const sub = [gear.minorCategory, gear.brand].filter(Boolean).join(" · ");
   const timer = useRef<number | undefined>(undefined);
@@ -181,11 +182,7 @@ export function GearRow({
           </div>
         </button>
 
-        {packCount != null && packCount > 1 && (
-          <span className="shrink-0 tabular text-[13px] font-semibold text-tint">
-            ×{packCount}
-          </span>
-        )}
+        {stepper && selected && !editMode && <QtyStepper {...stepper} />}
         <span className="shrink-0 tabular text-[14px] text-secondary">
           {formatWeight(gear.weightG, unit)}
           {gear.quantity > 1 && (
