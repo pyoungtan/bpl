@@ -118,7 +118,7 @@ export function SettingsSheet({
       ok: true,
       text: replace
         ? `기존 데이터를 지우고 ${n}개 장비를 가져왔어요.`
-        : `${n}개 장비를 가져왔어요. Inventory에서 확인하세요.`,
+        : `${n}개 장비를 가져왔어요. Gear에서 확인하세요.`,
     });
   }
 

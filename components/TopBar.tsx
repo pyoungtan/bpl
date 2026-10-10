@@ -253,10 +253,10 @@ export function GlassCircle({
   );
 }
 
-/* ---------- Inventory | Trips segmented tabs ---------- */
+/* ---------- Gear | Trip segmented tabs ---------- */
 const TABS: { key: TabKey; label: string }[] = [
-  { key: "shelf", label: "Inventory" },
-  { key: "trips", label: "Trips" },
+  { key: "shelf", label: "Gear" },
+  { key: "trips", label: "Trip" },
 ];
 
 function TabSegment({

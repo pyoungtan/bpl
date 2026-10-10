@@ -9,8 +9,8 @@
 - 모바일 우선 웹앱(홈 화면 추가해 PWA처럼 사용). **기준 디바이스 iPhone 16 Pro (393pt)** — 하단 플로팅 컨트롤(GNB·FAB·선택바)은 높이 56px로 통일, 393pt에서 겹치지 않아야 함.
 - 배포: **https://bpl-three-theta.vercel.app** (GitHub `pyoungtan/bpl` → master push 시 Vercel 자동 배포)
 - 탭 2개, 좌하단 플로팅 글래스 GNB(아이콘 전용):
-  - **Inventory** (장비 카탈로그) — 컴포넌트는 리네임 전 이름인 `components/gear/GearShelf.tsx` 그대로
-  - **Trips** (패킹 스냅샷/여행 기록)
+  - **Gear** (장비 카탈로그) — 컴포넌트는 리네임 전 이름인 `components/gear/GearShelf.tsx` 그대로
+  - **Trip** (패킹 스냅샷/여행 기록)
 
 ## 2. 스택
 
@@ -30,12 +30,12 @@
 
 - 흰 캔버스 `#fff` / 다크 `#000`. 토큰은 전부 `app/globals.css`. **`--tint` = 검정(라이트) / 흰색(다크)**, 그 위 글자는 반드시 `text-on-tint`(`text-white` 금지 — 다크에서 흰 바탕 흰 글씨가 됨).
 - Glass 재질: `.glass`(컨트롤), `.glass-strong`(메뉴·시트·다이얼로그) + `.press-fx`/`.g-glow`(눌림 swell·stretch, 터치 글로우). `backdrop-filter`는 떠 있는 소수 요소에만. `prefers-reduced-transparency`면 불투명 `--g-solid`로 폴백(형태·테두리 유지).
-- 상단 바(`components/TopBar.tsx`, ChatGPT iOS 치수: 원형 44pt · 세그먼트 48pt/알약 40pt · 좌우 16pt · 라벨 17pt medium, 항목 폭은 라벨+18pt 패딩): 좌 검색(🔍↔×)/‹(뒤로) · 가운데 Inventory|Trips 세그먼트(또는 상세 화면의 상태 캡슐) · 우 ⋯ 모프 메뉴(맨 아래에 항상 '설정'). 화면 타이틀 영역은 없음. 각 화면은 `useTopBar({ onBack?, center?, onSearch?, searching?, menu? })`로 등록. 바 위치는 CSS 변수 `--bar-top` / 하단 플로팅은 `--bar-bottom`.
+- 상단 바(`components/TopBar.tsx`, ChatGPT iOS 치수: 원형 44pt · 세그먼트 48pt/알약 40pt · 좌우 16pt · 라벨 17pt medium, 항목 폭은 라벨+18pt 패딩): 좌 검색(🔍↔×)/‹(뒤로) · 가운데 Gear|Trip 세그먼트(또는 상세 화면의 상태 캡슐) · 우 ⋯ 모프 메뉴(맨 아래에 항상 '설정'). 화면 타이틀 영역은 없음. 각 화면은 `useTopBar({ onBack?, center?, onSearch?, searching?, menu? })`로 등록. 바 위치는 CSS 변수 `--bar-top` / 하단 플로팅은 `--bar-bottom`.
 - 주 액션 버튼: `InkButton`(검정 캡슐), 보조: `GlassButton` (`components/ui/Glass.tsx`). 둘 다 `touch-none`이라 **스크롤 영역 안의 인라인 버튼에는 쓰지 말 것**(fixed 플로팅 전용).
 - 시트(`ui/Sheet.tsx`): 화면 가장자리에서 띄운 glass-strong 패널, radius 32, 좌 × 글래스 원형 · 우 검정 캡슐 액션.
 - 카테고리 색상 팔레트(`lib/colors.ts`)는 그대로 — 12색 이름 해시 매핑(`colorForCategory`).
 - 서체: 시스템 SF 스택(`--font-sans`, `--font-serif` 둘 다 동일). 타이틀은 bold, 숫자는 `tabular` 유틸.
-- 리스트는 카드 박스 없이 **flat + 좌측 인셋 헤어라인**(`bg-separator`)으로만 구분 — Inventory·Trips 목록 공통.
+- 리스트는 카드 박스 없이 **flat + 좌측 인셋 헤어라인**(`bg-separator`)으로만 구분 — Gear·Trip 목록 공통.
 - 플로팅 요소 그림자는 `.shadow-float`(수직 오프셋 0 앰비언트 — 모바일 브라우저 크롬에 그림자가 잘리는 문제 회피).
 
 ## 4. 데이터 모델 (`lib/types.ts`)
@@ -60,10 +60,10 @@
 
 ## 6. 핵심 컴포넌트/패턴
 
-- **`components/ui/SwipeRow.tsx`**: 앱 전체 스와이프 행 공통(방향 인지, 리스트당 1행만 열림 — `openId`를 리스트가 소유, 본문 불투명 유지). Inventory 행: ←수정/삭제(2탭 확인), →숨김. 트립 행/트립 내 행: ←삭제.
+- **`components/ui/SwipeRow.tsx`**: 앱 전체 스와이프 행 공통(방향 인지, 리스트당 1행만 열림 — `openId`를 리스트가 소유, 본문 불투명 유지). Gear 행: ←수정/삭제(2탭 확인), →숨김. 트립 행/트립 내 행: ←삭제.
 - **`components/ui/Sheet.tsx`**: 바텀시트 공통. ① body `position:fixed` 스크롤락 + 닫을 때 스크롤 복원(키보드로 인한 배경 스크롤 유실 방지), ② **VisualViewport로 키보드 높이 추적** → 시트를 키보드 위로 리프트 + `max-h-[min(92dvh,100%)]`, ③ 포커스된 필드 자동 center 스크롤. **새 시트의 입력에 autoFocus 금지**(열림 애니메이션 중 키보드가 시트를 밀어 올림).
 - **`components/ui/RangeCalendar.tsx`**: 기간 선택(첫 탭=시작, 둘째 탭=종료, 이전 날짜 탭=리셋), 헤더 탭 → 12개월 그리드(화살표가 연 단위).
-- **Inventory 선택 모델**: 행 탭=선택 토글(체크박스 없음), 선택 시 헤더에 개수·무게(코랄), 하단 팩 수량 스테퍼(−/+만, 이름 없음), "Trip에 추가". 애드온 하위행은 pointerup+이동가드로 선택(iOS 연속 탭 보호).
+- **Gear 선택 모델**: 행 탭=선택 토글(체크박스 없음), 선택 시 헤더에 개수·무게(코랄), 하단 팩 수량 스테퍼(−/+만, 이름 없음), "Trip에 추가". 애드온 하위행은 pointerup+이동가드로 선택(iOS 연속 탭 보호).
 - **대분류 접기**: 헤더 탭 토글, localStorage `bpl-collapsed-cats` 기억. 편집/검색/칩필터 중엔 무시.
 - **트립 내 장비**: 행 탭 → 수량 스테퍼+삭제 패널 확장. `장비 추가` 시트는 애드온 중첩+수량 스테퍼 지원. 좌측 가장자리 스와이프 백(콘텐츠가 손가락 추종, 70px 임계).
 - **드래그 정렬**(편집 모드): **단일 SortableContext가 전 카테고리를 관통** → 카테고리 경계 넘어 실시간 정렬, `DragOverlay`로 부유 복제본, 드롭 시 `moveGear`(대상 카테고리 자동 채택). 드래그 중 `document.body.dataset.dragging`으로 PullToRefresh 차단.
@@ -76,7 +76,7 @@
 
 1. **height를 프레임마다 애니메이션하지 말 것** — 아래 전체가 매 프레임 리플로우되어 60fps 미만으로 떨어짐.
 2. **접기/펼치기에서 행을 조건부 마운트하지 말 것** — 펼칠 때 수십 개 SwipeRow 마운트 커밋이 시작 히치를 만듦.
-3. 현재 확정 구성(Inventory 대분류 접기): **행 상시 마운트 + `display:none` 토글(리플로우 1회)** + 아래 섹션들은 `motion.section layout="position"` **FLIP transform 글라이드** + 펼침 블록은 `.fold-reveal` CSS opacity 페이드 → 애니메이션 프레임 전부 컴포지터 전용.
+3. 현재 확정 구성(Gear 대분류 접기): **행 상시 마운트 + `display:none` 토글(리플로우 1회)** + 아래 섹션들은 `motion.section layout="position"` **FLIP transform 글라이드** + 펼침 블록은 `.fold-reveal` CSS opacity 페이드 → 애니메이션 프레임 전부 컴포지터 전용.
 4. 탭 전환 슬라이드는 **CSS 키프레임**(fill-mode 기본값) — 종료 후 transform이 none으로 복원되어야 내부 sticky 헤더/fixed FAB가 안 깨짐. framer로 x를 애니메이션하면 transform이 잔류해 fixed 기준이 바뀜.
 5. 스와이프/시트/백스와이프/GNB pill은 전부 transform/opacity 기반 — 유지할 것.
 6. 그래도 걸리면 다음 단계는 **목록 가상화**뿐.

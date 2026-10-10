@@ -54,7 +54,7 @@ function groupByMajor(
     if (!map.has(g.majorCategory)) map.set(g.majorCategory, []);
     map.get(g.majorCategory)!.push({ gear: g, quantity: qtyById.get(id)! });
   }
-  // Order groups by the Inventory's 대분류 order — first-occurrence order in
+  // Order groups by the Gear's 대분류 order — first-occurrence order in
   // gearOrder drifts when items are reordered/moved across categories, which
   // made a category randomly sink to the bottom here. Unknown names go last,
   // keeping their relative order (sort is stable).
@@ -963,7 +963,7 @@ function GearPickerSheet({
       if (!map.has(g.majorCategory)) map.set(g.majorCategory, []);
       map.get(g.majorCategory)!.push(g);
     }
-    // Same Inventory 대분류 order as the packed list.
+    // Same Gear 대분류 order as the packed list.
     const rank = (name: string) => {
       const i = categories.indexOf(name);
       return i === -1 ? categories.length : i;
