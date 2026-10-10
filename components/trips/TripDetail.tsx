@@ -769,7 +769,7 @@ export function TripDetail({
         {groups.map(([major, rows]) => (
           <section key={major}>
             <div className="flex items-baseline justify-between px-4 pb-1 pt-5">
-              <span className="text-[13px] font-semibold tracking-[0.01em] text-secondary">
+              <span className="text-[17px] font-bold tracking-[-0.01em] text-label">
                 {major}
               </span>
               <span className="tabular text-[13px] font-medium text-secondary">
@@ -1142,10 +1142,10 @@ function GearPickerSheet({
           {groups.map(([major, items]) => (
             <section key={major}>
               <div className="flex items-baseline justify-between px-4 pb-1 pt-4">
-                <span className="text-[13px] font-semibold tracking-[0.01em] text-secondary">
+                <span className="text-[17px] font-bold tracking-[-0.01em] text-label">
                   {major}
                 </span>
-                <span className="text-[12px] text-tertiary">{items.length}개</span>
+                <span className="text-[13px] text-tertiary">{items.length}개</span>
               </div>
               {items.map((g) => {
                 const addOns = g.addOnIds

@@ -71,8 +71,8 @@
   --g-edge-side: rgba(0, 0, 0, 0.15);
   --g-edge-cap: rgba(0, 0, 0, 0.05);
   --g-edge-w: 0.75px;
-  --g-rim-hi: rgba(255, 255, 255, 0.95);
-  --g-rim-mid: rgba(255, 255, 255, 0.55);
+  --g-rim-hi: rgba(255, 255, 255, 1);
+  --g-rim-bottom: rgba(255, 255, 255, 0.9);
   --g-rim-lo: rgba(255, 255, 255, 0.12);
   --g-glow: rgba(255, 255, 255, 0.9);
   --g-solid: #ffffff;
@@ -130,8 +130,8 @@
   --g-edge-side: rgba(255, 255, 255, 0.06);
   --g-edge-cap: rgba(255, 255, 255, 0.06);
   --g-edge-w: 0.5px;
-  --g-rim-hi: rgba(255, 255, 255, 0.6);
-  --g-rim-mid: rgba(255, 255, 255, 0.3);
+  --g-rim-hi: rgba(255, 255, 255, 0.62);
+  --g-rim-bottom: rgba(255, 255, 255, 0.4);
   --g-rim-lo: rgba(255, 255, 255, 0.07);
   --g-glow: rgba(255, 255, 255, 0.35);
   --g-solid: #1c1c1e;
@@ -254,7 +254,8 @@
     mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
     pointer-events: none;
   }
-  /* directional specular rim just inside the hairline */
+  /* specular rim just inside the hairline: brightest across the top and
+     bottom centres, falling off toward the darker left/right flanks */
   .glass::after,
   .glass-strong::after {
     content: "";
@@ -262,17 +263,11 @@
     inset: var(--g-edge-w);
     z-index: 3;
     border-radius: inherit;
-    padding: 1px;
-    background: conic-gradient(
-      from -45deg,
-      var(--g-rim-hi) 0deg,
-      var(--g-rim-lo) 65deg,
-      var(--g-rim-lo) 115deg,
-      var(--g-rim-mid) 180deg,
-      var(--g-rim-lo) 245deg,
-      var(--g-rim-lo) 295deg,
-      var(--g-rim-hi) 360deg
-    );
+    padding: 1.25px;
+    background:
+      radial-gradient(ellipse 72% 70% at 50% 0%, var(--g-rim-hi), transparent),
+      radial-gradient(ellipse 72% 70% at 50% 100%, var(--g-rim-bottom), transparent),
+      var(--g-rim-lo);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
@@ -384,18 +379,6 @@
   mask-image: linear-gradient(to bottom, #000 45%, transparent);
 }
 
-/* Tab switch: a quick crossfade, like iOS segmented/tab switches. Opacity
-   only — a transform here would make the tab's fixed floating buttons follow
-   the moving wrapper mid-animation. */
-@keyframes tabFade {
-  from {
-    opacity: 0;
-  }
-}
-.tab-fade {
-  animation: tabFade 0.16s ease-out;
-}
-
 /* Category-fold reveal: rows stay mounted and folding toggles display:none, so
    this fade restarts automatically each time the block becomes visible again.
    Opacity-only → compositor-driven, ProMotion-smooth. */
@@ -412,7 +395,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tab-fade,
   .fold-reveal {
     animation: none;
   }

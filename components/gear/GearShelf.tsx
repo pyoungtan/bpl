@@ -417,12 +417,12 @@ export function GearShelf({
               onClick={collapsible ? () => toggleCatCollapsed(major) : undefined}
               disabled={!collapsible}
               aria-expanded={!isCollapsed}
-              className="flex w-full touch-manipulation items-baseline justify-between px-4 pb-1 pt-5 text-left"
+              className="flex w-full touch-manipulation items-baseline justify-between px-4 pb-1.5 pt-6 text-left"
             >
-              <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-tint">
+              <span className="text-[17px] font-bold tracking-[-0.01em] text-label">
                 {major}
               </span>
-              <span className="flex items-center gap-1 text-[12px] text-tertiary">
+              <span className="flex items-center gap-1 text-[13px] text-tertiary">
                 {items.length}개
                 {collapsible && (
                   <ChevronDown
@@ -546,10 +546,10 @@ export function GearShelf({
         {editMode && addonItems.length > 0 && (
           <section>
             <div className="flex items-baseline justify-between px-4 pb-1 pt-6">
-              <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-secondary">
+              <span className="text-[17px] font-bold tracking-[-0.01em] text-label">
                 애드온
               </span>
-              <span className="text-[12px] text-tertiary">{addonItems.length}개</span>
+              <span className="text-[13px] text-tertiary">{addonItems.length}개</span>
             </div>
             {addonItems.map((g) => (
               <GearRow
@@ -569,10 +569,10 @@ export function GearShelf({
             transition={{ type: "spring", stiffness: 550, damping: 45 }}
           >
             <div className="flex items-baseline justify-between px-4 pb-1 pt-6">
-              <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-tertiary">
+              <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
                 숨겨짐
               </span>
-              <span className="text-[12px] text-tertiary">{hiddenItems.length}개</span>
+              <span className="text-[13px] text-tertiary">{hiddenItems.length}개</span>
             </div>
             {hiddenItems.map((g) => (
               <GearRow

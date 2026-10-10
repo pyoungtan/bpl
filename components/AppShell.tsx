@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAppStore, useHydrated } from "@/lib/store";
 import {
   useCloudSync,
   type SyncConflict,
   type SyncSummary,
 } from "@/lib/useCloudSync";
-import { TopBarProvider, type TabKey } from "./TopBar";
+import { TopBarPane, TopBarProvider, type TabKey } from "./TopBar";
 import { GearShelf } from "./gear/GearShelf";
 import { TripsTab } from "./trips/TripsTab";
 import { SettingsSheet } from "./SettingsSheet";
@@ -21,16 +21,41 @@ export function AppShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tripToOpen, setTripToOpen] = useState<string | null>(null);
   const cloud = useCloudSync();
-  // Each tab keeps its own scroll offset, like a native tab bar.
+  // Tabs stay mounted once visited (switching only toggles visibility, so
+  // the long Gear list is never rebuilt mid-transition) and each keeps its
+  // own scroll offset, like a native tab bar.
+  const [visited, setVisited] = useState<TabKey[]>(["shelf"]);
+  const tabRef = useRef<TabKey>("shelf");
   const tabScroll = useRef<Partial<Record<TabKey, number>>>({});
   const pendingScroll = useRef<number | null>(null);
 
-  function switchTab(next: TabKey, scrollTo?: number) {
-    if (next === tab) return;
-    tabScroll.current[tab] = window.scrollY;
+  const switchTab = useCallback((next: TabKey, scrollTo?: number) => {
+    const cur = tabRef.current;
+    if (next === cur) return;
+    tabScroll.current[cur] = window.scrollY;
     pendingScroll.current = scrollTo ?? tabScroll.current[next] ?? 0;
+    tabRef.current = next;
+    setVisited((v) => (v.includes(next) ? v : [...v, next]));
     setTab(next);
-  }
+  }, []);
+  const openTripFromShelf = useCallback(
+    (id: string) => {
+      setTripToOpen(id);
+      switchTab("trips", 0);
+    },
+    [switchTab],
+  );
+  const consumeTripToOpen = useCallback(() => setTripToOpen(null), []);
+  // Stable elements: a tab switch must not re-render the (hidden or shown)
+  // screens — framer layout animations would measure the display:none state.
+  const shelfScreen = useMemo(
+    () => <GearShelf onOpenTrip={openTripFromShelf} />,
+    [openTripFromShelf],
+  );
+  const tripsScreen = useMemo(
+    () => <TripsTab openTripId={tripToOpen} onConsumeOpen={consumeTripToOpen} />,
+    [tripToOpen, consumeTripToOpen],
+  );
 
   useLayoutEffect(() => {
     if (pendingScroll.current === null) return;
@@ -65,28 +90,19 @@ export function AppShell() {
   return (
     <TopBarProvider
       tab={tab}
-      onTabChange={(t) => switchTab(t)}
+      onTabChange={switchTab}
       onOpenSettings={() => setSettingsOpen(true)}
     >
       <div className="mx-auto min-h-dvh w-full max-w-2xl">
         <PullToRefresh />
-        {/* Re-keyed per tab so the crossfade replays on switch. Top padding
-            clears the floating glass bar; content scrolls underneath it. */}
-        <div key={tab} className="tab-fade pt-[calc(var(--bar-top)+60px)]">
-          {tab === "shelf" ? (
-            <GearShelf
-              onOpenTrip={(id) => {
-                setTripToOpen(id);
-                switchTab("trips", 0);
-              }}
-            />
-          ) : (
-            <TripsTab
-              openTripId={tripToOpen}
-              onConsumeOpen={() => setTripToOpen(null)}
-            />
-          )}
-        </div>
+        <TabPane pane="shelf" active={tab === "shelf"}>
+          {shelfScreen}
+        </TabPane>
+        {visited.includes("trips") && (
+          <TabPane pane="trips" active={tab === "trips"}>
+            {tripsScreen}
+          </TabPane>
+        )}
         <SettingsSheet
           open={settingsOpen}
           onClose={() => setSettingsOpen(false)}
@@ -100,6 +116,34 @@ export function AppShell() {
         )}
       </div>
     </TopBarProvider>
+  );
+}
+
+/** A kept-alive tab screen: hidden while inactive, crossfades in when shown.
+ *  Top padding clears the floating glass bar; content scrolls underneath. */
+function TabPane({
+  pane,
+  active,
+  children,
+}: {
+  pane: TabKey;
+  active: boolean;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!active || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    ref.current?.animate([{ opacity: 0 }, { opacity: 1 }], {
+      duration: 160,
+      easing: "ease-out",
+    });
+  }, [active]);
+  return (
+    <TopBarPane value={pane}>
+      <div ref={ref} hidden={!active} className="pt-[calc(var(--bar-top)+60px)]">
+        {children}
+      </div>
+    </TopBarPane>
   );
 }
 

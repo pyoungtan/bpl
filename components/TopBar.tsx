@@ -37,8 +37,12 @@ export interface TopBarConfig {
   menu?: TopBarMenuItem[];
 }
 
-type Setter = (config: TopBarConfig | null, owner: symbol) => void;
+type Setter = (config: TopBarConfig | null, owner: symbol, pane: TabKey) => void;
 const TopBarCtx = createContext<Setter | null>(null);
+/** Which tab a screen lives in. Tabs stay mounted while hidden, so the bar
+ *  keeps one config per tab and shows the active tab's. */
+const TopBarPaneCtx = createContext<TabKey>("shelf");
+export const TopBarPane = TopBarPaneCtx.Provider;
 
 /**
  * Register what the floating top bar shows while this screen is mounted.
@@ -47,6 +51,7 @@ const TopBarCtx = createContext<Setter | null>(null);
  */
 export function useTopBar(config: TopBarConfig) {
   const set = useContext(TopBarCtx);
+  const pane = useContext(TopBarPaneCtx);
   const ref = useRef(config);
   ref.current = config;
   const [owner] = useState(() => Symbol("topbar"));
@@ -72,10 +77,11 @@ export function useTopBar(config: TopBarConfig) {
         })),
       },
       owner,
+      pane,
     );
     // sig captures every visible field
-  }, [set, owner, sig]);
-  useEffect(() => () => set?.(null, owner), [set, owner]);
+  }, [set, owner, pane, sig]);
+  useEffect(() => () => set?.(null, owner, pane), [set, owner, pane]);
 }
 
 /* ---------- springs: sample a damped spring into a CSS linear() curve ---------- */
@@ -708,20 +714,25 @@ export function TopBarProvider({
   onOpenSettings: () => void;
   children: React.ReactNode;
 }) {
-  const [config, setConfig] = useState<TopBarConfig | null>(null);
-  const ownerRef = useRef<symbol | null>(null);
+  const [configs, setConfigs] = useState<Partial<Record<TabKey, TopBarConfig>>>({});
+  const owners = useRef<Partial<Record<TabKey, symbol>>>({});
   const [menuOpen, setMenuOpen] = useState(false);
+  const config = configs[tab] ?? null;
 
-  const set = useCallback<Setter>((c, owner) => {
+  const set = useCallback<Setter>((c, owner, pane) => {
     if (c === null) {
-      if (ownerRef.current === owner) {
-        ownerRef.current = null;
-        setConfig(null);
+      if (owners.current[pane] === owner) {
+        delete owners.current[pane];
+        setConfigs((m) => {
+          const n = { ...m };
+          delete n[pane];
+          return n;
+        });
       }
       return;
     }
-    ownerRef.current = owner;
-    setConfig(c);
+    owners.current[pane] = owner;
+    setConfigs((m) => ({ ...m, [pane]: c }));
   }, []);
 
   // Physically-sampled spring curves for the glass motion.
