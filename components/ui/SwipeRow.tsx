@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { animate, motion, useMotionValue } from "framer-motion";
+import { animate, motion, useMotionValue, useTransform } from "framer-motion";
 import { Check, Trash2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -58,6 +58,10 @@ export function SwipeRow({
   const RIGHT_W = rightWidth;
   const LEFT_W = leftWidth;
   const x = useMotionValue(0);
+  // Action layers sit under the opaque body; hide them while the row is at
+  // rest, or the body's antialiased edges let them bleed through as lines.
+  const leftVis = useTransform(x, (v) => (v > 0.5 ? 1 : 0));
+  const rightVis = useTransform(x, (v) => (v < -0.5 ? 1 : 0));
   const [open, setOpen] = useState<OpenState>("closed");
   const openRef = useRef<OpenState>("closed");
   const dragging = useRef(false);
@@ -106,14 +110,14 @@ export function SwipeRow({
       )}
     >
       {swipeable && LEFT_W > 0 && renderLeft && (
-        <div className="absolute inset-y-0 left-0 flex">
+        <motion.div className="absolute inset-y-0 left-0 flex" style={{ opacity: leftVis }}>
           {renderLeft(() => close(), open === "left")}
-        </div>
+        </motion.div>
       )}
       {swipeable && RIGHT_W > 0 && renderRight && (
-        <div className="absolute inset-y-0 right-0 flex">
+        <motion.div className="absolute inset-y-0 right-0 flex" style={{ opacity: rightVis }}>
           {renderRight(() => close(), open === "right")}
-        </div>
+        </motion.div>
       )}
 
       <motion.div
