@@ -14,18 +14,18 @@ function tempRange(low?: string, high?: string): string {
   if (low || high) return `${low ?? high}℃`;
   return "";
 }
-import { cn } from "@/lib/cn";
 import { useTopBar } from "../TopBar";
 import { InkButton } from "../ui/Glass";
+import { TagChip } from "../ui/TagChip";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
 import { TripDetail } from "./TripDetail";
 
 type TripSort = "date" | "created" | "companions";
 
 const SORTS: { key: TripSort; label: string }[] = [
-  { key: "date", label: "다녀온 날짜" },
-  { key: "created", label: "작성일" },
-  { key: "companions", label: "함께한 사람" },
+  { key: "date", label: "Trip Date" },
+  { key: "created", label: "Created" },
+  { key: "companions", label: "Companions" },
 ];
 
 const SORT_KEY = "bpl-trip-sort";
@@ -128,7 +128,7 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
       },
       ...SORTS.map((s, i) => ({
         id: `sort-${s.key}`,
-        label: `${s.label} 순`,
+        label: s.label,
         checked: sort === s.key,
         group: i === 0,
         onSelect: () => changeSort(s.key),
@@ -167,20 +167,11 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
         <EmptyTrips onCreate={() => onOpen(createTrip())} />
       ) : (
         <div>
-          <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-2.5 pt-2">
+          <div className="no-scrollbar -mb-2 flex gap-2 overflow-x-auto px-4 pb-4 pt-2">
             {SORTS.map((s) => (
-              <button
-                key={s.key}
-                type="button"
-                onClick={() => changeSort(s.key)}
-                aria-pressed={sort === s.key}
-                className={cn(
-                  "h-8 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[14px] font-medium transition active:opacity-60",
-                  sort === s.key ? "btn-ink" : "glass-chip text-label",
-                )}
-              >
+              <TagChip key={s.key} active={sort === s.key} onClick={() => changeSort(s.key)}>
                 {s.label}
-              </button>
+              </TagChip>
             ))}
           </div>
           {/* Dense flat list, like the Gear */}
@@ -220,7 +211,7 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
           style={{ bottom: "var(--bar-bottom)" }}
         >
           <InkButton onClick={() => onOpen(createTrip())}>
-            <Plus size={21} strokeWidth={2.4} /> 새 트립
+            <Plus size={21} strokeWidth={2.4} /> Add
           </InkButton>
         </div>
       )}

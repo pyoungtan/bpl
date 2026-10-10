@@ -32,7 +32,7 @@
 - Glass 재질: `.glass`(컨트롤), `.glass-strong`(메뉴·시트·다이얼로그) + `.press-fx`/`.g-glow`(눌림 swell·stretch, 터치 글로우). `backdrop-filter`는 떠 있는 소수 요소에만. `prefers-reduced-transparency`면 불투명 `--g-solid`로 폴백(형태·테두리 유지).
 - 상단 바(`components/TopBar.tsx`, ChatGPT iOS 치수: 원형 44pt · 세그먼트 48pt/알약 40pt · 좌우 16pt · 라벨 17pt medium, 항목 폭은 라벨+18pt 패딩): 좌 검색(🔍↔×)/‹(뒤로) · 가운데 Gear|Trip 세그먼트(또는 상세 화면의 상태 캡슐) · 우 ⋯ 모프 메뉴(맨 아래에 항상 '설정'). 화면 타이틀 영역은 없음. 각 화면은 `useTopBar({ onBack?, center?, onSearch?, searching?, menu? })`로 등록. 바 위치는 CSS 변수 `--bar-top` / 하단 플로팅은 `--bar-bottom`.
 - 탭(Gear/Trip)은 둘 다 상시 마운트 + `hidden` 토글(`AppShell` TabPane). 탭별 스크롤 기억. 비아이템 영역 좌우 스와이프로 실제 화면이 손가락을 따라 넘어감(`components/useTabSwipe.ts`: 드래그 중 두 pane을 position:fixed + 자기 scrollTop으로 고정). 스와이프 제외: `[data-swipe-row]`·칩 스트립(.overflow-x-auto)·입력·.touch-none·`[data-no-tab-swipe]`(트립 상세). 화면 요소는 useMemo로 고정 — 탭 전환이 화면을 리렌더하면 framer layout이 display:none 상태를 측정해 튐.
-- 글래스 클래스: `.glass`/`.glass-strong`(투명), `.btn-ink`(검정/다크에선 흰색 틴티드 글래스), `.glass-chip`(인플로우 태그용, blur 없이 양감만). 림(위·아래 중앙 흰 하이라이트)과 좌우 어두운 테두리는 공용 ::before/::after, 클래스별로 `--rim-*`/`--edge-*` 변수만 바꿈.
+- 글래스 클래스: `.glass`/`.glass-strong`(투명), `.btn-ink`(라이트: 거의 검정 단색 + 옅은 링, blur 없음 — 보랏빛 방지 / 다크: 흰색), 태그는 `TagChip`(`.glass .glass-tag`, 선택 = 세그먼트와 같은 회색 플래터). 림(위·아래 중앙 흰 하이라이트)과 좌우 어두운 테두리는 공용 ::before/::after, 클래스별로 `--rim-*`/`--edge-*` 변수만 바꿈.
 - 주 액션 버튼: `InkButton`(검정 캡슐), 보조: `GlassButton` (`components/ui/Glass.tsx`). 둘 다 `touch-none`이라 **스크롤 영역 안의 인라인 버튼에는 쓰지 말 것**(fixed 플로팅 전용).
 - 시트(`ui/Sheet.tsx`): 화면 가장자리에서 띄운 glass-strong 패널, radius 32, 좌 × 글래스 원형 · 우 검정 캡슐 액션.
 - 카테고리 색상 팔레트(`lib/colors.ts`)는 그대로 — 12색 이름 해시 매핑(`colorForCategory`).

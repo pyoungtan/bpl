@@ -30,7 +30,7 @@ import { RangeCalendar } from "../ui/RangeCalendar";
 import { Sheet } from "../ui/Sheet";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
 import { Checkbox } from "../ui/Checkbox";
-import { Badge } from "../ui/Badge";
+import { GearFlags } from "../ui/GearFlags";
 
 type Mode = "none" | "check";
 
@@ -352,8 +352,7 @@ export function TripDetail({
                   </span>
                 )}
               </span>
-              {g.worn && <Badge>착용</Badge>}
-              {g.consumable && <Badge tone="orange">소모</Badge>}
+              <GearFlags worn={g.worn} consumable={g.consumable} />
             </div>
             {!nested && (
               <div className="mt-0.5 truncate text-[12.5px] leading-tight text-secondary">
@@ -684,7 +683,7 @@ export function TripDetail({
             <div className="grid flex-1 grid-cols-2 gap-x-3 gap-y-2.5">
               <Stat label="베이스" value={formatWeightSmart(stats.baseG, unit)} color="var(--tint)" />
               <Stat label="착용" value={formatWeightSmart(stats.wornG, unit)} color="var(--secondary)" />
-              <Stat label="소모" value={formatWeightSmart(stats.consumableG, unit)} color="var(--orange)" />
+              <Stat label="소모" value={formatWeightSmart(stats.consumableG, unit)} color="var(--tertiary)" />
               <Stat label="총 무게" value={formatWeightSmart(stats.totalG, unit)} strong />
             </div>
             <ChevronDown

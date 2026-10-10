@@ -5,7 +5,7 @@ import { ChevronDown, Eye, EyeOff, SquarePen } from "lucide-react";
 import type { GearItem, WeightUnit } from "@/lib/types";
 import { formatWeight } from "@/lib/units";
 import { cn } from "@/lib/cn";
-import { Badge } from "../ui/Badge";
+import { GearFlags } from "../ui/GearFlags";
 import { QtyStepper } from "../ui/QtyStepper";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
 
@@ -170,8 +170,7 @@ export function GearRow({
               <span className="min-w-0 truncate text-[15px] font-semibold leading-tight text-label">
                 {gear.name}
               </span>
-              {gear.worn && <Badge>착용</Badge>}
-              {gear.consumable && <Badge tone="orange">소모</Badge>}
+              <GearFlags worn={gear.worn} consumable={gear.consumable} />
             </div>
             <div className="mt-0.5 truncate text-[12.5px] leading-tight text-secondary">
               {sub || gear.majorCategory}

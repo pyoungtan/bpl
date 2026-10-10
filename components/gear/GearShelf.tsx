@@ -37,6 +37,7 @@ import { cn } from "@/lib/cn";
 import { useTopBar } from "../TopBar";
 import { GlassButton, InkButton } from "../ui/Glass";
 import { QtyStepper } from "../ui/QtyStepper";
+import { TagChip } from "../ui/TagChip";
 import { NotePopup } from "../NotePopup";
 import { GearRow } from "./GearRow";
 import { GearEditorSheet } from "./GearEditorSheet";
@@ -345,31 +346,21 @@ export function GearShelf({
       )}
 
       {!editMode && chipCats.length > 0 && (
-        <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-2.5 pt-2">
-          <button
-            type="button"
+        // Bottom padding holds the tags' shadow inside the scroll strip (an
+        // overflow-x container clips it); the negative margin keeps spacing.
+        <div className="no-scrollbar -mb-2 flex gap-2 overflow-x-auto px-4 pb-4 pt-2">
+          <TagChip
             onClick={() => setPresetsOpen(true)}
             aria-label="프리셋"
-            className="glass-chip grid h-8 w-8 shrink-0 place-items-center rounded-full text-label transition active:opacity-60"
+            className="grid w-8 place-items-center px-0"
           >
             <Bookmark size={15} />
-          </button>
-          {["all", ...chipCats].map((c) => {
-            const active = c === activeCat;
-            return (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setActiveCat(c)}
-                className={cn(
-                  "h-8 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[14px] font-medium transition active:opacity-60",
-                  active ? "btn-ink" : "glass-chip text-label",
-                )}
-              >
-                {c === "all" ? "전체" : c}
-              </button>
-            );
-          })}
+          </TagChip>
+          {["all", ...chipCats].map((c) => (
+            <TagChip key={c} active={c === activeCat} onClick={() => setActiveCat(c)}>
+              {c === "all" ? "전체" : c}
+            </TagChip>
+          ))}
         </div>
       )}
 
@@ -613,6 +604,12 @@ export function GearShelf({
 
       {/* Primary action: add gear · finish editing · pack the selection */}
       {selecting && !editMode ? (
+        <>
+        {/* Soft scrim so the clear-glass cancel button reads against the list */}
+        <div
+          aria-hidden="true"
+          className="fold-reveal pointer-events-none fixed inset-x-0 bottom-0 z-40 h-44 bg-gradient-to-t from-black/[0.13] via-black/[0.05] to-transparent dark:from-black/70 dark:via-black/30"
+        />
         <div
           className="pointer-events-none fixed inset-x-0 z-40 flex flex-col items-center gap-3"
           style={{ bottom: "var(--bar-bottom)" }}
@@ -636,6 +633,7 @@ export function GearShelf({
             </span>
           </InkButton>
         </div>
+        </>
       ) : (
         <div className="fixed right-4 z-40" style={{ bottom: "var(--bar-bottom)" }}>
           {editMode ? (

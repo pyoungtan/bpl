@@ -8,6 +8,7 @@ import { fromGrams, toGrams, WEIGHT_UNITS } from "@/lib/units";
 import { cn } from "@/lib/cn";
 import { Sheet } from "../ui/Sheet";
 import { Segmented } from "../ui/Segmented";
+import { TagChip } from "../ui/TagChip";
 
 function round3(n: number): number {
   return Math.round(n * 1000) / 1000;
@@ -41,17 +42,9 @@ function ChipToggle({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "h-9 rounded-full px-4 text-[14px] font-medium transition active:opacity-60",
-        active ? "btn-ink" : "glass-chip text-secondary",
-      )}
-    >
+    <TagChip active={active} onClick={onClick} className="h-9 px-4">
       {label}
-    </button>
+    </TagChip>
   );
 }
 
@@ -287,20 +280,17 @@ export function GearEditorSheet({
             {majorOptions.map((c) => {
               const active = major === c && !addingMajor;
               return (
-                <button
+                <TagChip
                   key={c}
-                  type="button"
+                  active={active}
                   onClick={() => {
                     setMajor(c);
                     setAddingMajor(false);
                   }}
-                  className={cn(
-                    "h-8 touch-manipulation rounded-full px-3 text-[14px] font-medium transition active:opacity-60",
-                    active ? "btn-ink" : "glass-chip text-secondary",
-                  )}
+                  className="touch-manipulation px-3"
                 >
                   {c}
-                </button>
+                </TagChip>
               );
             })}
             {addingMajor ? (
