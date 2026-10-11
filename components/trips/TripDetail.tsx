@@ -11,6 +11,7 @@ import {
   Minus,
   NotebookPen,
   Plus,
+  Search,
   Thermometer,
   Trash2,
   Users,
@@ -26,6 +27,7 @@ import { tripCompanions } from "@/lib/trips";
 import { cn } from "@/lib/cn";
 import { Donut } from "../Donut";
 import { useTopBar } from "../TopBar";
+import { InkButton } from "../ui/Glass";
 import { RangeCalendar } from "../ui/RangeCalendar";
 import { Sheet } from "../ui/Sheet";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
@@ -742,7 +744,7 @@ export function TripDetail({
         {/* Manual extra weight — reflected in totals without picking gear */}
         <div className="flex items-center gap-2.5 px-4 py-2.5">
           <Weight size={16} className="shrink-0 text-tertiary" />
-          <span className="min-w-0 flex-1 text-[15px] font-semibold text-label">
+          <span className="min-w-0 flex-1 text-[15px] font-medium text-secondary">
             무게 추가
           </span>
           <input
@@ -766,7 +768,7 @@ export function TripDetail({
         {groups.map(([major, rows]) => (
           <section key={major}>
             <div className="flex items-baseline justify-between px-4 pb-1 pt-5">
-              <span className="text-[17px] font-bold tracking-[-0.01em] text-label">
+              <span className="text-[17px] font-bold tracking-[-0.01em] text-secondary">
                 {major}
               </span>
               <span className="tabular text-[13px] font-medium text-secondary">
@@ -800,19 +802,12 @@ export function TripDetail({
 
         {groups.length === 0 && (
           <p className="px-4 py-12 text-center text-[15px] text-secondary">
-            아직 챙긴 장비가 없어요. 아래에서 추가해보세요.
+            아직 챙긴 장비가 없어요. Add로 추가해보세요.
           </p>
         )}
       </div>
 
       <div className="mt-6 space-y-3 px-4">
-        <button
-          type="button"
-          onClick={() => setPickerOpen(true)}
-          className="btn-ink flex h-[52px] w-full items-center justify-center gap-1.5 rounded-full text-[17px] font-semibold transition-transform active:scale-[0.97]"
-        >
-          <Plus size={20} strokeWidth={2.4} /> 장비 추가
-        </button>
         <button
           ref={deleteBtnRef}
           type="button"
@@ -825,6 +820,12 @@ export function TripDetail({
           <Trash2 size={17} />
           {confirmDelete ? "한 번 더 눌러 삭제" : "트립 삭제"}
         </button>
+      </div>
+
+      <div className="fixed right-4 z-40" style={{ bottom: "var(--bar-bottom)" }}>
+        <InkButton onClick={() => setPickerOpen(true)}>
+          <Plus size={21} strokeWidth={2.4} /> Add
+        </InkButton>
       </div>
 
       <GearPickerSheet
@@ -915,14 +916,17 @@ function GearPickerSheet({
   const [qty, setQty] = useState<Record<string, number>>({});
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const [query, setQuery] = useState("");
   useEffect(() => {
     if (open) {
       setPicked(new Set());
       setQty({});
       setExpandedIds(new Set());
       setCollapsedIds(new Set());
+      setQuery("");
     }
   }, [open]);
+  const q = query.trim().toLowerCase();
 
   const alreadyIn = useMemo(
     () => new Set(trip?.packed.map((p) => p.gearId) ?? []),
@@ -946,10 +950,15 @@ function GearPickerSheet({
 
   const groups = useMemo(() => {
     const map = new Map<string, GearItem[]>();
+    const matches = (g: GearItem) =>
+      [g.name, g.brand ?? "", g.minorCategory ?? "", g.majorCategory].some((v) =>
+        v.toLowerCase().includes(q),
+      );
     for (const id of gearOrder) {
-      if (alreadyIn.has(id) || nestedSet.has(id)) continue;
+      // Searching lists every match flat (add-ons included), unnested.
+      if (alreadyIn.has(id) || (!q && nestedSet.has(id))) continue;
       const g = gear[id];
-      if (!g) continue;
+      if (!g || (q && !matches(g))) continue;
       if (!map.has(g.majorCategory)) map.set(g.majorCategory, []);
       map.get(g.majorCategory)!.push(g);
     }
@@ -959,7 +968,7 @@ function GearPickerSheet({
       return i === -1 ? categories.length : i;
     };
     return [...map.entries()].sort((a, b) => rank(a[0]) - rank(b[0]));
-  }, [gear, gearOrder, categories, alreadyIn, nestedSet]);
+  }, [gear, gearOrder, categories, alreadyIn, nestedSet, q]);
 
   function toggle(id: string) {
     const willPick = !picked.has(id);
@@ -1128,26 +1137,50 @@ function GearPickerSheet({
         prominent: true,
       }}
     >
+      <div className="px-4 pb-1">
+        <div className="flex h-11 items-center gap-2.5 rounded-full bg-fill px-4">
+          <Search size={17} className="shrink-0 text-tertiary" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="장비 검색…"
+            enterKeyHint="search"
+            className="min-w-0 flex-1 bg-transparent text-[16px] text-label outline-none placeholder:text-tertiary"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              aria-label="검색 지우기"
+              className="shrink-0 text-tertiary active:opacity-50"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      </div>
       {groups.length === 0 ? (
         <p className="px-6 py-10 text-center text-[15px] text-secondary">
-          모든 장비가 이미 이 트립에 담겨 있어요.
+          {q ? "검색 결과가 없습니다." : "모든 장비가 이미 이 트립에 담겨 있어요."}
         </p>
       ) : (
         <div className="pb-2">
           {groups.map(([major, items]) => (
             <section key={major}>
               <div className="flex items-baseline justify-between px-4 pb-1 pt-4">
-                <span className="text-[17px] font-bold tracking-[-0.01em] text-label">
+                <span className="text-[17px] font-bold tracking-[-0.01em] text-secondary">
                   {major}
                 </span>
                 <span className="text-[13px] text-tertiary">{items.length}개</span>
               </div>
               {items.map((g) => {
-                const addOns = g.addOnIds
-                  .map((aid) => gear[aid])
-                  .filter(
-                    (a): a is GearItem => Boolean(a) && !alreadyIn.has(a.id),
-                  );
+                const addOns = q
+                  ? []
+                  : g.addOnIds
+                      .map((aid) => gear[aid])
+                      .filter(
+                        (a): a is GearItem => Boolean(a) && !alreadyIn.has(a.id),
+                      );
                 const autoOpen =
                   picked.has(g.id) || addOns.some((a) => picked.has(a.id));
                 const isExpanded =

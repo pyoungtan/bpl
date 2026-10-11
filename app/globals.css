@@ -210,7 +210,9 @@
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
     overflow-x: clip;
-    overscroll-behavior-x: none;
+    /* No native rubber-band: pull-to-refresh moves the whole screen (top bar
+       included) itself, so the bar never sits still over a sliding page. */
+    overscroll-behavior: none;
   }
   body {
     background: var(--bg);

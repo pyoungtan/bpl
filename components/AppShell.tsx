@@ -188,6 +188,7 @@ function TabPane({
           elRef(pane, el);
         }}
         hidden={!active}
+        data-tab-pane
         className="pt-[calc(var(--bar-top)+60px)]"
       >
         {children}

@@ -266,6 +266,10 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "trips", label: "Trip" },
 ];
 
+/**
+ * Each tab owns its selection platter; switching crossfades them (the old
+ * one fades out as the new one fades in) — nothing slides sideways.
+ */
 function TabSegment({
   tab,
   onChange,
@@ -277,111 +281,8 @@ function TabSegment({
   blocked: () => boolean;
 }) {
   const idx = Math.max(0, TABS.findIndex((t) => t.key === tab));
-  const idxRef = useRef(idx);
-  idxRef.current = idx;
   const segRef = useRef<HTMLDivElement>(null);
-  const pillRef = useRef<HTMLSpanElement>(null);
-  const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const d = useRef({ pid: -1, startX: 0, startPx: 0, moved: false, lifted: false, px: 0, w: 0, quiet: false });
-  const prevIdx = useRef(idx);
-  const [lifted, setLifted] = useState(false);
 
-  // Items are sized to their labels, so the platter takes each item's own
-  // offset and width (relative to its resting origin at the 4px inset).
-  const slot = useCallback((i: number) => {
-    const b = btnRefs.current[i];
-    return b ? { x: b.offsetLeft - 4, w: b.offsetWidth } : { x: 0, w: 0 };
-  }, []);
-
-  const setPill = useCallback((px: number, w: number, sx = 1, sy = 1, fast = false) => {
-    const p = pillRef.current;
-    if (!p) return;
-    d.current.px = px;
-    d.current.w = w;
-    p.style.setProperty("--px", `${px}px`);
-    p.style.width = `${w}px`;
-    p.style.setProperty("--psx", String(sx));
-    p.style.setProperty("--psy", String(sy));
-    p.style.transitionDuration = fast ? "0.12s, 0.12s, 0.2s, 0.2s" : "";
-  }, []);
-
-  const rest = useCallback(
-    (i: number, sx = 1, sy = 1) => {
-      const s = slot(i);
-      setPill(s.x, s.w, sx, sy);
-    },
-    [slot, setPill],
-  );
-
-  useLayoutEffect(() => {
-    if (prevIdx.current === idx) {
-      rest(idx);
-      return;
-    }
-    prevIdx.current = idx;
-    if (d.current.quiet) {
-      d.current.quiet = false;
-      rest(idx);
-      return;
-    }
-    // the platter stretches as it travels, then settles — liquid, not sliding
-    rest(idx, 1.16, 0.9);
-    const t = window.setTimeout(() => rest(idx), 110);
-    return () => window.clearTimeout(t);
-  }, [idx, rest]);
-
-  // Label widths shift once the web font loads; keep the platter on its item.
-  useEffect(() => {
-    const el = segRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => {
-      if (d.current.pid === -1) rest(idxRef.current);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [rest]);
-
-  const under = (clientX: number) => {
-    let best = 0;
-    let dist = Infinity;
-    btnRefs.current.forEach((b, i) => {
-      if (!b) return;
-      const r = b.getBoundingClientRect();
-      const dd = clientX < r.left ? r.left - clientX : clientX > r.right ? clientX - r.right : 0;
-      if (dd < dist) {
-        dist = dd;
-        best = i;
-      }
-    });
-    return best;
-  };
-  // Width while dragging: interpolate between the neighbouring items' widths.
-  const widthAt = (px: number) => {
-    const n = TABS.length;
-    for (let i = 0; i < n - 1; i++) {
-      const a = slot(i);
-      const b = slot(i + 1);
-      if (px <= b.x || i === n - 2) {
-        const t = clamp((px - a.x) / Math.max(1, b.x - a.x), 0, 1);
-        return a.w + (b.w - a.w) * t;
-      }
-    }
-    return slot(0).w;
-  };
-  const nearest = (px: number, w: number) => {
-    const c = px + w / 2;
-    let best = 0;
-    let dist = Infinity;
-    TABS.forEach((_, i) => {
-      const s = slot(i);
-      const dd = Math.abs(s.x + s.w / 2 - c);
-      if (dd < dist) {
-        dist = dd;
-        best = i;
-      }
-    });
-    return best;
-  };
   const glow = (e: React.PointerEvent, on: boolean) => {
     const el = segRef.current;
     if (!el) return;
@@ -396,98 +297,23 @@ function TabSegment({
       ref={segRef}
       role="tablist"
       aria-label="화면 전환"
-      className="glass relative flex h-12 touch-none rounded-full p-1"
-      onPointerDown={(e) => {
-        if (blocked()) return;
-        if (e.pointerType === "mouse" && e.button !== 0) return;
-        const s = d.current;
-        s.pid = e.pointerId;
-        try {
-          segRef.current?.setPointerCapture(e.pointerId);
-        } catch {
-          /* ignore */
-        }
-        s.startX = e.clientX;
-        s.startPx = slot(idx).x;
-        s.moved = false;
-        glow(e, true);
-        if (under(e.clientX) === idx) {
-          // pressing the selected tab lifts its platter into a lens to drag
-          s.lifted = true;
-          setLifted(true);
-          rest(idx, 1.08, 1.08);
-        }
-      }}
-      onPointerMove={(e) => {
-        const s = d.current;
-        if (e.pointerId !== s.pid) return;
-        const dx = e.clientX - s.startX;
-        if (!s.moved && Math.abs(dx) > 6) s.moved = true;
-        glow(e, true);
-        if (!s.lifted || !s.moved) return;
-        let px = s.startPx + dx;
-        const min = slot(0).x;
-        const max = slot(TABS.length - 1).x;
-        if (px < min) px = min + (px - min) * 0.3; // rubber-band past the ends
-        if (px > max) px = max + (px - max) * 0.3;
-        setPill(px, widthAt(px), 1.1, 1.06, true);
-      }}
-      onPointerUp={(e) => {
-        const s = d.current;
-        if (e.pointerId !== s.pid) return;
-        s.pid = -1;
-        glow(e, false);
-        const wasLifted = s.lifted;
-        s.lifted = false;
-        setLifted(false);
-        let next = under(e.clientX);
-        if (wasLifted && s.moved) {
-          next = nearest(s.px, s.w);
-          s.quiet = true; // already travelled under the finger — no stretch
-        }
-        if (next === idx) {
-          s.quiet = false;
-          rest(idx);
-        } else onChange(TABS[next].key);
-      }}
-      onPointerCancel={(e) => {
-        const s = d.current;
-        s.pid = -1;
-        s.lifted = false;
-        setLifted(false);
-        glow(e, false);
-        rest(idx);
-      }}
+      className="glass relative flex h-12 rounded-full p-1"
+      onPointerDown={(e) => glow(e, true)}
+      onPointerUp={(e) => glow(e, false)}
+      onPointerCancel={(e) => glow(e, false)}
+      onPointerLeave={(e) => glow(e, false)}
     >
       <span className="g-glow" />
-      <span
-        ref={pillRef}
-        aria-hidden="true"
-        className={cn(
-          "pointer-events-none absolute left-1 top-1 z-0 h-10 rounded-full",
-          lifted
-            ? "bg-white/45 shadow-[0_4px_14px_rgba(0,0,0,0.12),0_0_0_0.5px_rgba(0,0,0,0.08),inset_0_1px_0.5px_rgba(255,255,255,0.95)] dark:bg-white/[0.22] dark:shadow-[0_4px_14px_rgba(0,0,0,0.4),0_0_0_0.5px_rgba(255,255,255,0.12),inset_0_1px_0_rgba(255,255,255,0.25)]"
-            : "bg-black/[0.075] dark:bg-white/[0.14]",
-        )}
-        style={{
-          transform: "translateX(var(--px, 0px)) scale(var(--psx, 1), var(--psy, 1))",
-          transitionProperty: "transform, width, background-color, box-shadow",
-          transitionDuration: "var(--dur-press), var(--dur-press), 0.2s, 0.2s",
-          transitionTimingFunction: "var(--spring-press), var(--spring-press), ease, ease",
-        }}
-      />
       {TABS.map((t, i) => (
         <button
           key={t.key}
-          ref={(el) => {
-            btnRefs.current[i] = el;
-          }}
           type="button"
           role="tab"
           aria-selected={i === idx}
           tabIndex={i === idx ? 0 : -1}
-          onClick={(e) => {
-            if (e.detail === 0) onChange(t.key);
+          onClick={() => {
+            if (blocked() || i === idx) return;
+            onChange(t.key);
           }}
           onKeyDown={(e) => {
             if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
@@ -495,8 +321,15 @@ function TabSegment({
             const n = clamp(idx + (e.key === "ArrowRight" ? 1 : -1), 0, TABS.length - 1);
             onChange(TABS[n].key);
           }}
-          className="relative z-10 h-10 whitespace-nowrap rounded-full px-[18px] text-[17px] font-medium tracking-[-0.01em] text-label"
+          className="relative h-10 touch-manipulation whitespace-nowrap rounded-full px-[18px] text-[17px] font-medium tracking-[-0.01em] text-label"
         >
+          <span
+            aria-hidden="true"
+            className={cn(
+              "pointer-events-none absolute inset-0 -z-10 rounded-full bg-black/[0.075] transition-opacity duration-300 ease-out dark:bg-white/[0.14]",
+              i === idx ? "opacity-100" : "opacity-0",
+            )}
+          />
           {t.label}
         </button>
       ))}
