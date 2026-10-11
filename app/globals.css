@@ -79,17 +79,26 @@
   --g-glow: rgba(255, 255, 255, 0.9);
   --g-solid: #ffffff;
   --g-hl: rgba(0, 0, 0, 0.07);
-  /* Ink (black prominent) glass — restrained: near-black fill, a faint
-     light ring a touch brighter on top, no colour-picking blur */
-  --ink-fill: #1c1c1e;
-  --ink-sheen: rgba(255, 255, 255, 0.05);
-  --ink-inner: inset 0 0.5px 0 rgba(255, 255, 255, 0.14);
-  --ink-rim-hi: rgba(255, 255, 255, 0.26);
-  --ink-rim-bottom: rgba(255, 255, 255, 0.09);
-  --ink-rim-lo: rgba(255, 255, 255, 0.11);
+  /* Edge glow for dark glass, measured from ChatGPT's iOS buttons: a ~1pt
+     white band on the top and bottom edges only (equal strength), easing
+     inward into a ~4pt soft glow; insetting it makes it a crescent that
+     fades out toward the sides on its own — no side rim. */
+  --glow-edges:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 4px 5px -3px rgba(255, 255, 255, 0.13),
+    inset 0 -4px 5px -3px rgba(255, 255, 255, 0.13);
+  /* Ink (black prominent) glass: near-black fill + the edge glow, no outline
+     and no colour-picking blur */
+  --ink-fill: #1f1f20;
+  --ink-sheen: transparent;
+  --ink-inner: var(--glow-edges);
+  --ink-rim-hi: transparent;
+  --ink-rim-bottom: transparent;
+  --ink-rim-lo: transparent;
   --ink-rim-w: 0.75px;
-  --ink-edge-side: rgba(0, 0, 0, 0.35);
-  --ink-edge-cap: rgba(0, 0, 0, 0.25);
+  --ink-edge-side: transparent;
+  --ink-edge-cap: transparent;
 
   /* Springs — TopBarProvider swaps in physically-sampled linear() curves */
   --spring-press: cubic-bezier(0.3, 1.5, 0.5, 1);
@@ -138,17 +147,15 @@
   --g-bright: 0.92;
   --g-sheen: rgba(255, 255, 255, 0.08);
   --g-dim: linear-gradient(transparent, transparent);
-  --g-inner:
-    inset 0 1px 1px rgba(255, 255, 255, 0.3),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.08),
-    inset 0 0 16px rgba(255, 255, 255, 0.05);
+  /* dark glass takes the same top/bottom edge glow as the ink buttons */
+  --g-inner: var(--glow-edges);
   --g-shadow: 0 10px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35);
-  --g-edge-side: rgba(255, 255, 255, 0.06);
-  --g-edge-cap: rgba(255, 255, 255, 0.06);
+  --g-edge-side: transparent;
+  --g-edge-cap: transparent;
   --g-edge-w: 0.5px;
-  --g-rim-hi: rgba(255, 255, 255, 0.62);
-  --g-rim-bottom: rgba(255, 255, 255, 0.4);
-  --g-rim-lo: rgba(255, 255, 255, 0.07);
+  --g-rim-hi: transparent;
+  --g-rim-bottom: transparent;
+  --g-rim-lo: transparent;
   --g-glow: rgba(255, 255, 255, 0.35);
   --g-solid: #2c2c2e;
   --g-hl: rgba(255, 255, 255, 0.13);
