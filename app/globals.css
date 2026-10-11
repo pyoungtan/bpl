@@ -376,6 +376,37 @@
   }
 }
 
+/* Experimental HDR edge (InkButton hdrEdge): on HDR displays the top and
+   bottom edge band is cut from a PQ-encoded tile (~1000 nits), so it can
+   shine brighter than SDR white, as native Liquid Glass highlights do. The
+   inner span re-covers all but a 1px crescent at top and bottom (same
+   radius, inset vertically only, so it tapers to nothing at the sides) and
+   carries the soft inner glow. SDR screens keep the regular CSS edge. */
+.hdr-rim {
+  display: none;
+}
+@media (dynamic-range: high) {
+  :root:not(.dark) .hdr-rim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    border-radius: inherit;
+    background: url("/hdr-white.avif") center / cover;
+    pointer-events: none;
+  }
+  :root:not(.dark) .hdr-rim > i {
+    position: absolute;
+    inset: 1px 0;
+    border-radius: inherit;
+    background: var(--ink-fill);
+    box-shadow:
+      inset 0 4px 5px -3px rgba(255, 255, 255, 0.13),
+      inset 0 -4px 5px -3px rgba(255, 255, 255, 0.13);
+  }
+}
+
 /* Reduce Transparency: keep the shape, edges and shadow, drop the see-through */
 @media (prefers-reduced-transparency: reduce) {
   .glass,

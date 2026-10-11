@@ -15,12 +15,15 @@ export function InkButton({
   className,
   "aria-label": ariaLabel,
   disabled,
+  hdrEdge = false,
 }: {
   onClick: () => void;
   children: React.ReactNode;
   className?: string;
   "aria-label"?: string;
   disabled?: boolean;
+  /** Experimental: brighter-than-white edge glow on HDR displays. */
+  hdrEdge?: boolean;
 }) {
   const { fxRef, handlers } = usePressFx<HTMLButtonElement>({
     scale: 1.06,
@@ -43,6 +46,11 @@ export function InkButton({
         if (e.detail === 0) onClick();
       }}
     >
+      {hdrEdge && (
+        <span className="hdr-rim" aria-hidden="true">
+          <i />
+        </span>
+      )}
       <span className="g-glow" />
       {children}
     </button>

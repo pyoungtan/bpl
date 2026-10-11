@@ -674,7 +674,7 @@ export function GearShelf({
               </InkButton>
             </div>
           ) : (
-            <InkButton onClick={() => setEditor({ open: true, gear: null })}>
+            <InkButton onClick={() => setEditor({ open: true, gear: null })} hdrEdge>
               <Plus size={21} strokeWidth={2.4} /> Add
             </InkButton>
           )}
