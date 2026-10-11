@@ -434,7 +434,7 @@ export function GearShelf({
               aria-expanded={!isCollapsed}
               className="flex w-full touch-manipulation items-baseline justify-between px-4 pb-1.5 pt-6 text-left"
             >
-              <span className="text-[17px] font-bold tracking-[-0.01em] text-secondary">
+              <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
                 {major}
               </span>
               <span className="flex items-center gap-1 text-[13px] text-tertiary">
@@ -560,7 +560,7 @@ export function GearShelf({
         {editMode && addonItems.length > 0 && (
           <section>
             <div className="flex items-baseline justify-between px-4 pb-1 pt-6">
-              <span className="text-[17px] font-bold tracking-[-0.01em] text-secondary">
+              <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
                 애드온
               </span>
               <span className="text-[13px] text-tertiary">{addonItems.length}개</span>

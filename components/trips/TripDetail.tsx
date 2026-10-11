@@ -692,7 +692,7 @@ export function TripDetail({
               size={18}
               className={cn(
                 "shrink-0 self-center text-tertiary transition-transform",
-                catOpen && "rotate-180",
+                !catOpen && "-rotate-90",
               )}
             />
           </button>
@@ -768,7 +768,7 @@ export function TripDetail({
         {groups.map(([major, rows]) => (
           <section key={major}>
             <div className="flex items-baseline justify-between px-4 pb-1 pt-5">
-              <span className="text-[17px] font-bold tracking-[-0.01em] text-secondary">
+              <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
                 {major}
               </span>
               <span className="tabular text-[13px] font-medium text-secondary">
@@ -1168,7 +1168,7 @@ function GearPickerSheet({
           {groups.map(([major, items]) => (
             <section key={major}>
               <div className="flex items-baseline justify-between px-4 pb-1 pt-4">
-                <span className="text-[17px] font-bold tracking-[-0.01em] text-secondary">
+                <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
                   {major}
                 </span>
                 <span className="text-[13px] text-tertiary">{items.length}개</span>
