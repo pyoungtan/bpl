@@ -362,16 +362,7 @@ export function TripDetail({
               </div>
             )}
           </div>
-          <span
-            className={cn(
-              "shrink-0 tabular",
-              nested ? "text-[13px] text-tertiary" : "text-[14px] text-secondary",
-            )}
-          >
-            {formatWeight(g.weightG, unit)}
-            {quantity > 1 && <span className="text-tertiary"> ×{quantity}</span>}
-          </span>
-          <div className="flex w-6 shrink-0 justify-end">
+          <div className="flex w-6 shrink-0 justify-center">
             {!nested && hasAddOns && (
               <button
                 type="button"
@@ -380,7 +371,7 @@ export function TripDetail({
                   e.stopPropagation();
                   toggleItemExpand(g.id);
                 }}
-                className="-mr-1.5 grid h-7 w-7 touch-manipulation place-items-center rounded-full text-tint active:bg-fill"
+                className="grid h-7 w-7 touch-manipulation place-items-center rounded-full text-tint active:bg-fill"
               >
                 <ChevronDown
                   size={18}
@@ -389,6 +380,15 @@ export function TripDetail({
               </button>
             )}
           </div>
+          <span
+            className={cn(
+              "w-[76px] shrink-0 whitespace-nowrap text-right tabular",
+              nested ? "text-[13px] text-tertiary" : "text-[14px] text-secondary",
+            )}
+          >
+            {formatWeight(g.weightG, unit)}
+            {quantity > 1 && <span className="text-tertiary"> ×{quantity}</span>}
+          </span>
         </div>
       </SwipeRow>
       <AnimatePresence initial={false}>
@@ -1098,21 +1098,13 @@ function GearPickerSheet({
             </button>
           </div>
         )}
-        <span
-          className={cn(
-            "shrink-0 tabular",
-            nested ? "text-[13px] text-tertiary" : "text-[14px] text-secondary",
-          )}
-        >
-          {formatWeight(g.weightG, unit)}
-        </span>
-        <div className="flex w-6 shrink-0 justify-end">
+        <div className="flex w-6 shrink-0 justify-center">
           {!nested && hasAddOns && (
             <button
               type="button"
               aria-label="애드온 펼치기"
               onClick={() => toggleExpand(g.id, !!expanded)}
-              className="-mr-1.5 grid h-7 w-7 touch-manipulation place-items-center rounded-full text-tint active:bg-fill"
+              className="grid h-7 w-7 touch-manipulation place-items-center rounded-full text-tint active:bg-fill"
             >
               <ChevronDown
                 size={17}
@@ -1121,6 +1113,14 @@ function GearPickerSheet({
             </button>
           )}
         </div>
+        <span
+          className={cn(
+            "w-[64px] shrink-0 whitespace-nowrap text-right tabular",
+            nested ? "text-[13px] text-tertiary" : "text-[14px] text-secondary",
+          )}
+        >
+          {formatWeight(g.weightG, unit)}
+        </span>
       </div>
     );
   }

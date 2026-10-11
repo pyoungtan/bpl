@@ -870,11 +870,12 @@ function AddonRow({
         {sub && <span className="text-[12px] text-tertiary">{sub}</span>}
       </span>
       {stepper && <QtyStepper {...stepper} size="sm" />}
-      <span className="min-w-[56px] shrink-0 text-right tabular text-[13px] text-tertiary">
+      {/* same columns as the parent row: empty toggle slot, then weight */}
+      <span className="w-6 shrink-0" />
+      <span className="w-[76px] shrink-0 whitespace-nowrap text-right tabular text-[13px] text-tertiary">
         {formatWeight(gear.weightG, unit)}
         {gear.quantity > 1 && <span> ×{gear.quantity}</span>}
       </span>
-      <span className="w-6 shrink-0" />
     </div>
   );
 }
