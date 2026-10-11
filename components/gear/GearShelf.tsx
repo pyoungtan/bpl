@@ -432,7 +432,7 @@ export function GearShelf({
               onClick={collapsible ? () => toggleCatCollapsed(major) : undefined}
               disabled={!collapsible}
               aria-expanded={!isCollapsed}
-              className="flex w-full touch-manipulation items-baseline justify-between px-4 pb-1.5 pt-6 text-left"
+              className="flex w-full touch-manipulation items-baseline justify-between px-4 pb-3 pt-6 text-left"
             >
               <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
                 {major}
@@ -559,7 +559,7 @@ export function GearShelf({
 
         {editMode && addonItems.length > 0 && (
           <section>
-            <div className="flex items-baseline justify-between px-4 pb-1 pt-6">
+            <div className="flex items-baseline justify-between px-4 pb-3 pt-6">
               <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
                 애드온
               </span>
@@ -582,7 +582,7 @@ export function GearShelf({
             layout="position"
             transition={{ type: "spring", stiffness: 550, damping: 45 }}
           >
-            <div className="flex items-baseline justify-between px-4 pb-1 pt-6">
+            <div className="flex items-baseline justify-between px-4 pb-3 pt-6">
               <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
                 숨겨짐
               </span>
@@ -674,8 +674,8 @@ export function GearShelf({
               </InkButton>
             </div>
           ) : (
-            <InkButton onClick={() => setEditor({ open: true, gear: null })}>
-              <Plus size={21} strokeWidth={2.4} /> Add
+            <InkButton size="lg" onClick={() => setEditor({ open: true, gear: null })}>
+              <Plus size={22} strokeWidth={2.4} /> Add
             </InkButton>
           )}
         </div>
@@ -874,7 +874,6 @@ function AddonRow({
       <span className="-mr-1.5 w-6 shrink-0" />
       <span className="min-w-[52px] shrink-0 whitespace-nowrap text-right tabular text-[13px] text-tertiary">
         {formatWeight(gear.weightG, unit)}
-        {gear.quantity > 1 && <span> ×{gear.quantity}</span>}
       </span>
     </div>
   );

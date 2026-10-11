@@ -15,12 +15,15 @@ export function InkButton({
   className,
   "aria-label": ariaLabel,
   disabled,
+  size = "md",
 }: {
   onClick: () => void;
   children: React.ReactNode;
   className?: string;
   "aria-label"?: string;
   disabled?: boolean;
+  /** "lg": the screen's primary Add action. */
+  size?: "md" | "lg";
 }) {
   const { fxRef, handlers } = usePressFx<HTMLButtonElement>({
     scale: 1.06,
@@ -34,7 +37,8 @@ export function InkButton({
       aria-label={ariaLabel}
       disabled={disabled}
       className={cn(
-        "btn-ink press-fx relative isolate flex h-[46px] touch-none items-center justify-center gap-2.5 rounded-full px-5 text-[17px] font-semibold disabled:opacity-40",
+        "btn-ink press-fx relative isolate flex touch-none items-center justify-center gap-2.5 rounded-full font-semibold disabled:opacity-40",
+        size === "lg" ? "h-[54px] px-6 text-[18px]" : "h-[46px] px-5 text-[17px]",
         className,
       )}
       style={{ "--g-glow": "rgba(255,255,255,0.28)" } as React.CSSProperties}

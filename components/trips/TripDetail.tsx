@@ -729,7 +729,7 @@ export function TripDetail({
         </div>
         {groups.map(([major, rows]) => (
           <section key={major}>
-            <div className="flex items-baseline justify-between px-4 pb-1 pt-5">
+            <div className="flex items-baseline justify-between px-4 pb-3 pt-5">
               <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
                 {major}
               </span>
@@ -799,8 +799,8 @@ export function TripDetail({
       />
 
       <div className="fixed right-4 z-40" style={{ bottom: "var(--bar-bottom)" }}>
-        <InkButton onClick={() => setPickerOpen(true)}>
-          <Plus size={21} strokeWidth={2.4} /> Add
+        <InkButton size="lg" onClick={() => setPickerOpen(true)}>
+          <Plus size={22} strokeWidth={2.4} /> Add
         </InkButton>
       </div>
 
@@ -1143,7 +1143,7 @@ function GearPickerSheet({
         <div className="pb-2">
           {groups.map(([major, items]) => (
             <section key={major}>
-              <div className="flex items-baseline justify-between px-4 pb-1 pt-4">
+              <div className="flex items-baseline justify-between px-4 pb-3 pt-4">
                 <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
                   {major}
                 </span>

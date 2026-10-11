@@ -200,9 +200,6 @@ export function GearRow({
         </div>
         <span className="min-w-[52px] shrink-0 whitespace-nowrap text-right tabular text-[14px] text-secondary">
           {formatWeight(gear.weightG, unit)}
-          {gear.quantity > 1 && (
-            <span className="text-tertiary"> ×{gear.quantity}</span>
-          )}
         </span>
       </div>
     </SwipeRow>

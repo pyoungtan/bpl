@@ -210,8 +210,8 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
           className="fixed right-4 z-40"
           style={{ bottom: "var(--bar-bottom)" }}
         >
-          <InkButton onClick={() => onOpen(createTrip())}>
-            <Plus size={21} strokeWidth={2.4} /> Add
+          <InkButton size="lg" onClick={() => onOpen(createTrip())}>
+            <Plus size={22} strokeWidth={2.4} /> Add
           </InkButton>
         </div>
       )}
