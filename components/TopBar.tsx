@@ -35,6 +35,8 @@ export interface TopBarConfig {
   /** Left glass button toggles this screen's search. */
   onSearch?: () => void;
   searching?: boolean;
+  /** Left glass button with a custom action (takes precedence over search). */
+  left?: { label: string; icon: React.ReactNode; onTap: () => void };
   menu?: TopBarMenuItem[];
 }
 
@@ -50,7 +52,7 @@ export const TopBarPane = TopBarPaneCtx.Provider;
  * Handlers are read through a ref, so they always see current state; the bar
  * only re-renders when something visible (labels, checks) changes.
  */
-export function useTopBar(config: TopBarConfig) {
+export function useTopBar(config: TopBarConfig, active = true) {
   const set = useContext(TopBarCtx);
   const pane = useContext(TopBarPaneCtx);
   const ref = useRef(config);
@@ -61,10 +63,17 @@ export function useTopBar(config: TopBarConfig) {
     center: config.center ?? null,
     search: Boolean(config.onSearch),
     searching: Boolean(config.searching),
+    left: config.left?.label ?? null,
     menu: config.menu?.map((i) => [i.id, i.label, !!i.checked, !!i.danger, !!i.group]),
   });
   useEffect(() => {
     if (!set) return;
+    // A screen covered by another in the same tab (trip list under a trip's
+    // detail) gives the bar up, and takes it back when it shows again.
+    if (!active) {
+      set(null, owner, pane);
+      return;
+    }
     const c = ref.current;
     set(
       {
@@ -72,6 +81,7 @@ export function useTopBar(config: TopBarConfig) {
         center: c.center,
         onSearch: c.onSearch ? () => ref.current.onSearch?.() : undefined,
         searching: c.searching,
+        left: c.left ? { ...c.left, onTap: () => ref.current.left?.onTap() } : undefined,
         menu: c.menu?.map((item) => ({
           ...item,
           onSelect: () => ref.current.menu?.find((x) => x.id === item.id)?.onSelect(),
@@ -81,7 +91,7 @@ export function useTopBar(config: TopBarConfig) {
       pane,
     );
     // sig captures every visible field
-  }, [set, owner, pane, sig]);
+  }, [set, owner, pane, sig, active]);
   useEffect(() => () => set?.(null, owner, pane), [set, owner, pane]);
 }
 
@@ -654,6 +664,15 @@ export function TopBarProvider({
               }}
             >
               <ChevronLeft size={26} strokeWidth={2.2} className="-ml-0.5" />
+            </GlassCircle>
+          ) : config?.left ? (
+            <GlassCircle
+              label={config.left.label}
+              onTap={() => {
+                if (!closeIfOpen()) config.left?.onTap();
+              }}
+            >
+              {config.left.icon}
             </GlassCircle>
           ) : config?.onSearch ? (
             <GlassCircle

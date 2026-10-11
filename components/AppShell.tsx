@@ -114,6 +114,23 @@ export function AppShell() {
     dissolving.current = { el: out, anim, timer: window.setTimeout(endDissolve, 300) };
   }, [tab]);
 
+  // Switching light/dark reloads once: the iOS status bar only picks up the
+  // new theme-color on a fresh load. The choice is already persisted
+  // (zustand persist writes localStorage synchronously).
+  // Only changes after hydration count (the stored value loading in is not
+  // a switch), so this can't loop.
+  const lastTheme = useRef<typeof theme | null>(null);
+  useEffect(() => {
+    if (!hydrated) return;
+    if (lastTheme.current === null) {
+      lastTheme.current = theme;
+      return;
+    }
+    if (lastTheme.current === theme) return;
+    lastTheme.current = theme;
+    window.location.reload();
+  }, [theme, hydrated]);
+
   useEffect(() => {
     const root = document.documentElement;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, Map, Plus, Search, X } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { Trip } from "@/lib/types";
@@ -39,6 +39,16 @@ export function TripsTab({
 }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const trips = useAppStore((s) => s.trips);
+  // The list stays mounted (hidden) under an open trip so the detail's
+  // swipe-back can reveal it, and keeps its own scroll offset.
+  const listRef = useRef<HTMLDivElement>(null);
+  const listScroll = useRef(0);
+  const firstLayout = useRef(true);
+
+  const open = useCallback((id: string) => {
+    listScroll.current = window.scrollY;
+    setActiveId(id);
+  }, []);
 
   useEffect(() => {
     if (openTripId && trips[openTripId]) {
@@ -47,13 +57,34 @@ export function TripsTab({
     }
   }, [openTripId, trips, onConsumeOpen]);
 
-  if (activeId && trips[activeId]) {
-    return <TripDetail tripId={activeId} onBack={() => setActiveId(null)} />;
-  }
-  return <TripList onOpen={setActiveId} />;
+  const showDetail = Boolean(activeId && trips[activeId]);
+  useLayoutEffect(() => {
+    if (firstLayout.current) {
+      firstLayout.current = false;
+      return;
+    }
+    window.scrollTo(0, showDetail ? 0 : listScroll.current);
+  }, [showDetail]);
+
+  return (
+    <>
+      <div ref={listRef} hidden={showDetail}>
+        <TripList onOpen={open} active={!showDetail} />
+      </div>
+      {showDetail && activeId && (
+        <TripDetail
+          key={activeId}
+          tripId={activeId}
+          onBack={() => setActiveId(null)}
+          underlay={() => listRef.current}
+          underlayScroll={() => listScroll.current}
+        />
+      )}
+    </>
+  );
 }
 
-function TripList({ onOpen }: { onOpen: (id: string) => void }) {
+function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: boolean }) {
   const trips = useAppStore((s) => s.trips);
   const tripOrder = useAppStore((s) => s.tripOrder);
   const createTrip = useAppStore((s) => s.createTrip);
@@ -134,7 +165,7 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
         onSelect: () => changeSort(s.key),
       })),
     ],
-  });
+  }, active);
 
   return (
     <div className="pb-40">

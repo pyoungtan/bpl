@@ -149,8 +149,14 @@ export function GearRow({
       }
     >
       <div
+        // Taps on the weight / empty space select the row too; the name
+        // button, chevron, stepper and drag handle handle their own.
+        onClick={(e) => {
+          if ((e.target as Element).closest("button")) return;
+          handleTap();
+        }}
         className={cn(
-          "flex items-center gap-2.5 px-4 py-2.5",
+          "flex cursor-pointer items-center gap-2.5 px-4 py-2.5",
           dimmed && "opacity-45",
         )}
       >

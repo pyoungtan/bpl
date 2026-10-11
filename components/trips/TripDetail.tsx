@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { flushSync } from "react-dom";
 import {
   CalendarDays,
   ChevronDown,
@@ -9,7 +10,8 @@ import {
   ListChecks,
   MapPin,
   Minus,
-  NotebookPen,
+  Lock,
+  LockOpen,
   Plus,
   Search,
   Thermometer,
@@ -27,6 +29,7 @@ import { tripCompanions } from "@/lib/trips";
 import { cn } from "@/lib/cn";
 import { Donut } from "../Donut";
 import { useTopBar } from "../TopBar";
+import { pinPane, unpinPane } from "../useTabSwipe";
 import { InkButton } from "../ui/Glass";
 import { QtyStepper } from "../ui/QtyStepper";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
@@ -72,9 +75,14 @@ function groupByMajor(
 export function TripDetail({
   tripId,
   onBack,
+  underlay,
+  underlayScroll,
 }: {
   tripId: string;
   onBack: () => void;
+  /** The trip list kept mounted underneath, revealed by the swipe-back. */
+  underlay?: () => HTMLDivElement | null;
+  underlayScroll?: () => number;
 }) {
   const trip = useAppStore((s) => s.trips[tripId]);
   const gear = useAppStore((s) => s.gear);
@@ -108,7 +116,7 @@ export function TripDetail({
   const memoRef = useRef<HTMLTextAreaElement>(null);
   const deleteBtnRef = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
-  const backSwipe = useRef<{ x: number; y: number; ok: boolean } | null>(null);
+  useSwipeBack(rootRef, onBack, underlay, underlayScroll);
 
   const packed = useMemo(() => trip?.packed ?? [], [trip]);
   const packedQty = useMemo(
@@ -219,16 +227,10 @@ export function TripDetail({
         },
       },
       {
-        id: "add",
-        label: "장비 추가",
-        icon: <Plus size={20} />,
-        onSelect: () => setPickerOpen(true),
-      },
-      {
-        id: "memo",
-        label: memoOpen ? "메모 접기" : "메모 열기",
-        icon: <NotebookPen size={20} />,
-        onSelect: () => setMemoOpen((o) => !o),
+        id: "memo-lock",
+        label: trip?.memoLocked ? "메모 보호 해제" : "메모 보호",
+        icon: trip?.memoLocked ? <LockOpen size={20} /> : <Lock size={20} />,
+        onSelect: () => updateTrip(tripId, { memoLocked: !trip?.memoLocked }),
       },
       {
         id: "delete",
@@ -330,7 +332,7 @@ export function TripDetail({
             nested ? "pl-9 pr-4" : "px-4",
             "cursor-pointer active:bg-fill",
             selected && "bg-selected",
-            dim && "opacity-40",
+            dim && "opacity-25",
           )}
         >
           {isChecking && (
@@ -409,69 +411,8 @@ export function TripDetail({
     );
   }
 
-  // Slide the whole screen with the finger during a left-edge back-swipe
-  // (Safari-style), so the gesture has visible feedback. Direct style writes —
-  // no per-move re-render.
-  function paintBackDrag(dx: number, transition = "none") {
-    const el = rootRef.current;
-    if (!el) return;
-    el.style.transition = transition;
-    el.style.transform = dx > 0 ? `translateX(${dx}px)` : "translateX(0px)";
-  }
-  function clearBackDrag() {
-    const el = rootRef.current;
-    if (el) {
-      el.style.transition = "";
-      el.style.transform = "";
-    }
-  }
-
   return (
-    <div ref={rootRef} data-no-tab-swipe className="pb-40">
-      {/* Left-edge swipe-right to go back (iOS-style), below the header so it
-          doesn't block the back button. touch-action pan-y: vertical scrolls
-          stay with the browser (we get a pointercancel), horizontal is ours. */}
-      <div
-        className="fixed left-0 z-30 w-4"
-        style={{
-          top: "calc(var(--bar-top) + 56px)",
-          bottom: 0,
-          touchAction: "pan-y",
-        }}
-        onPointerDown={(e) => {
-          backSwipe.current = { x: e.clientX, y: e.clientY, ok: true };
-          e.currentTarget.setPointerCapture?.(e.pointerId);
-        }}
-        onPointerMove={(e) => {
-          const s = backSwipe.current;
-          if (!s || !s.ok) return;
-          const dx = e.clientX - s.x;
-          if (Math.abs(e.clientY - s.y) > 45 && dx < 30) {
-            s.ok = false; // vertical → cancel and snap back
-            paintBackDrag(0, "transform 0.2s ease");
-            return;
-          }
-          if (dx > 0) paintBackDrag(dx);
-        }}
-        onPointerUp={(e) => {
-          const s = backSwipe.current;
-          backSwipe.current = null;
-          if (!s || !s.ok) return;
-          if (e.clientX - s.x > 70) {
-            // Commit: finish the slide off-screen, then navigate back.
-            paintBackDrag(window.innerWidth, "transform 0.18s ease-out");
-            window.setTimeout(onBack, 170);
-          } else {
-            paintBackDrag(0, "transform 0.22s ease");
-            window.setTimeout(clearBackDrag, 260);
-          }
-        }}
-        onPointerCancel={() => {
-          backSwipe.current = null;
-          paintBackDrag(0, "transform 0.2s ease");
-          window.setTimeout(clearBackDrag, 260);
-        }}
-      />
+    <div ref={rootRef} data-no-tab-swipe className="min-h-dvh pb-40">
       <div className="space-y-4 px-4 pt-2">
         <div className="px-1">
           <input
@@ -607,7 +548,12 @@ export function TripDetail({
             onClick={() => setMemoOpen((o) => !o)}
             className="flex h-12 w-full items-center justify-between px-4 active:bg-fill"
           >
-            <span className="text-[15px] font-semibold text-label">메모</span>
+            <span className="flex items-center gap-1.5 text-[15px] font-semibold text-label">
+              메모
+              {trip.memoLocked && (
+                <Lock size={13} strokeWidth={2.4} className="text-tertiary" aria-label="보호됨" />
+              )}
+            </span>
             <ChevronDown
               size={19}
               className={cn(
@@ -622,7 +568,10 @@ export function TripDetail({
                 ref={memoRef}
                 value={trip.memo}
                 onChange={(e) => updateTrip(tripId, { memo: e.target.value })}
-                placeholder="이 트립에서 기록하고 싶은 내용을 적어두세요."
+                // Protected memos are read-only: no caret, no keyboard.
+                readOnly={trip.memoLocked}
+                tabIndex={trip.memoLocked ? -1 : undefined}
+                placeholder={trip.memoLocked ? "" : "이 트립에서 기록하고 싶은 내용을 적어두세요."}
                 rows={1}
                 className="w-full resize-none overflow-hidden bg-transparent text-[14px] leading-relaxed text-label outline-none placeholder:text-tertiary"
               />
@@ -811,6 +760,145 @@ export function TripDetail({
       />
     </div>
   );
+}
+
+/**
+ * Swipe right anywhere except item rows (or from the left edge, rows
+ * included) to go back. The detail and the trip list underneath are pinned
+ * to the viewport at their own scroll offsets for the gesture, so the real
+ * list slides in from behind (iOS parallax) instead of a blank page.
+ */
+function useSwipeBack(
+  rootRef: React.RefObject<HTMLDivElement | null>,
+  onBack: () => void,
+  underlay?: () => HTMLDivElement | null,
+  underlayScroll?: () => number,
+) {
+  const latest = useRef({ onBack, underlay, underlayScroll });
+  useEffect(() => {
+    latest.current = { onBack, underlay, underlayScroll };
+  });
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const EXCLUDE =
+      "[data-swipe-row], .overflow-x-auto, input, textarea, select, [contenteditable], .touch-none";
+    type Phase = "idle" | "pending" | "drag" | "settling";
+    const g = {
+      phase: "idle" as Phase,
+      x0: 0,
+      y0: 0,
+      dx: 0,
+      lastX: 0,
+      lastT: 0,
+      v: 0,
+      width: 0,
+      scroll: 0,
+      list: null as HTMLDivElement | null,
+    };
+
+    const paint = (x: number) => {
+      root.style.transform = `translate3d(${x}px,0,0)`;
+      if (g.list) g.list.style.transform = `translate3d(${(x - g.width) * 0.3}px,0,0)`;
+    };
+    const begin = () => {
+      const pane = root.parentElement;
+      if (!pane) return false;
+      const rect = pane.getBoundingClientRect();
+      // content starts below the tab pane's top padding (floating bar)
+      const contentTop = parseFloat(getComputedStyle(pane).paddingTop) || 0;
+      g.width = rect.width;
+      g.scroll = window.scrollY;
+      pinPane(root, g.scroll, rect, 2, contentTop);
+      root.style.boxShadow = "-8px 0 24px rgba(0,0,0,0.12)";
+      g.list = latest.current.underlay?.() ?? null;
+      if (g.list) pinPane(g.list, latest.current.underlayScroll?.() ?? 0, rect, 1, contentTop);
+      return true;
+    };
+    const finish = (commit: boolean) => {
+      const list = g.list;
+      g.phase = "idle";
+      g.list = null;
+      if (commit) {
+        flushSync(() => latest.current.onBack());
+        unpinPane(list);
+        window.scrollTo(0, latest.current.underlayScroll?.() ?? 0);
+      } else {
+        unpinPane(root);
+        root.style.removeProperty("box-shadow");
+        unpinPane(list);
+        if (list) list.hidden = true;
+        window.scrollTo(0, g.scroll);
+      }
+    };
+    const settle = (commit: boolean) => {
+      g.phase = "settling";
+      const ease = "transform 0.3s cubic-bezier(0.22, 0.8, 0.28, 1)";
+      root.style.transition = ease;
+      if (g.list) g.list.style.transition = ease;
+      paint(commit ? g.width : 0);
+      window.setTimeout(() => finish(commit), 310);
+    };
+
+    const onStart = (e: TouchEvent) => {
+      if (g.phase === "settling") return;
+      g.phase = "idle";
+      if (e.touches.length !== 1) return;
+      const t = e.target as Element | null;
+      const touch = e.touches[0];
+      if (!t || !root.contains(t)) return;
+      const fromEdge = touch.clientX < 24;
+      if (!fromEdge && t.closest(EXCLUDE)) return;
+      if (document.querySelector('[role="dialog"]')) return;
+      g.phase = "pending";
+      g.x0 = g.lastX = touch.clientX;
+      g.y0 = touch.clientY;
+      g.lastT = e.timeStamp;
+      g.dx = 0;
+      g.v = 0;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (g.phase !== "pending" && g.phase !== "drag") return;
+      const touch = e.touches[0];
+      const dx = touch.clientX - g.x0;
+      const dy = touch.clientY - g.y0;
+      if (g.phase === "pending") {
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+        if (dx > 0 && Math.abs(dx) > Math.abs(dy) * 1.3 && begin()) g.phase = "drag";
+        else {
+          g.phase = "idle";
+          return;
+        }
+      }
+      e.preventDefault();
+      const dt = Math.max(1, e.timeStamp - g.lastT);
+      g.v = (touch.clientX - g.lastX) / dt;
+      g.lastX = touch.clientX;
+      g.lastT = e.timeStamp;
+      g.dx = Math.max(0, Math.min(g.width, dx));
+      paint(g.dx);
+    };
+    const onEnd = () => {
+      if (g.phase !== "drag") {
+        if (g.phase !== "settling") g.phase = "idle";
+        return;
+      }
+      const commit = (g.dx > g.width * 0.33 || g.v > 0.35) && g.v > -0.2;
+      settle(commit);
+    };
+
+    root.addEventListener("touchstart", onStart, { passive: true });
+    root.addEventListener("touchmove", onMove, { passive: false });
+    root.addEventListener("touchend", onEnd);
+    root.addEventListener("touchcancel", onEnd);
+    return () => {
+      root.removeEventListener("touchstart", onStart);
+      root.removeEventListener("touchmove", onMove);
+      root.removeEventListener("touchend", onEnd);
+      root.removeEventListener("touchcancel", onEnd);
+    };
+  }, [rootRef]);
 }
 
 /** Small temperature field — free-text so a minus sign is typeable on iOS

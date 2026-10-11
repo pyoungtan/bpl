@@ -38,19 +38,27 @@ export const FROZEN_PROPS = [
 
 /** Pin a tab pane over the viewport at its own scroll offset, so it can move
  *  or fade independently of the page (swipe paging, tab dissolve). */
-export function pinPane(el: HTMLDivElement, scroll: number, rect: DOMRect, zIndex?: number) {
+export function pinPane(
+  el: HTMLDivElement,
+  scroll: number,
+  rect: DOMRect,
+  zIndex?: number,
+  /** Page offset where el's content starts (e.g. below a parent's padding). */
+  contentTop = 0,
+) {
   el.hidden = false;
+  const shift = scroll - contentTop;
   const s = el.style;
   s.position = "fixed";
-  s.top = "0";
+  s.top = `${Math.max(0, -shift)}px`;
   s.left = `${rect.left}px`;
   s.width = `${rect.width}px`;
-  s.height = `${window.innerHeight}px`;
+  s.height = `${window.innerHeight - Math.max(0, -shift)}px`;
   s.overflow = "hidden";
   s.willChange = "transform";
   s.backgroundColor = "var(--bg)";
   if (zIndex !== undefined) s.zIndex = String(zIndex);
-  el.scrollTop = scroll;
+  el.scrollTop = Math.max(0, shift);
 }
 export function unpinPane(el: HTMLDivElement | null) {
   if (!el) return;

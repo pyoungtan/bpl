@@ -53,6 +53,8 @@ export interface Trip {
   tempLow?: string;
   tempHigh?: string;
   memo: string;
+  /** Memo is protected: shown read-only until unlocked. */
+  memoLocked?: boolean;
   /** Manual extra weight in grams, counted into totals without picking gear
    *  (e.g. "I remember carrying ~2kg of misc"). */
   extraWeightG?: number;

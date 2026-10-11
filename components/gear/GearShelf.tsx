@@ -115,12 +115,17 @@ export function GearShelf({
   }
 
   // Screen actions live in the floating glass bar's ⋯ menu.
+  function toggleSearch() {
+    if (editMode) toggleEditMode();
+    setSearchOpen((o) => !o);
+    if (searchOpen) setQuery("");
+  }
+
   useTopBar({
-    searching: searchOpen,
-    onSearch: () => {
-      if (editMode) toggleEditMode();
-      setSearchOpen((o) => !o);
-      if (searchOpen) setQuery("");
+    left: {
+      label: "프리셋",
+      icon: <Bookmark size={20} strokeWidth={2.1} />,
+      onTap: () => setPresetsOpen(true),
     },
     menu: [
       {
@@ -373,12 +378,14 @@ export function GearShelf({
         // overflow-x container clips it). No negative margin: anything
         // overlapping that padding would paint over the shadow.
         <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-4 pb-3.5 pt-2">
+          {/* search sits apart from the category tags */}
           <TagChip
-            onClick={() => setPresetsOpen(true)}
-            aria-label="프리셋"
-            className="grid w-8 place-items-center px-0"
+            active={searchOpen}
+            onClick={toggleSearch}
+            aria-label={searchOpen ? "검색 닫기" : "검색"}
+            className="mr-1.5 grid w-8 place-items-center px-0"
           >
-            <Bookmark size={15} />
+            {searchOpen ? <X size={15} /> : <Search size={15} />}
           </TagChip>
           {["all", ...chipCats].map((c) => (
             <TagChip key={c} active={c === activeCat} onClick={() => setActiveCat(c)}>
@@ -646,11 +653,12 @@ export function GearShelf({
             <X size={21} />
           </GlassButton>
           <InkButton
+            size="lg"
             onClick={() => setAddTripOpen(true)}
             aria-label={`선택한 ${selected.size}개 Trip에 담기`}
             className="pointer-events-auto"
           >
-            <Backpack size={20} />
+            <Backpack size={22} />
             Pack
             <span className="tabular font-medium opacity-60">
               {formatWeightSmart(selectedStats.totalG, unit)}
