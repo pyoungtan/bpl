@@ -674,7 +674,7 @@ export function GearShelf({
               </InkButton>
             </div>
           ) : (
-            <InkButton onClick={() => setEditor({ open: true, gear: null })} hdrEdge>
+            <InkButton onClick={() => setEditor({ open: true, gear: null })}>
               <Plus size={21} strokeWidth={2.4} /> Add
             </InkButton>
           )}
@@ -871,8 +871,8 @@ function AddonRow({
       </span>
       {stepper && <QtyStepper {...stepper} size="sm" />}
       {/* same columns as the parent row: empty toggle slot, then weight */}
-      <span className="w-6 shrink-0" />
-      <span className="w-[76px] shrink-0 whitespace-nowrap text-right tabular text-[13px] text-tertiary">
+      <span className="-mr-1.5 w-6 shrink-0" />
+      <span className="min-w-[52px] shrink-0 whitespace-nowrap text-right tabular text-[13px] text-tertiary">
         {formatWeight(gear.weightG, unit)}
         {gear.quantity > 1 && <span> ×{gear.quantity}</span>}
       </span>

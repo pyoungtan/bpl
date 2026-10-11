@@ -180,10 +180,10 @@ export function GearRow({
         </button>
 
         {stepper && selected && !editMode && <QtyStepper {...stepper} />}
-        {/* Add-on toggle sits in a fixed slot before a fixed-width weight
-            column (fits 4 digits + "×N"), so the chevron never shifts with
-            the weight's length and weights end flush at the right edge. */}
-        <div className="flex w-6 shrink-0 justify-center">
+        {/* Add-on toggle sits in a fixed slot just before a weight column
+            sized for 4 digits, so the chevron doesn't shift with the
+            weight's length and weights end flush at the right edge. */}
+        <div className="-mr-1.5 flex w-6 shrink-0 justify-center">
           {hasAddOns && !editMode && (
             <button
               type="button"
@@ -198,7 +198,7 @@ export function GearRow({
             </button>
           )}
         </div>
-        <span className="w-[76px] shrink-0 whitespace-nowrap text-right tabular text-[14px] text-secondary">
+        <span className="min-w-[52px] shrink-0 whitespace-nowrap text-right tabular text-[14px] text-secondary">
           {formatWeight(gear.weightG, unit)}
           {gear.quantity > 1 && (
             <span className="text-tertiary"> ×{gear.quantity}</span>

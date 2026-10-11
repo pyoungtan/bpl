@@ -73,9 +73,14 @@
   --g-edge-side: rgba(0, 0, 0, 0.15);
   --g-edge-cap: rgba(0, 0, 0, 0.05);
   --g-edge-w: 0.75px;
-  --g-rim-hi: rgba(255, 255, 255, 1);
-  --g-rim-bottom: rgba(255, 255, 255, 0.9);
+  /* rim: opaque white across most of the top and bottom edges, fading only
+     near the ends (ellipse width / solid stop / fade stop) */
+  --g-rim-hi: #ffffff;
+  --g-rim-bottom: #ffffff;
   --g-rim-lo: rgba(255, 255, 255, 0.12);
+  --g-rim-ex: 84%;
+  --g-rim-solid: 42%;
+  --g-rim-fade: 86%;
   --g-glow: rgba(255, 255, 255, 0.9);
   --g-solid: #ffffff;
   --g-hl: rgba(0, 0, 0, 0.07);
@@ -147,15 +152,22 @@
   --g-bright: 0.92;
   --g-sheen: rgba(255, 255, 255, 0.08);
   --g-dim: linear-gradient(transparent, transparent);
-  /* dark glass takes the same top/bottom edge glow as the ink buttons */
-  --g-inner: var(--glow-edges);
+  /* dark glass: soft inner glow + a top/bottom rim that dims toward the
+     left and right ends */
+  --g-inner:
+    inset 0 4px 5px -3px rgba(255, 255, 255, 0.1),
+    inset 0 -4px 5px -3px rgba(255, 255, 255, 0.1);
+  --rim-w: 1px;
   --g-shadow: 0 10px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35);
   --g-edge-side: transparent;
   --g-edge-cap: transparent;
   --g-edge-w: 0.5px;
-  --g-rim-hi: transparent;
-  --g-rim-bottom: transparent;
+  --g-rim-hi: rgba(255, 255, 255, 0.32);
+  --g-rim-bottom: rgba(255, 255, 255, 0.32);
   --g-rim-lo: transparent;
+  --g-rim-ex: 70%;
+  --g-rim-solid: 0%;
+  --g-rim-fade: 100%;
   --g-glow: rgba(255, 255, 255, 0.35);
   --g-solid: #2c2c2e;
   --g-hl: rgba(255, 255, 255, 0.13);
@@ -304,11 +316,15 @@
     border-radius: inherit;
     padding: var(--rim-w, 1.25px);
     background:
-      radial-gradient(ellipse 72% 70% at 50% 0%, var(--rim-hi, var(--g-rim-hi)), transparent),
       radial-gradient(
-        ellipse 72% 70% at 50% 100%,
-        var(--rim-bottom, var(--g-rim-bottom)),
-        transparent
+        ellipse var(--g-rim-ex) 70% at 50% 0%,
+        var(--rim-hi, var(--g-rim-hi)) var(--g-rim-solid),
+        transparent var(--g-rim-fade)
+      ),
+      radial-gradient(
+        ellipse var(--g-rim-ex) 70% at 50% 100%,
+        var(--rim-bottom, var(--g-rim-bottom)) var(--g-rim-solid),
+        transparent var(--g-rim-fade)
       ),
       var(--rim-lo, var(--g-rim-lo));
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -373,37 +389,6 @@
       var(--ink-inner),
       0 1px 2px rgba(0, 0, 0, 0.12),
       0 3px 8px rgba(0, 0, 0, 0.1);
-  }
-}
-
-/* Experimental HDR edge (InkButton hdrEdge): on HDR displays the top and
-   bottom edge band is cut from a PQ-encoded tile (~1000 nits), so it can
-   shine brighter than SDR white, as native Liquid Glass highlights do. The
-   inner span re-covers all but a 1px crescent at top and bottom (same
-   radius, inset vertically only, so it tapers to nothing at the sides) and
-   carries the soft inner glow. SDR screens keep the regular CSS edge. */
-.hdr-rim {
-  display: none;
-}
-@media (dynamic-range: high) {
-  :root:not(.dark) .hdr-rim {
-    display: block;
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    overflow: hidden;
-    border-radius: inherit;
-    background: url("/hdr-white.avif") center / cover;
-    pointer-events: none;
-  }
-  :root:not(.dark) .hdr-rim > i {
-    position: absolute;
-    inset: 1px 0;
-    border-radius: inherit;
-    background: var(--ink-fill);
-    box-shadow:
-      inset 0 4px 5px -3px rgba(255, 255, 255, 0.13),
-      inset 0 -4px 5px -3px rgba(255, 255, 255, 0.13);
   }
 }
 

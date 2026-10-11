@@ -28,6 +28,8 @@ import { cn } from "@/lib/cn";
 import { Donut } from "../Donut";
 import { useTopBar } from "../TopBar";
 import { InkButton } from "../ui/Glass";
+import { QtyStepper } from "../ui/QtyStepper";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { RangeCalendar } from "../ui/RangeCalendar";
 import { Sheet } from "../ui/Sheet";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
@@ -101,6 +103,8 @@ export function TripDetail({
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Minus at quantity 1 asks before taking the item out of the trip.
+  const [removeCandidate, setRemoveCandidate] = useState<GearItem | null>(null);
   const memoRef = useRef<HTMLTextAreaElement>(null);
   const deleteBtnRef = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -362,7 +366,15 @@ export function TripDetail({
               </div>
             )}
           </div>
-          <div className="flex w-6 shrink-0 justify-center">
+          {selected && (
+            <QtyStepper
+              value={quantity}
+              size={nested ? "sm" : "md"}
+              onChange={(n) => setEntryQuantity(tripId, g.id, n)}
+              onRemove={() => setRemoveCandidate(g)}
+            />
+          )}
+          <div className="-mr-1.5 flex w-6 shrink-0 justify-center">
             {!nested && hasAddOns && (
               <button
                 type="button"
@@ -382,67 +394,17 @@ export function TripDetail({
           </div>
           <span
             className={cn(
-              "w-[76px] shrink-0 whitespace-nowrap text-right tabular",
+              "min-w-[52px] shrink-0 whitespace-nowrap text-right tabular",
               nested ? "text-[13px] text-tertiary" : "text-[14px] text-secondary",
             )}
           >
             {formatWeight(g.weightG, unit)}
-            {quantity > 1 && <span className="text-tertiary"> ×{quantity}</span>}
+            {quantity > 1 && !selected && (
+              <span className="text-tertiary"> ×{quantity}</span>
+            )}
           </span>
         </div>
       </SwipeRow>
-      <AnimatePresence initial={false}>
-        {selected && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="overflow-hidden bg-selected"
-          >
-            <div
-              className={cn(
-                "flex items-center justify-between gap-3 py-2.5",
-                nested ? "pl-9 pr-4" : "px-4",
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  aria-label="수량 감소"
-                  disabled={quantity <= 1}
-                  onClick={() => setEntryQuantity(tripId, g.id, quantity - 1)}
-                  className="grid h-8 w-8 place-items-center rounded-full bg-bg text-label shadow-float active:opacity-60 disabled:opacity-30"
-                >
-                  <Minus size={16} />
-                </button>
-                <span className="w-8 text-center tabular text-[16px] font-medium text-label">
-                  {quantity}
-                </span>
-                <button
-                  type="button"
-                  aria-label="수량 증가"
-                  onClick={() => setEntryQuantity(tripId, g.id, quantity + 1)}
-                  className="grid h-8 w-8 place-items-center rounded-full bg-bg text-label shadow-float active:opacity-60"
-                >
-                  <Plus size={16} />
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  removeEntry(tripId, g.id);
-                  setSelectedId(null);
-                }}
-                className="flex items-center gap-1.5 text-[14px] font-medium text-red active:opacity-60"
-              >
-                <Trash2 size={16} />
-                트립에서 삭제
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
       </Fragment>
     );
   }
@@ -771,7 +733,7 @@ export function TripDetail({
               <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
                 {major}
               </span>
-              <span className="tabular text-[13px] font-medium text-secondary">
+              <span className="tabular text-[13px] font-medium text-tertiary">
                 {rows.length}개, {formatWeightSmart(catTotals.get(major) ?? 0, unit)}
               </span>
             </div>
@@ -821,6 +783,20 @@ export function TripDetail({
           {confirmDelete ? "한 번 더 눌러 삭제" : "트립 삭제"}
         </button>
       </div>
+
+      <ConfirmDialog
+        open={removeCandidate !== null}
+        title="트립에서 삭제할까요?"
+        message={removeCandidate ? `${removeCandidate.name}을(를) 이 트립에서 뺍니다.` : undefined}
+        confirmLabel="삭제"
+        destructive
+        onConfirm={() => {
+          if (removeCandidate) removeEntry(tripId, removeCandidate.id);
+          setRemoveCandidate(null);
+          setSelectedId(null);
+        }}
+        onCancel={() => setRemoveCandidate(null)}
+      />
 
       <div className="fixed right-4 z-40" style={{ bottom: "var(--bar-bottom)" }}>
         <InkButton onClick={() => setPickerOpen(true)}>
@@ -1098,7 +1074,7 @@ function GearPickerSheet({
             </button>
           </div>
         )}
-        <div className="flex w-6 shrink-0 justify-center">
+        <div className="-mr-1.5 flex w-6 shrink-0 justify-center">
           {!nested && hasAddOns && (
             <button
               type="button"
@@ -1115,7 +1091,7 @@ function GearPickerSheet({
         </div>
         <span
           className={cn(
-            "w-[64px] shrink-0 whitespace-nowrap text-right tabular",
+            "min-w-[52px] shrink-0 whitespace-nowrap text-right tabular",
             nested ? "text-[13px] text-tertiary" : "text-[14px] text-secondary",
           )}
         >
