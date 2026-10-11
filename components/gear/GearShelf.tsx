@@ -38,6 +38,7 @@ import { useTopBar } from "../TopBar";
 import { GlassButton, InkButton } from "../ui/Glass";
 import { QtyStepper } from "../ui/QtyStepper";
 import { TagChip } from "../ui/TagChip";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { NotePopup } from "../NotePopup";
 import { GearRow } from "./GearRow";
 import { GearEditorSheet } from "./GearEditorSheet";
@@ -83,12 +84,34 @@ export function GearShelf({
     rect: DOMRect;
   } | null>(null);
 
+  // Edit mode can be abandoned: snapshot what it may change (order,
+  // categories, item edits) on entry and restore it on cancel.
+  const editSnapshot = useRef<Pick<
+    ReturnType<typeof useAppStore.getState>,
+    "gear" | "gearOrder" | "categories"
+  > | null>(null);
+  const [cancelEditOpen, setCancelEditOpen] = useState(false);
+
   function toggleEditMode() {
+    if (editMode) {
+      editSnapshot.current = null;
+    } else {
+      const { gear: g, gearOrder: o, categories: c } = useAppStore.getState();
+      editSnapshot.current = { gear: g, gearOrder: o, categories: c };
+    }
     setEditMode((e) => !e);
     clearSelection();
     setSwipeOpenId(null);
     setSearchOpen(false);
     setQuery("");
+  }
+  function cancelEdit() {
+    const snap = editSnapshot.current;
+    if (snap) useAppStore.setState(snap);
+    editSnapshot.current = null;
+    setCancelEditOpen(false);
+    setEditMode(false);
+    setSwipeOpenId(null);
   }
 
   // Screen actions live in the floating glass bar's ⋯ menu.
@@ -102,7 +125,7 @@ export function GearShelf({
     menu: [
       {
         id: "edit",
-        label: editMode ? "편집 완료" : "순서·분류 편집",
+        label: editMode ? "편집 완료" : "장비 편집",
         icon: editMode ? <Check size={19} /> : <SquarePen size={18} />,
         onSelect: toggleEditMode,
       },
@@ -347,8 +370,9 @@ export function GearShelf({
 
       {!editMode && chipCats.length > 0 && (
         // Bottom padding holds the tags' shadow inside the scroll strip (an
-        // overflow-x container clips it); the negative margin keeps spacing.
-        <div className="no-scrollbar -mb-2 flex gap-1.5 overflow-x-auto px-4 pb-4 pt-2">
+        // overflow-x container clips it). No negative margin: anything
+        // overlapping that padding would paint over the shadow.
+        <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-4 pb-3.5 pt-2">
           <TagChip
             onClick={() => setPresetsOpen(true)}
             aria-label="프리셋"
@@ -410,7 +434,7 @@ export function GearShelf({
               aria-expanded={!isCollapsed}
               className="flex w-full touch-manipulation items-baseline justify-between px-4 pb-1.5 pt-6 text-left"
             >
-              <span className="text-[17px] font-bold tracking-[-0.01em] text-label">
+              <span className="text-[17px] font-bold tracking-[-0.01em] text-secondary">
                 {major}
               </span>
               <span className="flex items-center gap-1 text-[13px] text-tertiary">
@@ -536,7 +560,7 @@ export function GearShelf({
         {editMode && addonItems.length > 0 && (
           <section>
             <div className="flex items-baseline justify-between px-4 pb-1 pt-6">
-              <span className="text-[17px] font-bold tracking-[-0.01em] text-label">
+              <span className="text-[17px] font-bold tracking-[-0.01em] text-secondary">
                 애드온
               </span>
               <span className="text-[13px] text-tertiary">{addonItems.length}개</span>
@@ -637,9 +661,18 @@ export function GearShelf({
       ) : (
         <div className="fixed right-4 z-40" style={{ bottom: "var(--bar-bottom)" }}>
           {editMode ? (
-            <InkButton onClick={toggleEditMode}>
-              <Check size={20} strokeWidth={2.4} /> 완료
-            </InkButton>
+            <div className="flex items-center gap-2">
+              <GlassButton
+                onClick={() => setCancelEditOpen(true)}
+                aria-label="편집 취소"
+                className="w-[46px]"
+              >
+                <X size={21} />
+              </GlassButton>
+              <InkButton onClick={toggleEditMode}>
+                <Check size={20} strokeWidth={2.4} /> 완료
+              </InkButton>
+            </div>
           ) : (
             <InkButton onClick={() => setEditor({ open: true, gear: null })}>
               <Plus size={21} strokeWidth={2.4} /> Add
@@ -651,6 +684,17 @@ export function GearShelf({
       {peek && (
         <NotePopup note={peek.note} priceText={peek.priceText} rect={peek.rect} />
       )}
+
+      <ConfirmDialog
+        open={cancelEditOpen}
+        title="편집을 취소할까요?"
+        message="이번 편집에서 바꾼 순서·분류·장비 정보가 저장되지 않아요."
+        confirmLabel="편집 취소"
+        cancelLabel="계속 편집"
+        destructive
+        onConfirm={cancelEdit}
+        onCancel={() => setCancelEditOpen(false)}
+      />
 
       <GearEditorSheet
         open={editor.open}
@@ -826,7 +870,7 @@ function AddonRow({
         {sub && <span className="text-[12px] text-tertiary">{sub}</span>}
       </span>
       {stepper && <QtyStepper {...stepper} size="sm" />}
-      <span className="shrink-0 tabular text-[13px] text-tertiary">
+      <span className="min-w-[56px] shrink-0 text-right tabular text-[13px] text-tertiary">
         {formatWeight(gear.weightG, unit)}
         {gear.quantity > 1 && <span> ×{gear.quantity}</span>}
       </span>

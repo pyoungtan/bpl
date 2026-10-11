@@ -24,7 +24,7 @@ export function TagChip({
       aria-pressed={active}
       className={cn(
         "h-8 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[14px] transition-transform active:scale-95",
-        active ? "btn-ink font-semibold" : "glass glass-tag font-medium text-label",
+        active ? "btn-ink ink-tag font-semibold" : "glass glass-tag font-medium text-label",
         className,
       )}
     >

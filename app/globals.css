@@ -98,11 +98,13 @@
   --dur-morph: 0.5s;
 }
 
+/* Dark: a dark-gray canvas with lighter elevated layers (iOS grouped
+   hierarchy) rather than pure black */
 .dark {
-  --bg: #000000;
-  --bg-elevated: #1c1c1e;
-  --card: #1c1c1e;
-  --card-2: #2c2c2e;
+  --bg: #1c1c1e;
+  --bg-elevated: #2c2c2e;
+  --card: #2c2c2e;
+  --card-2: #3a3a3c;
   --fill: rgba(118, 118, 128, 0.24);
   --fill-2: rgba(118, 118, 128, 0.32);
   --label: #ffffff;
@@ -121,15 +123,15 @@
   --orange-strong: #ffb340;
   --teal: #40c8e0;
   --navy: #000000;
-  --navy-elevated: #1c1c1e;
+  --navy-elevated: #2c2c2e;
   --on-dark: #ffffff;
   --on-dark-soft: #98989f;
-  --material: rgba(28, 28, 30, 0.72);
+  --material: rgba(44, 44, 46, 0.72);
   --material-border: rgba(255, 255, 255, 0.1);
 
   /* Liquid Glass — dark */
-  --g-tint: rgba(44, 44, 48, 0.3);
-  --g-tint-strong: rgba(30, 30, 34, 0.72);
+  --g-tint: rgba(58, 58, 62, 0.34);
+  --g-tint-strong: rgba(48, 48, 52, 0.78);
   --g-blur: 10px;
   --g-blur-strong: 28px;
   --g-sat: 170%;
@@ -148,7 +150,7 @@
   --g-rim-bottom: rgba(255, 255, 255, 0.4);
   --g-rim-lo: rgba(255, 255, 255, 0.07);
   --g-glow: rgba(255, 255, 255, 0.35);
-  --g-solid: #1c1c1e;
+  --g-solid: #2c2c2e;
   --g-hl: rgba(255, 255, 255, 0.13);
   --ink-fill: rgba(255, 255, 255, 0.92);
   --ink-sheen: rgba(255, 255, 255, 0.7);
@@ -355,6 +357,13 @@
   }
   .dark .glass-tag {
     --g-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  }
+  /* selected tag (ink): same tight shadow budget as the glass tags */
+  .btn-ink.ink-tag {
+    box-shadow:
+      var(--ink-inner),
+      0 1px 2px rgba(0, 0, 0, 0.12),
+      0 3px 8px rgba(0, 0, 0, 0.1);
   }
 }
 

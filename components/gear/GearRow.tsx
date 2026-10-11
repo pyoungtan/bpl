@@ -105,6 +105,7 @@ export function GearRow({
       swipeDisabled={!hasSwipe}
       rightWidth={112}
       leftWidth={56}
+      edgeBand={10}
       selected={Boolean(selected) && !editMode}
       renderRight={
         swipeActions
@@ -179,7 +180,8 @@ export function GearRow({
         </button>
 
         {stepper && selected && !editMode && <QtyStepper {...stepper} />}
-        <span className="shrink-0 tabular text-[14px] text-secondary">
+        {/* Fixed-width weight column keeps every row's stepper aligned */}
+        <span className="min-w-[64px] shrink-0 text-right tabular text-[14px] text-secondary">
           {formatWeight(gear.weightG, unit)}
           {gear.quantity > 1 && (
             <span className="text-tertiary"> ×{gear.quantity}</span>

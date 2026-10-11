@@ -13,7 +13,7 @@ import { GearShelf } from "./gear/GearShelf";
 import { TripsTab } from "./trips/TripsTab";
 import { SettingsSheet } from "./SettingsSheet";
 import { PullToRefresh } from "./PullToRefresh";
-import { useTabSwipe } from "./useTabSwipe";
+import { pinPane, unpinPane, useTabSwipe } from "./useTabSwipe";
 import { cn } from "@/lib/cn";
 
 export function AppShell() {
@@ -30,17 +30,24 @@ export function AppShell() {
   const tabRef = useRef<TabKey>("shelf");
   const tabScroll = useRef<Partial<Record<TabKey, number>>>({});
   const pendingScroll = useRef<number | null>(null);
-  const fadeIn = useRef(true);
+  // Tapping the segment dissolves: the outgoing screen stays pinned on top
+  // at its scroll offset and fades out over the incoming one.
+  const pendingDissolve = useRef<{ from: TabKey; scroll: number } | null>(null);
+  const dissolving = useRef<{ el: HTMLDivElement; anim: Animation; timer: number } | null>(
+    null,
+  );
   const rootRef = useRef<HTMLDivElement>(null);
   const paneEls = useRef<Partial<Record<TabKey, HTMLDivElement | null>>>({});
 
   const switchTab = useCallback(
-    (next: TabKey, opts?: { scrollTo?: number; fromScroll?: number; fade?: boolean }) => {
+    (next: TabKey, opts?: { scrollTo?: number; fromScroll?: number; dissolve?: boolean }) => {
       const cur = tabRef.current;
       if (next === cur) return;
-      tabScroll.current[cur] = opts?.fromScroll ?? window.scrollY;
+      const fromScroll = opts?.fromScroll ?? window.scrollY;
+      tabScroll.current[cur] = fromScroll;
       pendingScroll.current = opts?.scrollTo ?? tabScroll.current[next] ?? 0;
-      fadeIn.current = opts?.fade ?? true;
+      pendingDissolve.current =
+        opts?.dissolve === false ? null : { from: cur, scroll: fromScroll };
       tabRef.current = next;
       setTab(next);
     },
@@ -53,11 +60,6 @@ export function AppShell() {
     },
     [switchTab],
   );
-  const consumeFade = useCallback(() => {
-    const fade = fadeIn.current;
-    fadeIn.current = true;
-    return fade;
-  }, []);
   const registerPane = useCallback((pane: TabKey, el: HTMLDivElement | null) => {
     paneEls.current[pane] = el;
   }, []);
@@ -68,7 +70,7 @@ export function AppShell() {
     getTab: () => tabRef.current,
     getScroll: (t) => tabScroll.current[t] ?? 0,
     onCommit: (next, fromScroll) =>
-      flushSync(() => switchTab(next, { fromScroll, fade: false })),
+      flushSync(() => switchTab(next, { fromScroll, dissolve: false })),
   });
   const consumeTripToOpen = useCallback(() => setTripToOpen(null), []);
   // Stable elements: a tab switch must not re-render the (hidden or shown)
@@ -83,9 +85,33 @@ export function AppShell() {
   );
 
   useLayoutEffect(() => {
-    if (pendingScroll.current === null) return;
-    window.scrollTo(0, pendingScroll.current);
-    pendingScroll.current = null;
+    const endDissolve = () => {
+      const d = dissolving.current;
+      if (!d) return;
+      dissolving.current = null;
+      window.clearTimeout(d.timer);
+      d.anim.cancel();
+      unpinPane(d.el);
+      d.el.hidden = d.el !== paneEls.current[tabRef.current];
+    };
+    endDissolve();
+    if (pendingScroll.current !== null) {
+      window.scrollTo(0, pendingScroll.current);
+      pendingScroll.current = null;
+    }
+    const d = pendingDissolve.current;
+    pendingDissolve.current = null;
+    const out = d ? paneEls.current[d.from] : null;
+    const root = rootRef.current;
+    if (!d || !out || !root || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // z 45: above the incoming tab's floating buttons, below the top bar
+    pinPane(out, d.scroll, root.getBoundingClientRect(), 45);
+    const anim = out.animate([{ opacity: 1 }, { opacity: 0 }], {
+      duration: 280,
+      easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+      fill: "forwards",
+    });
+    dissolving.current = { el: out, anim, timer: window.setTimeout(endDissolve, 300) };
   }, [tab]);
 
   useEffect(() => {
@@ -120,20 +146,10 @@ export function AppShell() {
     >
       <div ref={rootRef} className="mx-auto min-h-dvh w-full max-w-2xl">
         <PullToRefresh />
-        <TabPane
-          pane="shelf"
-          active={tab === "shelf"}
-          shouldFade={consumeFade}
-          elRef={registerPane}
-        >
+        <TabPane pane="shelf" active={tab === "shelf"} elRef={registerPane}>
           {shelfScreen}
         </TabPane>
-        <TabPane
-          pane="trips"
-          active={tab === "trips"}
-          shouldFade={consumeFade}
-          elRef={registerPane}
-        >
+        <TabPane pane="trips" active={tab === "trips"} elRef={registerPane}>
           {tripsScreen}
         </TabPane>
         <SettingsSheet
@@ -152,36 +168,23 @@ export function AppShell() {
   );
 }
 
-/** A kept-alive tab screen: hidden while inactive, crossfades in when shown.
- *  Top padding clears the floating glass bar; content scrolls underneath. */
+/** A kept-alive tab screen, hidden while inactive. Top padding clears the
+ *  floating glass bar; content scrolls underneath. */
 function TabPane({
   pane,
   active,
-  shouldFade,
   elRef,
   children,
 }: {
   pane: TabKey;
   active: boolean;
-  /** False when the switch was already animated (swipe). */
-  shouldFade: () => boolean;
   elRef: (pane: TabKey, el: HTMLDivElement | null) => void;
   children: React.ReactNode;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    if (!active || !shouldFade()) return;
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    ref.current?.animate([{ opacity: 0 }, { opacity: 1 }], {
-      duration: 160,
-      easing: "ease-out",
-    });
-  }, [active, shouldFade]);
   return (
     <TopBarPane value={pane}>
       <div
         ref={(el) => {
-          ref.current = el;
           elRef(pane, el);
         }}
         hidden={!active}

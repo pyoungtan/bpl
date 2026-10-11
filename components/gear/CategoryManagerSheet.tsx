@@ -65,6 +65,24 @@ export function CategoryManagerSheet({
   return (
     <Sheet open={open} onClose={onClose} title="대분류 관리" leftLabel="완료">
       <div className="space-y-4 px-4">
+        <div className="flex gap-2">
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addNew();
+              }
+            }}
+            placeholder="새 대분류 이름"
+            className="h-11 min-w-0 flex-1 rounded-full bg-card px-3.5 text-[15px] text-label outline-none"
+          />
+          <Button variant="tinted" onClick={addNew} className="shrink-0">
+            추가
+          </Button>
+        </div>
+
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -88,24 +106,6 @@ export function CategoryManagerSheet({
             </div>
           </SortableContext>
         </DndContext>
-
-        <div className="flex gap-2 pt-1">
-          <input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addNew();
-              }
-            }}
-            placeholder="새 대분류 이름"
-            className="h-11 min-w-0 flex-1 rounded-full bg-card px-3.5 text-[15px] text-label outline-none"
-          />
-          <Button variant="tinted" onClick={addNew} className="shrink-0">
-            추가
-          </Button>
-        </div>
 
         <p className="px-1 text-[13px] leading-snug text-secondary">
           드래그해서 순서를 바꾸세요. 이름을 바꾸면 해당 분류의 모든 장비에

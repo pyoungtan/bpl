@@ -21,7 +21,7 @@ function rowOwnsTouch(t: Element, clientY: number) {
   return y >= band && y <= r.height - band;
 }
 
-const FROZEN_PROPS = [
+export const FROZEN_PROPS = [
   "position",
   "top",
   "left",
@@ -32,7 +32,30 @@ const FROZEN_PROPS = [
   "transition",
   "will-change",
   "background-color",
+  "z-index",
+  "opacity",
 ] as const;
+
+/** Pin a tab pane over the viewport at its own scroll offset, so it can move
+ *  or fade independently of the page (swipe paging, tab dissolve). */
+export function pinPane(el: HTMLDivElement, scroll: number, rect: DOMRect, zIndex?: number) {
+  el.hidden = false;
+  const s = el.style;
+  s.position = "fixed";
+  s.top = "0";
+  s.left = `${rect.left}px`;
+  s.width = `${rect.width}px`;
+  s.height = `${window.innerHeight}px`;
+  s.overflow = "hidden";
+  s.willChange = "transform";
+  s.backgroundColor = "var(--bg)";
+  if (zIndex !== undefined) s.zIndex = String(zIndex);
+  el.scrollTop = scroll;
+}
+export function unpinPane(el: HTMLDivElement | null) {
+  if (!el) return;
+  for (const p of FROZEN_PROPS) el.style.removeProperty(p);
+}
 
 interface Options {
   /** Attach once the root element exists (after hydration). */
@@ -80,23 +103,9 @@ export function useTabSwipe({ enabled, rootRef, panes, getTab, getScroll, onComm
       nextKey: null as TabKey | null,
     };
 
-    const freeze = (el: HTMLDivElement, scroll: number, rect: DOMRect) => {
-      el.hidden = false;
-      const s = el.style;
-      s.position = "fixed";
-      s.top = "0";
-      s.left = `${rect.left}px`;
-      s.width = `${rect.width}px`;
-      s.height = `${window.innerHeight}px`;
-      s.overflow = "hidden";
-      s.willChange = "transform";
-      s.backgroundColor = "var(--bg)";
-      el.scrollTop = scroll;
-    };
-    const unfreeze = (el: HTMLDivElement | null) => {
-      if (!el) return;
-      for (const p of FROZEN_PROPS) el.style.removeProperty(p);
-    };
+    const freeze = (el: HTMLDivElement, scroll: number, rect: DOMRect) =>
+      pinPane(el, scroll, rect);
+    const unfreeze = unpinPane;
     const paint = (dx: number) => {
       if (!g.cur) return;
       g.cur.style.transform = `translate3d(${dx}px,0,0)`;

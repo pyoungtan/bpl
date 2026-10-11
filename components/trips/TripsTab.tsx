@@ -167,7 +167,7 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
         <EmptyTrips onCreate={() => onOpen(createTrip())} />
       ) : (
         <div>
-          <div className="no-scrollbar -mb-2 flex gap-1.5 overflow-x-auto px-4 pb-4 pt-2">
+          <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-4 pb-3.5 pt-2">
             {SORTS.map((s) => (
               <TagChip key={s.key} active={sort === s.key} onClick={() => changeSort(s.key)}>
                 {s.label}
