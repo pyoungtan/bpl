@@ -120,6 +120,11 @@ export function AppShell() {
     const apply = () => {
       const dark = theme === "dark" || (theme === "system" && mq.matches);
       root.classList.toggle("dark", dark);
+      // The iOS status bar takes its tint from theme-color; follow the app's
+      // own choice, not just the system scheme the media variants encode.
+      document
+        .querySelectorAll('meta[name="theme-color"]')
+        .forEach((m) => m.setAttribute("content", dark ? "#1c1c1e" : "#ffffff"));
     };
     apply();
     if (theme === "system") {
