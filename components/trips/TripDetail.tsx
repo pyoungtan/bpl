@@ -323,7 +323,7 @@ export function TripDetail({
             "flex w-full items-center gap-2.5 py-2.5 text-left transition",
             nested ? "pl-9 pr-4" : "px-4",
             "cursor-pointer active:bg-fill",
-            selected && "bg-fill",
+            selected && "bg-selected",
             dim && "opacity-40",
           )}
         >
@@ -396,7 +396,7 @@ export function TripDetail({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="overflow-hidden bg-fill"
+            className="overflow-hidden bg-selected"
           >
             <div
               className={cn(

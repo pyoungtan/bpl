@@ -348,7 +348,7 @@ export function GearShelf({
       {!editMode && chipCats.length > 0 && (
         // Bottom padding holds the tags' shadow inside the scroll strip (an
         // overflow-x container clips it); the negative margin keeps spacing.
-        <div className="no-scrollbar -mb-2 flex gap-2 overflow-x-auto px-4 pb-4 pt-2">
+        <div className="no-scrollbar -mb-2 flex gap-1.5 overflow-x-auto px-4 pb-4 pt-2">
           <TagChip
             onClick={() => setPresetsOpen(true)}
             aria-label="프리셋"
@@ -818,14 +818,14 @@ function AddonRow({
       }}
       className={cn(
         "flex w-full cursor-pointer touch-manipulation select-none items-center gap-2.5 py-2 pl-9 pr-4 text-left outline-none transition",
-        selected && "bg-tint-soft",
+        selected && "bg-selected",
       )}
     >
       <span className="min-w-0 flex-1 truncate text-[14px] text-secondary">
         {gear.name}
         {sub && <span className="text-[12px] text-tertiary">{sub}</span>}
       </span>
-      {stepper && <QtyStepper {...stepper} />}
+      {stepper && <QtyStepper {...stepper} size="sm" />}
       <span className="shrink-0 tabular text-[13px] text-tertiary">
         {formatWeight(gear.weightG, unit)}
         {gear.quantity > 1 && <span> ×{gear.quantity}</span>}

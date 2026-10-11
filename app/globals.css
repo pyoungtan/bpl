@@ -27,6 +27,8 @@
   --tint: #000000;
   --tint-active: #2c2c2e;
   --tint-soft: rgba(0, 0, 0, 0.06);
+  /* Selected rows (gear, add-ons, trip items): a light wash */
+  --selected: rgba(0, 0, 0, 0.035);
   --on-tint: #ffffff;
   /* Semantic */
   --green: #34c759;
@@ -111,6 +113,7 @@
   --tint: #ffffff;
   --tint-active: #d1d1d6;
   --tint-soft: rgba(255, 255, 255, 0.12);
+  --selected: rgba(255, 255, 255, 0.08);
   --on-tint: #000000;
   --green: #30d158;
   --red: #ff453a;
@@ -175,6 +178,7 @@
   --color-tint: var(--tint);
   --color-tint-active: var(--tint-active);
   --color-tint-soft: var(--tint-soft);
+  --color-selected: var(--selected);
   --color-on-tint: var(--on-tint);
   --color-green: var(--green);
   --color-red: var(--red);

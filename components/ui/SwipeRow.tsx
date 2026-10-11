@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { animate, motion, useMotionValue, useTransform } from "framer-motion";
+import { animate, motion, useDragControls, useMotionValue, useTransform } from "framer-motion";
 import { Check, Trash2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -29,6 +29,9 @@ export interface SwipeRowProps {
   selectedClassName?: string;
   /** Opaque background of the sliding body (so actions never bleed through). */
   bgClassName?: string;
+  /** Px at the top and bottom of the row that don't start a row swipe — a
+   *  horizontal drag there pages between tabs instead (see useTabSwipe). */
+  edgeBand?: number;
   children: React.ReactNode;
 }
 
@@ -51,6 +54,7 @@ export function SwipeRow({
   selected,
   selectedClassName,
   bgClassName,
+  edgeBand = 0,
   children,
 }: SwipeRowProps) {
   const RIGHT_W = rightWidth;
@@ -63,6 +67,7 @@ export function SwipeRow({
   const [open, setOpen] = useState<OpenState>("closed");
   const openRef = useRef<OpenState>("closed");
   const dragging = useRef(false);
+  const dragControls = useDragControls();
 
   const swipeable = !swipeDisabled && (RIGHT_W > 0 || LEFT_W > 0);
 
@@ -100,7 +105,11 @@ export function SwipeRow({
   }
 
   return (
-    <div data-swipe-row className="relative overflow-hidden">
+    <div
+      data-swipe-row
+      data-swipe-band={edgeBand || undefined}
+      className="relative overflow-hidden"
+    >
       {swipeable && LEFT_W > 0 && renderLeft && (
         <motion.div className="absolute inset-y-0 left-0 flex" style={{ opacity: leftVis }}>
           {renderLeft(() => close(), open === "left")}
@@ -115,6 +124,18 @@ export function SwipeRow({
       <motion.div
         style={{ x }}
         drag={swipeable ? "x" : false}
+        dragListener={!edgeBand}
+        dragControls={dragControls}
+        onPointerDown={
+          edgeBand
+            ? (e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                const y = e.clientY - r.top;
+                const inCenter = y >= edgeBand && y <= r.height - edgeBand;
+                if (inCenter || openRef.current !== "closed") dragControls.start(e);
+              }
+            : undefined
+        }
         dragDirectionLock
         dragConstraints={
           open === "right"
@@ -160,7 +181,7 @@ export function SwipeRow({
           <span
             className={cn(
               "pointer-events-none absolute inset-0 z-0",
-              selectedClassName ?? "bg-tint-soft",
+              selectedClassName ?? "bg-selected",
             )}
           />
         )}

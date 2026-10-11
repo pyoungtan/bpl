@@ -167,7 +167,7 @@ function TripList({ onOpen }: { onOpen: (id: string) => void }) {
         <EmptyTrips onCreate={() => onOpen(createTrip())} />
       ) : (
         <div>
-          <div className="no-scrollbar -mb-2 flex gap-2 overflow-x-auto px-4 pb-4 pt-2">
+          <div className="no-scrollbar -mb-2 flex gap-1.5 overflow-x-auto px-4 pb-4 pt-2">
             {SORTS.map((s) => (
               <TagChip key={s.key} active={sort === s.key} onClick={() => changeSort(s.key)}>
                 {s.label}
@@ -250,6 +250,7 @@ function TripRow({
       openId={swipeOpenId}
       onOpenChange={onSwipeOpenChange}
       rightWidth={56}
+      edgeBand={12}
       bgClassName="bg-bg"
       renderRight={(_close, rowOpen) => (
         <SwipeDeleteButton rowOpen={rowOpen} onDelete={onDelete} />

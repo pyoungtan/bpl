@@ -5,10 +5,21 @@ import type { TabKey } from "./TopBar";
 
 const ORDER: TabKey[] = ["shelf", "trips"];
 
-/** Touches that start here keep their own gestures (row swipe actions, chip
- *  strips, fields, drag handles) instead of paging between tabs. */
-const EXCLUDE =
-  "[data-swipe-row], .overflow-x-auto, input, textarea, select, [contenteditable], .touch-none";
+/** Touches that start here keep their own gestures (chip strips, fields, drag
+ *  handles) instead of paging between tabs. Swipe rows are handled below. */
+const EXCLUDE = ".overflow-x-auto, input, textarea, select, [contenteditable], .touch-none";
+
+/** Rows own a horizontal drag (their swipe actions) — except within a row's
+ *  edge band (data-swipe-band px at top/bottom), the gap between rows. */
+function rowOwnsTouch(t: Element, clientY: number) {
+  const row = t.closest<HTMLElement>("[data-swipe-row]");
+  if (!row) return false;
+  const band = Number(row.dataset.swipeBand) || 0;
+  if (!band) return true;
+  const r = row.getBoundingClientRect();
+  const y = clientY - r.top;
+  return y >= band && y <= r.height - band;
+}
 
 const FROZEN_PROPS = [
   "position",
@@ -144,7 +155,7 @@ export function useTabSwipe({ enabled, rootRef, panes, getTab, getScroll, onComm
       const { panes: p, getTab: gt } = opts.current;
       const cur = p.current?.[gt()];
       if (!t || !cur || !cur.contains(t)) return;
-      if (t.closest(EXCLUDE)) return;
+      if (t.closest(EXCLUDE) || rowOwnsTouch(t, e.touches[0].clientY)) return;
       // A trip's detail screen has its own edge swipe-back; open sheets own
       // the screen.
       if (cur.querySelector("[data-no-tab-swipe]")) return;
