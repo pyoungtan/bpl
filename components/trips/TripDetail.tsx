@@ -14,6 +14,7 @@ import {
   LockOpen,
   Plus,
   Search,
+  Share,
   Thermometer,
   Trash2,
   Users,
@@ -33,6 +34,7 @@ import { pinPane, unpinPane } from "../useTabSwipe";
 import { InkButton } from "../ui/Glass";
 import { QtyStepper } from "../ui/QtyStepper";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
+import { ExportSheet } from "./ExportSheet";
 import { RangeCalendar } from "../ui/RangeCalendar";
 import { Sheet } from "../ui/Sheet";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
@@ -110,6 +112,7 @@ export function TripDetail({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Minus at quantity 1 asks before taking the item out of the trip.
   const [removeCandidate, setRemoveCandidate] = useState<GearItem | null>(null);
@@ -225,6 +228,12 @@ export function TripDetail({
           setSelectedId(null);
           setMode((m) => (m === "check" ? "none" : "check"));
         },
+      },
+      {
+        id: "export",
+        label: "내보내기",
+        icon: <Share size={20} />,
+        onSelect: () => setExportOpen(true),
       },
       {
         id: "memo-lock",
@@ -752,6 +761,8 @@ export function TripDetail({
           <Plus size={22} strokeWidth={2.4} /> Add
         </InkButton>
       </div>
+
+      <ExportSheet open={exportOpen} onClose={() => setExportOpen(false)} tripId={tripId} />
 
       <GearPickerSheet
         open={pickerOpen}
