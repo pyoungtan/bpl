@@ -7,8 +7,8 @@ import { formatWeight, formatWeightSmart } from "./units";
  * Two layouts, matching the export design canvas:
  *  - PC: 1920×1080, header + 4-column category list (name · brand · weight)
  *  - Mobile: iPhone width (402pt, rendered @3x), flowing "name weight" runs
- *    per category; at least iPhone height (874pt), taller when needed with
- *    equal top/bottom margins.
+ *    per category; the height is cut to the content, with equal top/bottom
+ *    margins.
  */
 
 export interface ExportItem {
@@ -320,7 +320,6 @@ export async function renderMobileImage(data: ExportData, unit: WeightUnit): Pro
   await loadExportFont();
   const S = 3; // device pixel ratio of the export
   const W = 402;
-  const MIN_H = 874;
   const PAD_X = 22;
   const PAD_Y = 34;
   const LABEL_W = 72;
@@ -386,7 +385,7 @@ export async function renderMobileImage(data: ExportData, unit: WeightUnit): Pro
   const bodyTop = PAD_Y + headerH + 26;
   const bodyH =
     sections.reduce((h, s) => h + s.height, 0) + SECTION_GAP * Math.max(0, sections.length - 1);
-  const H = Math.max(MIN_H, Math.ceil(bodyTop + bodyH + PAD_Y));
+  const H = Math.ceil(bodyTop + bodyH + PAD_Y);
 
   const canvas = document.createElement("canvas");
   canvas.width = W * S;

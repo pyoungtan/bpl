@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Download, Share } from "lucide-react";
+import { Download, Maximize2, Share } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { buildExportData, renderMobileImage, renderPcImage } from "@/lib/exportImage";
 import { Sheet } from "../ui/Sheet";
 import { Segmented } from "../ui/Segmented";
 import { InkButton } from "../ui/Glass";
+import { ImageViewer } from "./ImageViewer";
 
 type Kind = "pc" | "mobile";
 
@@ -121,62 +122,85 @@ export function ExportSheet({
   }
 
   const empty = data !== null && data.itemCount === 0;
+  const [viewing, setViewing] = useState(false);
 
   return (
-    <Sheet open={open} onClose={onClose} title="내보내기">
-      <div className="flex flex-col gap-4 px-4 pb-2">
-        <Segmented
-          value={kind}
-          onChange={pick}
-          options={[
-            { value: "mobile", label: "Mobile" },
-            { value: "pc", label: "PC" },
-          ]}
-          className="w-full"
-        />
-        <p className="-mt-1 px-1 text-[13px] text-secondary">
-          {kind === "pc"
-            ? "1920×1080 가로 이미지 · 웹에 게시하기 좋은 크기"
-            : "아이폰 세로 이미지 · 장비가 많으면 아래로 길어져요"}
-        </p>
+    <>
+      <Sheet open={open} onClose={onClose} title="내보내기">
+        <div className="flex flex-col gap-4 px-4 pb-2">
+          <Segmented
+            value={kind}
+            onChange={pick}
+            options={[
+              { value: "mobile", label: "Mobile" },
+              { value: "pc", label: "PC" },
+            ]}
+            className="w-full"
+          />
+          <p className="-mt-1 px-1 text-[13px] text-secondary">
+            {kind === "pc"
+              ? "1920×1080 가로 이미지 · 웹에 게시하기 좋은 크기"
+              : "아이폰 세로 이미지 · 장비가 많으면 아래로 길어져요"}
+          </p>
 
-        <div className="grid min-h-[200px] place-items-center overflow-hidden rounded-[18px] bg-fill">
-          {empty ? (
-            <p className="px-6 py-12 text-center text-[15px] text-secondary">
-              챙긴 장비가 없어요. 장비를 추가한 뒤 내보내 주세요.
-            </p>
-          ) : error ? (
-            <p className="px-6 py-12 text-center text-[15px] text-secondary">
-              이미지를 만들지 못했어요. 다시 시도해 주세요.
-            </p>
-          ) : image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={image.url}
-              alt="내보내기 미리보기"
-              className={
-                kind === "pc"
-                  ? "block h-auto w-full"
-                  : "block max-h-[52dvh] w-auto max-w-full shadow-[0_1px_6px_rgba(0,0,0,0.08)]"
-              }
-            />
-          ) : (
-            <p className="py-12 text-[14px] text-secondary">이미지를 만드는 중…</p>
-          )}
+          <div className="grid min-h-[200px] place-items-center overflow-hidden rounded-[18px] bg-fill">
+            {empty ? (
+              <p className="px-6 py-12 text-center text-[15px] text-secondary">
+                챙긴 장비가 없어요. 장비를 추가한 뒤 내보내 주세요.
+              </p>
+            ) : error ? (
+              <p className="px-6 py-12 text-center text-[15px] text-secondary">
+                이미지를 만들지 못했어요. 다시 시도해 주세요.
+              </p>
+            ) : image ? (
+              <button
+                type="button"
+                aria-label="크게 보기"
+                onClick={() => setViewing(true)}
+                className={
+                  kind === "pc"
+                    ? "relative block w-full cursor-zoom-in active:opacity-80"
+                    : "relative block max-w-full cursor-zoom-in active:opacity-80"
+                }
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={image.url}
+                  alt="내보내기 미리보기"
+                  className={
+                    kind === "pc"
+                      ? "block h-auto w-full"
+                      : "block max-h-[52dvh] w-auto max-w-full shadow-[0_1px_6px_rgba(0,0,0,0.08)]"
+                  }
+                />
+                <span className="absolute bottom-2 right-2 grid h-8 w-8 place-items-center rounded-full bg-black/45 text-white backdrop-blur-md">
+                  <Maximize2 size={15} strokeWidth={2.2} />
+                </span>
+              </button>
+            ) : (
+              <p className="py-12 text-[14px] text-secondary">이미지를 만드는 중…</p>
+            )}
+          </div>
+
+          <InkButton size="lg" onClick={share} disabled={!image || empty} className="w-full">
+            <Share size={20} strokeWidth={2.2} /> 공유
+          </InkButton>
+          <button
+            type="button"
+            onClick={download}
+            disabled={!image || empty}
+            className="flex h-11 items-center justify-center gap-1.5 text-[15px] font-medium text-secondary active:opacity-60 disabled:opacity-40"
+          >
+            <Download size={17} /> 이미지 저장
+          </button>
         </div>
-
-        <InkButton size="lg" onClick={share} disabled={!image || empty} className="w-full">
-          <Share size={20} strokeWidth={2.2} /> 공유
-        </InkButton>
-        <button
-          type="button"
-          onClick={download}
-          disabled={!image || empty}
-          className="flex h-11 items-center justify-center gap-1.5 text-[15px] font-medium text-secondary active:opacity-60 disabled:opacity-40"
-        >
-          <Download size={17} /> 이미지 저장
-        </button>
-      </div>
-    </Sheet>
+      </Sheet>
+      <ImageViewer
+        open={open && viewing}
+        src={image?.url ?? null}
+        tall={kind === "mobile"}
+        onClose={() => setViewing(false)}
+      />
+    </>
   );
 }
