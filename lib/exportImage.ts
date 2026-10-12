@@ -203,7 +203,7 @@ export async function renderPcImage(data: ExportData, unit: WeightUnit): Promise
   const PAD_Y = 72;
   const BODY_TOP = PAD_Y + 36 + 52;
   // Left panel: category weights, heaviest first, each with a bar.
-  const PANEL_W = 320;
+  const PANEL_W = 240;
   const PANEL_GAP = 64;
   const listX = PAD_X + PANEL_W + PANEL_GAP;
   const listW = W - PAD_X - listX;
@@ -260,22 +260,27 @@ export async function renderPcImage(data: ExportData, unit: WeightUnit): Promise
     const totalG = data.totalG || 1;
     for (const c of sorted) {
       const b = y + 14;
-      setFont(ctx, 700, 13);
-      ctx.fillStyle = INK;
-      drawTracked(ctx, c.name, PAD_X, b, 13, 0.06);
       setFont(ctx, 500, 15);
       const w = formatWeightSmart(c.totalG, unit);
       const wW = ctx.measureText(w).width;
+      ctx.fillStyle = INK;
       ctx.fillText(w, PAD_X + PANEL_W - wW, b);
       setFont(ctx, 400, 13);
       ctx.fillStyle = SUB;
       const pct = `${Math.round((c.totalG / totalG) * 100)}%`;
-      ctx.fillText(pct, PAD_X + PANEL_W - wW - 10 - ctx.measureText(pct).width, b);
+      const pW = ctx.measureText(pct).width;
+      ctx.fillText(pct, PAD_X + PANEL_W - wW - 8 - pW, b);
+      setFont(ctx, 700, 13);
+      ctx.fillStyle = INK;
+      const nameRoom = PANEL_W - wW - pW - 20;
+      const name =
+        trackedWidth(ctx, c.name, 13, 0.06) <= nameRoom ? c.name : ellipsize(ctx, c.name, nameRoom);
+      drawTracked(ctx, name, PAD_X, b, 13, name === c.name ? 0.06 : 0);
       const barY = y + panel.barTop;
       ctx.fillStyle = "#efeff2";
-      roundRect(ctx, PAD_X, barY, PANEL_W, 2, 1);
+      roundRect(ctx, PAD_X, barY, PANEL_W, 4, 2);
       ctx.fillStyle = INK;
-      roundRect(ctx, PAD_X, barY, Math.max(2, (c.totalG / max) * PANEL_W), 2, 1);
+      roundRect(ctx, PAD_X, barY, Math.max(4, (c.totalG / max) * PANEL_W), 4, 2);
       y += panel.rowH;
     }
   }
@@ -334,7 +339,7 @@ function roundRect(ctx: Ctx, x: number, y: number, w: number, h: number, r: numb
   ctx.fill();
 }
 
-/** Row metrics for the compact category-weights panel (hairline bars),
+/** Row metrics for the compact category-weights panel (thin bars),
  *  tightened when there are many categories. */
 function planPcPanel(count: number, avail: number) {
   const rowH = Math.max(26, Math.min(32, avail / Math.max(1, count)));
