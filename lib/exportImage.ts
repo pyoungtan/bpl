@@ -202,6 +202,13 @@ export async function renderPcImage(data: ExportData, unit: WeightUnit): Promise
   const PAD_X = 80;
   const PAD_Y = 72;
 
+  // Category weights summary under the header (heaviest first), flowing
+  // across the width; the columns start below it.
+  const m = document.createElement("canvas").getContext("2d")!;
+  const summary = layoutPcSummary(m, data, unit, W - PAD_X * 2);
+  const SUMMARY_TOP = PAD_Y + 36 + 34;
+  const bodyTop = SUMMARY_TOP + summary.lines * PC_SUM_LINE + 44;
+
   // Try the design size first; if the list is too tall, widen to 5 columns,
   // then step the type down, and as a last resort let the image grow taller.
   const attempts: { cols: number; s: number }[] = [
@@ -213,7 +220,7 @@ export async function renderPcImage(data: ExportData, unit: WeightUnit): Promise
   ];
   let plan: ReturnType<typeof planPc> | null = null;
   for (const a of attempts) {
-    plan = planPc(data, a.cols, a.s, W - PAD_X * 2);
+    plan = planPc(data, a.cols, a.s, W - PAD_X * 2, bodyTop);
     if (plan.bodyTop + plan.colHeight <= BASE_H - PAD_Y) break;
   }
   const p = plan!;
@@ -240,6 +247,26 @@ export async function renderPcImage(data: ExportData, unit: WeightUnit): Promise
   ctx.fillStyle = SUB;
   const meta = `장비 ${data.itemCount}개 · 카테고리 ${data.categories.length}개`;
   ctx.fillText(meta, W - PAD_X - totalW - 28 - ctx.measureText(meta).width, hb);
+
+  // category weights summary
+  for (const r of summary.runs) {
+    const b = SUMMARY_TOP + r.line * PC_SUM_LINE + PC_SUM_LINE / 2 + 17 * 0.36;
+    const x = PAD_X + r.x;
+    if (r.label) {
+      setFont(ctx, 600, 15);
+      ctx.fillStyle = SUB;
+      ctx.fillText(r.label, x, b);
+      continue;
+    }
+    setFont(ctx, 700, 15);
+    ctx.fillStyle = INK;
+    drawTracked(ctx, r.name, x, b, 15, 0.06);
+    setFont(ctx, 500, 17);
+    ctx.fillText(r.w, x + r.nameW + 9, b);
+    setFont(ctx, 400, 15);
+    ctx.fillStyle = SUB;
+    ctx.fillText(r.pct, x + r.nameW + 9 + r.wW + 6, b);
+  }
 
   // columns
   const s = p.s;
@@ -285,11 +312,46 @@ export async function renderPcImage(data: ExportData, unit: WeightUnit): Promise
   return toBlob(canvas);
 }
 
+const PC_SUM_LINE = 30;
+
+type SumRun = { x: number; line: number; label?: string; name: string; nameW: number; w: string; wW: number; pct: string };
+
+/** "카테고리별 무게" then "WATER 1.14 kg 15%" runs, heaviest first, wrapped
+ *  to the content width. */
+function layoutPcSummary(m: Ctx, data: ExportData, unit: WeightUnit, maxW: number) {
+  const GAP = 40;
+  const runs: SumRun[] = [];
+  setFont(m, 600, 15);
+  const label = "카테고리별 무게";
+  runs.push({ x: 0, line: 0, label, name: "", nameW: 0, w: "", wW: 0, pct: "" });
+  let x = m.measureText(label).width + 28;
+  let line = 0;
+  const total = data.totalG || 1;
+  for (const c of [...data.categories].sort((a, b) => b.totalG - a.totalG)) {
+    setFont(m, 700, 15);
+    const nameW = trackedWidth(m, c.name, 15, 0.06);
+    setFont(m, 500, 17);
+    const w = formatWeightSmart(c.totalG, unit);
+    const wW = m.measureText(w).width;
+    setFont(m, 400, 15);
+    const pct = `${Math.round((c.totalG / total) * 100)}%`;
+    const width = nameW + 9 + wW + 6 + m.measureText(pct).width;
+    if (x > 0 && x + width > maxW) {
+      line++;
+      x = 0;
+    }
+    runs.push({ x, line, name: c.name, nameW, w, wW, pct });
+    x += width + GAP;
+  }
+  return { runs, lines: line + 1 };
+}
+
 function planPc(
   data: ExportData,
   cols: number,
   s: number,
   innerW: number,
+  bodyTop: number,
 ) {
   const colGap = cols === 4 ? 64 : 48;
   const colW = (innerW - colGap * (cols - 1)) / cols;
@@ -307,7 +369,6 @@ function planPc(
       col.reduce((h, c, i) => h + headH + rowH * c.items.length + (i > 0 ? blockGap : 0), 0),
     ),
   );
-  const bodyTop = 72 + 36 + 52;
   return { cols, s, colGap, colW, headH, rowH, blockGap, columns, colHeight, bodyTop };
 }
 
