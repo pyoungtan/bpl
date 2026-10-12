@@ -203,8 +203,8 @@ export async function renderPcImage(data: ExportData, unit: WeightUnit): Promise
   const PAD_Y = 72;
   const BODY_TOP = PAD_Y + 36 + 52;
   // Left panel: category weights, heaviest first, each with a bar.
-  const PANEL_W = 400;
-  const PANEL_GAP = 72;
+  const PANEL_W = 320;
+  const PANEL_GAP = 64;
   const listX = PAD_X + PANEL_W + PANEL_GAP;
   const listW = W - PAD_X - listX;
 
@@ -255,31 +255,27 @@ export async function renderPcImage(data: ExportData, unit: WeightUnit): Promise
   // left panel: category weights + bars
   {
     let y = BODY_TOP;
-    setFont(ctx, 600, 15);
-    ctx.fillStyle = SUB;
-    ctx.fillText("카테고리별 무게", PAD_X, y + 15);
-    y += panel.labelH;
     const sorted = [...data.categories].sort((a, b) => b.totalG - a.totalG);
     const max = sorted[0]?.totalG || 1;
     const totalG = data.totalG || 1;
     for (const c of sorted) {
-      const b = y + 17;
-      setFont(ctx, 700, 15);
+      const b = y + 14;
+      setFont(ctx, 700, 13);
       ctx.fillStyle = INK;
-      drawTracked(ctx, c.name, PAD_X, b, 15, 0.06);
-      setFont(ctx, 500, 17);
+      drawTracked(ctx, c.name, PAD_X, b, 13, 0.06);
+      setFont(ctx, 500, 15);
       const w = formatWeightSmart(c.totalG, unit);
       const wW = ctx.measureText(w).width;
       ctx.fillText(w, PAD_X + PANEL_W - wW, b);
-      setFont(ctx, 400, 15);
+      setFont(ctx, 400, 13);
       ctx.fillStyle = SUB;
       const pct = `${Math.round((c.totalG / totalG) * 100)}%`;
-      ctx.fillText(pct, PAD_X + PANEL_W - wW - 12 - ctx.measureText(pct).width, b);
+      ctx.fillText(pct, PAD_X + PANEL_W - wW - 10 - ctx.measureText(pct).width, b);
       const barY = y + panel.barTop;
       ctx.fillStyle = "#efeff2";
-      roundRect(ctx, PAD_X, barY, PANEL_W, 6, 3);
+      roundRect(ctx, PAD_X, barY, PANEL_W, 2, 1);
       ctx.fillStyle = INK;
-      roundRect(ctx, PAD_X, barY, Math.max(6, (c.totalG / max) * PANEL_W), 6, 3);
+      roundRect(ctx, PAD_X, barY, Math.max(2, (c.totalG / max) * PANEL_W), 2, 1);
       y += panel.rowH;
     }
   }
@@ -338,13 +334,12 @@ function roundRect(ctx: Ctx, x: number, y: number, w: number, h: number, r: numb
   ctx.fill();
 }
 
-/** Row metrics for the category-weights panel: roomy at the design size,
- *  tightened when there are many categories (never below a readable row). */
+/** Row metrics for the compact category-weights panel (hairline bars),
+ *  tightened when there are many categories. */
 function planPcPanel(count: number, avail: number) {
-  const labelH = 40;
-  const rowH = Math.max(36, Math.min(48, (avail - labelH) / Math.max(1, count)));
-  const barTop = Math.min(30, rowH - 12);
-  return { labelH, rowH, barTop, height: labelH + rowH * count };
+  const rowH = Math.max(26, Math.min(32, avail / Math.max(1, count)));
+  const barTop = 20;
+  return { rowH, barTop, height: rowH * count };
 }
 
 function planPc(data: ExportData, cols: number, s: number, innerW: number, bodyTop: number) {
