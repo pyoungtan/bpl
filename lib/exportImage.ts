@@ -201,34 +201,23 @@ export async function renderPcImage(data: ExportData, unit: WeightUnit): Promise
   const BASE_H = 1080;
   const PAD_X = 80;
   const PAD_Y = 72;
-  const BODY_TOP = PAD_Y + 36 + 52;
-  // Left panel: category weights, heaviest first, each with a bar.
-  const PANEL_W = 240;
-  const PANEL_GAP = 64;
-  const listX = PAD_X + PANEL_W + PANEL_GAP;
-  const listW = W - PAD_X - listX;
 
-  const panel = planPcPanel(data.categories.length, BASE_H - PAD_Y - BODY_TOP);
-
-  // Try the design size first; if the list is too tall, step the type down,
-  // then go to 4 narrower columns, and as a last resort grow the image.
+  // Try the design size first; if the list is too tall, widen to 5 columns,
+  // then step the type down, and as a last resort let the image grow taller.
   const attempts: { cols: number; s: number }[] = [
-    { cols: 3, s: 1 },
-    { cols: 3, s: 0.94 },
-    { cols: 3, s: 0.88 },
-    { cols: 4, s: 0.84 },
-    { cols: 4, s: 0.78 },
+    { cols: 4, s: 1 },
+    { cols: 5, s: 1 },
+    { cols: 5, s: 0.92 },
+    { cols: 5, s: 0.85 },
+    { cols: 5, s: 0.78 },
   ];
   let plan: ReturnType<typeof planPc> | null = null;
   for (const a of attempts) {
-    plan = planPc(data, a.cols, a.s, listW, BODY_TOP);
+    plan = planPc(data, a.cols, a.s, W - PAD_X * 2);
     if (plan.bodyTop + plan.colHeight <= BASE_H - PAD_Y) break;
   }
   const p = plan!;
-  const H = Math.max(
-    BASE_H,
-    Math.ceil(Math.max(p.bodyTop + p.colHeight, BODY_TOP + panel.height) + PAD_Y),
-  );
+  const H = Math.max(BASE_H, Math.ceil(p.bodyTop + p.colHeight + PAD_Y));
 
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -252,45 +241,13 @@ export async function renderPcImage(data: ExportData, unit: WeightUnit): Promise
   const meta = `장비 ${data.itemCount}개 · 카테고리 ${data.categories.length}개`;
   ctx.fillText(meta, W - PAD_X - totalW - 28 - ctx.measureText(meta).width, hb);
 
-  // left panel: category weights + bars
-  {
-    let y = BODY_TOP;
-    const sorted = [...data.categories].sort((a, b) => b.totalG - a.totalG);
-    const max = sorted[0]?.totalG || 1;
-    const totalG = data.totalG || 1;
-    for (const c of sorted) {
-      const b = y + 14;
-      setFont(ctx, 500, 15);
-      const w = formatWeightSmart(c.totalG, unit);
-      const wW = ctx.measureText(w).width;
-      ctx.fillStyle = INK;
-      ctx.fillText(w, PAD_X + PANEL_W - wW, b);
-      setFont(ctx, 400, 13);
-      ctx.fillStyle = SUB;
-      const pct = `${Math.round((c.totalG / totalG) * 100)}%`;
-      const pW = ctx.measureText(pct).width;
-      ctx.fillText(pct, PAD_X + PANEL_W - wW - 8 - pW, b);
-      setFont(ctx, 700, 13);
-      ctx.fillStyle = INK;
-      const nameRoom = PANEL_W - wW - pW - 20;
-      const name =
-        trackedWidth(ctx, c.name, 13, 0.06) <= nameRoom ? c.name : ellipsize(ctx, c.name, nameRoom);
-      drawTracked(ctx, name, PAD_X, b, 13, name === c.name ? 0.06 : 0);
-      const barY = y + panel.barTop;
-      ctx.fillStyle = "#efeff2";
-      roundRect(ctx, PAD_X, barY, PANEL_W, 4, 2);
-      ctx.fillStyle = INK;
-      roundRect(ctx, PAD_X, barY, Math.max(4, (c.totalG / max) * PANEL_W), 4, 2);
-      y += panel.rowH;
-    }
-  }
-
-  // category columns
+  // columns
   const s = p.s;
   for (let c = 0; c < p.columns.length; c++) {
-    const x0 = listX + c * (p.colW + p.colGap);
+    const x0 = PAD_X + c * (p.colW + p.colGap);
     let y = p.bodyTop;
     for (const cat of p.columns[c]) {
+      // category header
       const headB = y + 17 * s;
       setFont(ctx, 700, 17 * s);
       ctx.fillStyle = INK;
@@ -328,27 +285,13 @@ export async function renderPcImage(data: ExportData, unit: WeightUnit): Promise
   return toBlob(canvas);
 }
 
-function roundRect(ctx: Ctx, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-  ctx.fill();
-}
-
-/** Row metrics for the compact category-weights panel (thin bars),
- *  tightened when there are many categories. */
-function planPcPanel(count: number, avail: number) {
-  const rowH = Math.max(26, Math.min(32, avail / Math.max(1, count)));
-  const barTop = 20;
-  return { rowH, barTop, height: rowH * count };
-}
-
-function planPc(data: ExportData, cols: number, s: number, innerW: number, bodyTop: number) {
-  const colGap = cols === 3 ? 56 : 40;
+function planPc(
+  data: ExportData,
+  cols: number,
+  s: number,
+  innerW: number,
+) {
+  const colGap = cols === 4 ? 64 : 48;
   const colW = (innerW - colGap * (cols - 1)) / cols;
   const headH = 25 * s + 8 * s;
   const rowH = 30 * s;
@@ -364,6 +307,7 @@ function planPc(data: ExportData, cols: number, s: number, innerW: number, bodyT
       col.reduce((h, c, i) => h + headH + rowH * c.items.length + (i > 0 ? blockGap : 0), 0),
     ),
   );
+  const bodyTop = 72 + 36 + 52;
   return { cols, s, colGap, colW, headH, rowH, blockGap, columns, colHeight, bodyTop };
 }
 
