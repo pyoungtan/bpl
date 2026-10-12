@@ -216,6 +216,14 @@ export function TripDetail({
   ).length;
   useTopBar({
     onBack,
+    actions: [
+      {
+        id: "export",
+        label: "내보내기",
+        icon: <Share size={20} strokeWidth={2.1} />,
+        onTap: () => setExportOpen(true),
+      },
+    ],
     center: mode === "check" ? `${checkedTotal}/${packedCount} 챙김` : undefined,
     menu: [
       {
@@ -228,12 +236,6 @@ export function TripDetail({
           setSelectedId(null);
           setMode((m) => (m === "check" ? "none" : "check"));
         },
-      },
-      {
-        id: "export",
-        label: "내보내기",
-        icon: <Share size={20} />,
-        onSelect: () => setExportOpen(true),
       },
       {
         id: "memo-lock",

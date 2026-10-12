@@ -37,6 +37,8 @@ export interface TopBarConfig {
   searching?: boolean;
   /** Left glass button with a custom action (takes precedence over search). */
   left?: { label: string; icon: React.ReactNode; onTap: () => void };
+  /** Glass circle buttons placed left of the ⋯ menu. */
+  actions?: { id: string; label: string; icon: React.ReactNode; onTap: () => void }[];
   menu?: TopBarMenuItem[];
 }
 
@@ -64,6 +66,7 @@ export function useTopBar(config: TopBarConfig, active = true) {
     search: Boolean(config.onSearch),
     searching: Boolean(config.searching),
     left: config.left?.label ?? null,
+    actions: config.actions?.map((a) => [a.id, a.label]),
     menu: config.menu?.map((i) => [i.id, i.label, !!i.checked, !!i.danger, !!i.group]),
   });
   useEffect(() => {
@@ -82,6 +85,10 @@ export function useTopBar(config: TopBarConfig, active = true) {
         onSearch: c.onSearch ? () => ref.current.onSearch?.() : undefined,
         searching: c.searching,
         left: c.left ? { ...c.left, onTap: () => ref.current.left?.onTap() } : undefined,
+        actions: c.actions?.map((a) => ({
+          ...a,
+          onTap: () => ref.current.actions?.find((x) => x.id === a.id)?.onTap(),
+        })),
         menu: c.menu?.map((item) => ({
           ...item,
           onSelect: () => ref.current.menu?.find((x) => x.id === item.id)?.onSelect(),
@@ -691,7 +698,8 @@ export function TopBarProvider({
             <span className="block w-11" aria-hidden="true" />
           )}
         </div>
-        <div className="pointer-events-auto flex h-12 items-center">
+        {/* centred on the bar itself, whatever the side groups' widths */}
+        <div className="pointer-events-auto absolute left-1/2 top-[var(--bar-top)] flex h-12 -translate-x-1/2 items-center">
           {config?.onBack ? (
             config.center ? (
               <span className="glass flex h-11 items-center rounded-full px-[18px] text-[17px] font-medium tabular tracking-[-0.01em] text-label">
@@ -702,7 +710,18 @@ export function TopBarProvider({
             <TabSegment tab={tab} onChange={onTabChange} blocked={closeIfOpen} />
           )}
         </div>
-        <div className="pointer-events-auto flex h-12 items-center">
+        <div className="pointer-events-auto flex h-12 items-center gap-2">
+          {config?.actions?.map((a) => (
+            <GlassCircle
+              key={a.id}
+              label={a.label}
+              onTap={() => {
+                if (!closeIfOpen()) a.onTap();
+              }}
+            >
+              {a.icon}
+            </GlassCircle>
+          ))}
           {menu.length > 0 ? (
             <MorphMenu items={menu} open={menuOpen} setOpen={setMenuOpen} />
           ) : (
