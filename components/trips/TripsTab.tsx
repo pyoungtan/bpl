@@ -7,6 +7,7 @@ import type { Trip } from "@/lib/types";
 import { formatWeightSmart } from "@/lib/units";
 import { formatTripRange, tripStart } from "@/lib/dates";
 import { tripCompanions } from "@/lib/trips";
+import { cn } from "@/lib/cn";
 
 /** "-5~12℃", a single bound like "12℃", or "" when no temps are set. */
 function tempRange(low?: string, high?: string): string {
@@ -19,6 +20,7 @@ import { InkButton } from "../ui/Glass";
 import { TagChip } from "../ui/TagChip";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
 import { TripDetail } from "./TripDetail";
+import { TbdTag } from "./TbdTag";
 
 type TripSort = "date" | "created" | "companions";
 
@@ -92,6 +94,8 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // TBD chip: shows only the trips whose plan isn't settled (not remembered).
+  const [tbdOnly, setTbdOnly] = useState(false);
   // Sort preference, remembered across sessions. Safe to read directly: the
   // list only mounts client-side (AppShell gates on hydration).
   const [sort, setSort] = useState<TripSort>(() => {
@@ -101,6 +105,7 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
   });
   function changeSort(s: TripSort) {
     setSort(s);
+    setTbdOnly(false);
     try {
       localStorage.setItem(SORT_KEY, s);
     } catch {
@@ -143,6 +148,31 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
       );
     });
   }, [sortedIds, trips, q]);
+  // Settled trips first; TBD ones get their own group at the bottom.
+  const plannedIds = shownIds.filter((id) => !trips[id].tbd);
+  const tbdIds = shownIds.filter((id) => trips[id].tbd);
+  const hasTbd = tripOrder.some((id) => trips[id]?.tbd);
+
+  function renderRow(id: string) {
+    const t = trips[id];
+    return t ? (
+      <TripRow
+        key={id}
+        trip={t}
+        showCompanions={sort === "companions" && !tbdOnly}
+        onOpen={() => {
+          if (swipeOpenId) {
+            setSwipeOpenId(null);
+            return;
+          }
+          onOpen(id);
+        }}
+        onDelete={() => deleteTrip(id)}
+        swipeOpenId={swipeOpenId}
+        onSwipeOpenChange={setSwipeOpenId}
+      />
+    ) : null;
+  }
 
   useTopBar({
     searching: searchOpen,
@@ -160,7 +190,7 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
       ...SORTS.map((s, i) => ({
         id: `sort-${s.key}`,
         label: s.label,
-        checked: sort === s.key,
+        checked: !tbdOnly && sort === s.key,
         group: i === 0,
         onSelect: () => changeSort(s.key),
       })),
@@ -200,34 +230,48 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
         <div>
           <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-4 pb-3.5 pt-2">
             {SORTS.map((s) => (
-              <TagChip key={s.key} active={sort === s.key} onClick={() => changeSort(s.key)}>
+              <TagChip
+                key={s.key}
+                active={!tbdOnly && sort === s.key}
+                onClick={() => changeSort(s.key)}
+              >
                 {s.label}
               </TagChip>
             ))}
+            {(hasTbd || tbdOnly) && (
+              <TagChip active={tbdOnly} onClick={() => setTbdOnly((v) => !v)}>
+                TBD
+              </TagChip>
+            )}
           </div>
           {/* Dense flat list, like the Gear */}
           <div>
-            {shownIds.map((id) => {
-              const t = trips[id];
-              return t ? (
-                <TripRow
-                  key={id}
-                  trip={t}
-                  showCompanions={sort === "companions"}
-                  onOpen={() => {
-                    if (swipeOpenId) {
-                      setSwipeOpenId(null);
-                      return;
-                    }
-                    onOpen(id);
-                  }}
-                  onDelete={() => deleteTrip(id)}
-                  swipeOpenId={swipeOpenId}
-                  onSwipeOpenChange={setSwipeOpenId}
-                />
-              ) : null;
-            })}
-            {q && shownIds.length === 0 && (
+            {tbdOnly ? (
+              tbdIds.map(renderRow)
+            ) : (
+              <>
+                {plannedIds.map(renderRow)}
+                {tbdIds.length > 0 && (
+                  <>
+                    <h2
+                      className={cn(
+                        "px-4 pb-1.5 text-[13px] font-semibold tracking-[0.04em] text-tertiary",
+                        plannedIds.length > 0 ? "pt-7" : "pt-1",
+                      )}
+                    >
+                      계획 미정
+                    </h2>
+                    {tbdIds.map(renderRow)}
+                  </>
+                )}
+              </>
+            )}
+            {tbdOnly && !q && tbdIds.length === 0 && (
+              <p className="px-4 py-12 text-center text-[15px] text-secondary">
+                계획 미정인 트립이 없어요.
+              </p>
+            )}
+            {q && (tbdOnly ? tbdIds : shownIds).length === 0 && (
               <p className="px-4 py-12 text-center text-[15px] text-secondary">
                 검색 결과가 없습니다.
               </p>
@@ -293,8 +337,11 @@ function TripRow({
         className="flex w-full touch-manipulation items-center gap-3 px-4 py-3 text-left transition active:bg-fill"
       >
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[17px] font-semibold tracking-[-0.01em] text-label">
-            {trip.name}
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-[17px] font-semibold tracking-[-0.01em] text-label">
+              {trip.name}
+            </span>
+            {trip.tbd && <TbdTag />}
           </div>
           {showCompanions ? (
             tripCompanions(trip).length > 0 && (

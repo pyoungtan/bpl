@@ -9,6 +9,8 @@ import { ListRow, ListSection } from "../ui/ListGroup";
 import { TextField } from "../ui/Field";
 import { Button } from "../ui/Button";
 import { WeightBar } from "../WeightBar";
+import { Checkbox } from "../ui/Checkbox";
+import { TbdTag } from "../trips/TbdTag";
 
 export function AddToTripSheet({
   open,
@@ -31,10 +33,16 @@ export function AddToTripSheet({
   const unit = useAppStore((s) => s.displayUnit);
   const createTrip = useAppStore((s) => s.createTrip);
   const addEntriesToTrip = useAppStore((s) => s.addEntriesToTrip);
+  const updateTrip = useAppStore((s) => s.updateTrip);
 
   const [newName, setNewName] = useState("");
+  // 계획 미정: the trip the gear lands in (new or existing) is marked TBD.
+  const [tbd, setTbd] = useState(false);
   useEffect(() => {
-    if (open) setNewName("");
+    if (open) {
+      setNewName("");
+      setTbd(false);
+    }
   }, [open]);
 
   const entries = gearIds
@@ -43,17 +51,33 @@ export function AddToTripSheet({
 
   function addTo(tripId: string) {
     addEntriesToTrip(tripId, entries);
+    if (tbd) updateTrip(tripId, { tbd: true });
     onAdded(tripId);
   }
   function createAndAdd() {
     const id = createTrip(newName.trim() || undefined);
     addEntriesToTrip(id, entries);
+    if (tbd) updateTrip(id, { tbd: true });
     onAdded(id);
   }
 
   return (
     <Sheet open={open} onClose={onClose} title="Trip에 추가">
       <div className="space-y-6 px-4">
+        {/* the whole row toggles; the checkbox itself is the focusable control */}
+        <div
+          onClick={() => setTbd((v) => !v)}
+          className="flex w-full cursor-pointer items-center gap-3 rounded-[22px] bg-card px-4 py-3.5 active:opacity-70"
+        >
+          <Checkbox checked={tbd} onChange={setTbd} aria-label="계획 미정" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[16px] font-medium text-label">계획 미정</span>
+            <span className="block text-[13px] text-secondary">
+              일정이 정해지지 않은 트립으로 둬요
+            </span>
+          </span>
+          <TbdTag />
+        </div>
         <div className="rounded-[22px] bg-card p-4">
           <div className="flex items-baseline justify-between">
             <span className="text-[15px] text-secondary">선택한 장비</span>
@@ -117,7 +141,10 @@ export function AddToTripSheet({
                     </span>
                   }
                 >
-                  <span className="text-[17px] text-label">{t.name}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-[17px] text-label">{t.name}</span>
+                    {t.tbd && <TbdTag />}
+                  </span>
                 </ListRow>
               );
             })}

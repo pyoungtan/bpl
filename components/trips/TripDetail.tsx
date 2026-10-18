@@ -4,6 +4,8 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { flushSync } from "react-dom";
 import {
+  CalendarCheck,
+  CalendarClock,
   CalendarDays,
   ChevronDown,
   CircleCheck,
@@ -35,6 +37,7 @@ import { InkButton } from "../ui/Glass";
 import { QtyStepper } from "../ui/QtyStepper";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { ExportSheet } from "./ExportSheet";
+import { TbdTag } from "./TbdTag";
 import { RangeCalendar } from "../ui/RangeCalendar";
 import { Sheet } from "../ui/Sheet";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
@@ -244,6 +247,12 @@ export function TripDetail({
         onSelect: () => updateTrip(tripId, { memoLocked: !trip?.memoLocked }),
       },
       {
+        id: "tbd",
+        label: trip?.tbd ? "계획 미정 해제" : "계획 미정 상태로 두기",
+        icon: trip?.tbd ? <CalendarCheck size={20} /> : <CalendarClock size={20} />,
+        onSelect: () => updateTrip(tripId, { tbd: !trip?.tbd }),
+      },
+      {
         id: "delete",
         label: "트립 삭제",
         icon: <Trash2 size={20} />,
@@ -426,12 +435,32 @@ export function TripDetail({
     <div ref={rootRef} data-no-tab-swipe className="min-h-dvh pb-40">
       <div className="space-y-4 px-4 pt-2">
         <div className="px-1">
-          <input
-            value={trip.name}
-            onChange={(e) => updateTrip(tripId, { name: e.target.value })}
-            placeholder="트립 이름"
-            className="w-full bg-transparent text-[30px] font-bold tracking-[-0.025em] text-label outline-none placeholder:text-tertiary"
-          />
+          {trip.tbd ? (
+            // Sized to its text (an invisible twin sets the width) so the
+            // TBD tag sits right after the name.
+            <div className="flex items-center gap-2.5">
+              <span className="grid min-w-0 text-[30px] font-bold tracking-[-0.025em]">
+                <span aria-hidden className="invisible overflow-hidden whitespace-pre [grid-area:1/1]">
+                  {trip.name || "트립 이름"}
+                </span>
+                <input
+                  size={1}
+                  value={trip.name}
+                  onChange={(e) => updateTrip(tripId, { name: e.target.value })}
+                  placeholder="트립 이름"
+                  className="w-full min-w-0 bg-transparent text-label outline-none [grid-area:1/1] placeholder:text-tertiary"
+                />
+              </span>
+              <TbdTag className="h-[22px] px-2 text-[12px]" />
+            </div>
+          ) : (
+            <input
+              value={trip.name}
+              onChange={(e) => updateTrip(tripId, { name: e.target.value })}
+              placeholder="트립 이름"
+              className="w-full bg-transparent text-[30px] font-bold tracking-[-0.025em] text-label outline-none placeholder:text-tertiary"
+            />
+          )}
           {/* Date range — tap to open the calendar; first tap = start, second = end */}
           <button
             type="button"
