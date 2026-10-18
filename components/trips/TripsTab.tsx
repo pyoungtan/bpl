@@ -303,7 +303,7 @@ function TripRow({
   onSwipeOpenChange,
 }: {
   trip: Trip;
-  /** 함께한 사람 sort active → subtitle shows companion tags instead of date/temp. */
+  /** 함께한 사람 sort active → companion tags show under the date/temp line. */
   showCompanions: boolean;
   onOpen: () => void;
   onDelete: () => void;
@@ -343,27 +343,24 @@ function TripRow({
             </span>
             {trip.tbd && <TbdTag />}
           </div>
-          {showCompanions ? (
-            tripCompanions(trip).length > 0 && (
-              <div className="mt-1 flex flex-wrap items-center gap-1">
-                {tripCompanions(trip).map((name, i) => (
-                  <span
-                    key={`${name}-${i}`}
-                    className="rounded-full bg-fill px-2 py-[1.5px] text-[12px] font-medium text-secondary"
-                  >
-                    {name}
-                  </span>
-                ))}
-              </div>
-            )
-          ) : (
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[13px] text-tertiary">
-              <span>{formatTripRange(tripStart(trip))}</span>
-              {tempRange(trip.tempLow, trip.tempHigh) && (
-                <span className="tabular">
-                  · {tempRange(trip.tempLow, trip.tempHigh)}
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[13px] text-tertiary">
+            <span>{formatTripRange(tripStart(trip))}</span>
+            {tempRange(trip.tempLow, trip.tempHigh) && (
+              <span className="tabular">
+                · {tempRange(trip.tempLow, trip.tempHigh)}
+              </span>
+            )}
+          </div>
+          {showCompanions && tripCompanions(trip).length > 0 && (
+            <div className="mt-1 flex flex-wrap items-center gap-1">
+              {tripCompanions(trip).map((name, i) => (
+                <span
+                  key={`${name}-${i}`}
+                  className="rounded-full bg-fill px-2 py-[1.5px] text-[12px] font-medium text-secondary"
+                >
+                  {name}
                 </span>
-              )}
+              ))}
             </div>
           )}
         </div>
