@@ -10,7 +10,19 @@ import {
   useRef,
   useState,
 } from "react";
-import { Check, ChevronLeft, Moon, Search, Settings, Sun, X } from "lucide-react";
+import {
+  Backpack,
+  Check,
+  ChevronLeft,
+  Map as MapIcon,
+  Moon,
+  Search,
+  Settings,
+  Heart,
+  Plus,
+  Sun,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useAppStore } from "@/lib/store";
 
@@ -32,6 +44,11 @@ export interface TopBarConfig {
    *  switcher is replaced by the optional `center` capsule. */
   onBack?: () => void;
   center?: string;
+  /** A live element for the bar's centre (e.g. the Gear category scrubber).
+   *  It re-registers only when `centerKey` changes, so it should keep its own
+   *  moment-to-moment state. */
+  centerSlot?: React.ReactNode;
+  centerKey?: string;
   /** Left glass button toggles this screen's search. */
   onSearch?: () => void;
   searching?: boolean;
@@ -40,6 +57,13 @@ export interface TopBarConfig {
   /** Glass circle buttons placed left of the ⋯ menu. */
   actions?: { id: string; label: string; icon: React.ReactNode; onTap: () => void }[];
   menu?: TopBarMenuItem[];
+  /** What the bottom bar's Add does on this screen (disabled when absent). */
+  onAdd?: () => void;
+  addLabel?: string;
+  /** Hide the bottom bar (a mode with its own bottom actions: selection, edit). */
+  hideNav?: boolean;
+  /** The bottom bar's ♥ (favourites-only) toggle — owned by the Gear screen. */
+  favorite?: { on: boolean; toggle: () => void };
 }
 
 type Setter = (config: TopBarConfig | null, owner: symbol, pane: TabKey) => void;
@@ -63,11 +87,16 @@ export function useTopBar(config: TopBarConfig, active = true) {
   const sig = JSON.stringify({
     back: Boolean(config.onBack),
     center: config.center ?? null,
+    centerKey: config.centerSlot ? (config.centerKey ?? "") : null,
     search: Boolean(config.onSearch),
     searching: Boolean(config.searching),
     left: config.left?.label ?? null,
     actions: config.actions?.map((a) => [a.id, a.label]),
     menu: config.menu?.map((i) => [i.id, i.label, !!i.checked, !!i.danger, !!i.group]),
+    add: Boolean(config.onAdd),
+    addLabel: config.addLabel ?? null,
+    hideNav: Boolean(config.hideNav),
+    fav: config.favorite ? config.favorite.on : null,
   });
   useEffect(() => {
     if (!set) return;
@@ -82,6 +111,7 @@ export function useTopBar(config: TopBarConfig, active = true) {
       {
         onBack: c.onBack ? () => ref.current.onBack?.() : undefined,
         center: c.center,
+        centerSlot: c.centerSlot,
         onSearch: c.onSearch ? () => ref.current.onSearch?.() : undefined,
         searching: c.searching,
         left: c.left ? { ...c.left, onTap: () => ref.current.left?.onTap() } : undefined,
@@ -93,6 +123,12 @@ export function useTopBar(config: TopBarConfig, active = true) {
           ...item,
           onSelect: () => ref.current.menu?.find((x) => x.id === item.id)?.onSelect(),
         })),
+        onAdd: c.onAdd ? () => ref.current.onAdd?.() : undefined,
+        addLabel: c.addLabel,
+        hideNav: c.hideNav,
+        favorite: c.favorite
+          ? { on: c.favorite.on, toggle: () => ref.current.favorite?.toggle() }
+          : undefined,
       },
       owner,
       pane,
@@ -277,81 +313,178 @@ export function GlassCircle({
   );
 }
 
-/* ---------- Gear | Trip segmented tabs ---------- */
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "shelf", label: "Gear" },
-  { key: "trips", label: "Trip" },
+/* ---------- bottom bar: Gear · Trip tabs + Add (Instagram-style) ---------- */
+const TABS: { key: TabKey; label: string; Icon: typeof Backpack }[] = [
+  { key: "shelf", label: "Gear", Icon: Backpack },
+  { key: "trips", label: "Trip", Icon: MapIcon },
 ];
 
 /**
- * Each tab owns its selection platter; switching crossfades them (the old
- * one fades out as the new one fades in) — nothing slides sideways.
+ * Floating glass capsule. Each tab owns its selection platter; switching
+ * crossfades them — nothing slides sideways. Scrolling down shrinks it
+ * (`compact`), scrolling back restores it; `hidden` slides it away for modes
+ * that bring their own bottom actions.
  */
-function TabSegment({
+function BottomNav({
   tab,
-  onChange,
-  blocked,
+  compact,
+  hidden,
+  onTab,
+  onAdd,
+  addLabel,
+  favOn,
+  onFav,
 }: {
   tab: TabKey;
-  onChange: (t: TabKey) => void;
-  /** Returns true when the tap should only dismiss something (open menu). */
-  blocked: () => boolean;
+  compact: boolean;
+  hidden: boolean;
+  onTab: (t: TabKey) => void;
+  onAdd?: () => void;
+  addLabel?: string;
+  favOn: boolean;
+  onFav: () => void;
 }) {
-  const idx = Math.max(0, TABS.findIndex((t) => t.key === tab));
-  const segRef = useRef<HTMLDivElement>(null);
-
+  const navRef = useRef<HTMLDivElement>(null);
   const glow = (e: React.PointerEvent, on: boolean) => {
-    const el = segRef.current;
+    const el = navRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
     el.style.setProperty("--gx", `${e.clientX - r.left}px`);
     el.style.setProperty("--gy", `${e.clientY - r.top}px`);
     el.style.setProperty("--go", on ? "1" : "0");
   };
+  const item =
+    "relative grid h-full w-[var(--gnb-item)] touch-manipulation place-items-center rounded-full text-label outline-none transition-[width] duration-[var(--dur-morph)] ease-[var(--spring-morph)]";
+  const iconWrap =
+    "grid place-items-center transition-transform duration-[var(--dur-morph)] ease-[var(--spring-morph)]";
 
   return (
     <div
-      ref={segRef}
-      role="tablist"
-      aria-label="화면 전환"
-      className="glass relative flex h-12 rounded-full p-1"
-      onPointerDown={(e) => glow(e, true)}
-      onPointerUp={(e) => glow(e, false)}
-      onPointerCancel={(e) => glow(e, false)}
-      onPointerLeave={(e) => glow(e, false)}
+      className="bottom-nav pointer-events-none fixed inset-x-0 z-50 flex justify-center"
+      style={{ bottom: "var(--bar-bottom)" }}
+      data-compact={compact || undefined}
+      data-hidden={hidden || undefined}
+      inert={hidden}
     >
-      <span className="g-glow" />
-      {TABS.map((t, i) => (
+      <nav
+        ref={navRef}
+        aria-label="하단 바"
+        className="glass pointer-events-auto relative flex h-[var(--gnb-h)] rounded-full p-[5px] transition-[height] duration-[var(--dur-morph)] ease-[var(--spring-morph)]"
+        onPointerDown={(e) => glow(e, true)}
+        onPointerUp={(e) => glow(e, false)}
+        onPointerCancel={(e) => glow(e, false)}
+        onPointerLeave={(e) => glow(e, false)}
+      >
+        <span className="g-glow" />
+        {TABS.map((t) => {
+          const on = t.key === tab;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              aria-label={t.label}
+              aria-current={on ? "page" : undefined}
+              onClick={() => onTab(t.key)}
+              className={item}
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "pointer-events-none absolute inset-0 -z-10 rounded-full bg-black/[0.075] transition-opacity duration-300 ease-out dark:bg-white/[0.14]",
+                  on ? "opacity-100" : "opacity-0",
+                )}
+              />
+              <span className={cn(iconWrap, "[[data-compact]_&]:scale-[0.9]")}>
+                <t.Icon size={26} strokeWidth={on ? 2.3 : 1.8} />
+              </span>
+            </button>
+          );
+        })}
+        {/* ♥: favourites only — filled while on */}
         <button
-          key={t.key}
           type="button"
-          role="tab"
-          aria-selected={i === idx}
-          tabIndex={i === idx ? 0 : -1}
-          onClick={() => {
-            if (blocked() || i === idx) return;
-            onChange(t.key);
-          }}
-          onKeyDown={(e) => {
-            if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-            e.preventDefault();
-            const n = clamp(idx + (e.key === "ArrowRight" ? 1 : -1), 0, TABS.length - 1);
-            onChange(TABS[n].key);
-          }}
-          className="relative h-10 touch-manipulation whitespace-nowrap rounded-full px-[18px] text-[17px] font-medium tracking-[-0.01em] text-label"
+          aria-label="하트한 장비만 보기"
+          aria-pressed={favOn}
+          onClick={onFav}
+          className={item}
         >
-          <span
-            aria-hidden="true"
-            className={cn(
-              "pointer-events-none absolute inset-0 -z-10 rounded-full bg-black/[0.075] transition-opacity duration-300 ease-out dark:bg-white/[0.14]",
-              i === idx ? "opacity-100" : "opacity-0",
-            )}
-          />
-          {t.label}
+          <span className={cn(iconWrap, "[[data-compact]_&]:scale-[0.9]")}>
+            <Heart size={26} strokeWidth={favOn ? 2.1 : 1.8} fill={favOn ? "currentColor" : "none"} />
+          </span>
         </button>
-      ))}
+        {/* plain + (drawn a touch larger: a bare cross reads small next to
+            the boxed icons) */}
+        <button
+          type="button"
+          aria-label={addLabel ?? "Add"}
+          onClick={() => onAdd?.()}
+          disabled={!onAdd}
+          className={cn(item, "disabled:opacity-35")}
+        >
+          <span className={cn(iconWrap, "[[data-compact]_&]:scale-[0.9]")}>
+            <Plus size={30} strokeWidth={1.7} />
+          </span>
+        </button>
+      </nav>
     </div>
   );
+}
+
+/**
+ * Scroll direction → bars. Scrolling down tucks the top bar away and shrinks
+ * the bottom one; any scroll back up (or reaching the top) restores both.
+ * Programmatic jumps (tab switches, sheets locking the page) don't count.
+ */
+let quietUntilGlobal = 0;
+/** Keep the next programmatic scroll (a jump to a section) from tucking the bars. */
+export function quietScrollTuck(ms = 400) {
+  quietUntilGlobal = performance.now() + ms;
+}
+
+function useScrollTuck(resetKey: unknown) {
+  const [tucked, setTucked] = useState(false);
+  const [key, setKey] = useState(resetKey);
+  if (key !== resetKey) {
+    // A new screen starts with both bars out.
+    setKey(resetKey);
+    setTucked(false);
+  }
+  const st = useRef({ last: 0, acc: 0, quietUntil: 0 });
+
+  useEffect(() => {
+    const s = st.current;
+    s.last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      const dy = y - s.last;
+      s.last = y;
+      if (performance.now() < Math.max(s.quietUntil, quietUntilGlobal)) return;
+      if (document.body.style.position === "fixed") return; // a sheet holds the page
+      if (Math.abs(dy) > 240) return; // scroll restore, not a gesture
+      if (y < 24) {
+        s.acc = 0;
+        setTucked(false);
+        return;
+      }
+      if (dy === 0) return;
+      if (dy > 0 !== s.acc > 0) s.acc = 0;
+      s.acc += dy;
+      if (s.acc > 14) setTucked(true);
+      else if (s.acc < -14) setTucked(false);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // …and the scroll offset it restores isn't a gesture.
+  useEffect(() => {
+    const s = st.current;
+    s.quietUntil = performance.now() + 250;
+    s.acc = 0;
+    s.last = window.scrollY;
+  }, [resetKey]);
+
+  return tucked;
 }
 
 /* ---------- "more" button that morphs into a menu ---------- */
@@ -627,6 +760,22 @@ export function TopBarProvider({
     setMenuOpen(false);
     return true;
   };
+  // Scrolling down tucks the top bar away and shrinks the bottom one.
+  const tucked = useScrollTuck(`${tab}|${Boolean(config?.onBack)}`) && !menuOpen;
+  useEffect(() => {
+    const root = document.documentElement;
+    if (tucked) root.dataset.bars = "tucked";
+    else delete root.dataset.bars;
+  }, [tucked]);
+
+  // Bottom bar: another tab switches; the current one pops a detail screen
+  // back to its list, or scrolls a list back to the top.
+  const tapTab = (t: TabKey) => {
+    if (closeIfOpen()) return;
+    if (t !== tab) onTabChange(t);
+    else if (config?.onBack) config.onBack();
+    else window.scrollTo({ top: 0, behavior: "smooth" });
+  };
   const menu: TopBarMenuItem[] = [
     ...(config?.menu ?? []),
     {
@@ -660,8 +809,14 @@ export function TopBarProvider({
       )}
       <nav
         aria-label="상단 바"
-        className="pointer-events-none fixed inset-x-0 top-0 z-50 mx-auto flex max-w-2xl items-center justify-between px-4 pt-[var(--bar-top)]"
+        className="pointer-events-none fixed inset-x-0 top-0 z-50 mx-auto max-w-2xl"
       >
+        {/* The tuck slides this inner row; pull-to-refresh moves the nav itself. */}
+        <div
+          className="top-bar-row relative flex items-center justify-between px-4 pt-[var(--bar-top)]"
+          data-tucked={tucked || undefined}
+          inert={tucked}
+        >
         <div className="pointer-events-auto flex h-12 items-center">
           {config?.onBack ? (
             <GlassCircle
@@ -699,17 +854,17 @@ export function TopBarProvider({
           )}
         </div>
         {/* centred on the bar itself, whatever the side groups' widths */}
-        <div className="pointer-events-auto absolute left-1/2 top-[var(--bar-top)] flex h-12 -translate-x-1/2 items-center">
-          {config?.onBack ? (
-            config.center ? (
-              <span className="glass flex h-11 items-center rounded-full px-[18px] text-[17px] font-medium tabular tracking-[-0.01em] text-label">
-                {config.center}
-              </span>
-            ) : null
-          ) : (
-            <TabSegment tab={tab} onChange={onTabChange} blocked={closeIfOpen} />
-          )}
-        </div>
+        {config?.centerSlot ? (
+          <div className="pointer-events-auto absolute left-1/2 top-[var(--bar-top)] flex h-12 -translate-x-1/2 items-center">
+            {config.centerSlot}
+          </div>
+        ) : config?.center ? (
+          <div className="pointer-events-auto absolute left-1/2 top-[var(--bar-top)] flex h-12 -translate-x-1/2 items-center">
+            <span className="glass flex h-11 items-center rounded-full px-[18px] text-[17px] font-medium tabular tracking-[-0.01em] text-label">
+              {config.center}
+            </span>
+          </div>
+        ) : null}
         <div className="pointer-events-auto flex h-12 items-center gap-2">
           {config?.actions?.map((a) => (
             <GlassCircle
@@ -728,7 +883,33 @@ export function TopBarProvider({
             <span className="block w-11" aria-hidden="true" />
           )}
         </div>
+        </div>
       </nav>
+      <BottomNav
+        tab={tab}
+        compact={tucked}
+        hidden={Boolean(config?.hideNav)}
+        onTab={tapTab}
+        onAdd={
+          config?.onAdd
+            ? () => {
+                if (!closeIfOpen()) config.onAdd?.();
+              }
+            : undefined
+        }
+        addLabel={config?.addLabel}
+        favOn={Boolean(configs.shelf?.favorite?.on)}
+        onFav={() => {
+          if (closeIfOpen()) return;
+          const fav = configs.shelf?.favorite;
+          if (!fav) return;
+          // From another tab the heart takes you to your hearted gear.
+          if (tab !== "shelf") {
+            onTabChange("shelf");
+            if (!fav.on) fav.toggle();
+          } else fav.toggle();
+        }}
+      />
     </TopBarCtx.Provider>
   );
 }

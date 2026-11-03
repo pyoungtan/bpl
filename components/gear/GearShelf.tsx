@@ -23,7 +23,6 @@ import {
   Check,
   ChevronDown,
   GripVertical,
-  Plus,
   Search,
   SlidersHorizontal,
   SquarePen,
@@ -37,7 +36,7 @@ import { cn } from "@/lib/cn";
 import { useTopBar } from "../TopBar";
 import { GlassButton, InkButton } from "../ui/Glass";
 import { QtyStepper } from "../ui/QtyStepper";
-import { TagChip } from "../ui/TagChip";
+import { CategoryScrubber } from "./CategoryScrubber";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { NotePopup } from "../NotePopup";
 import { GearRow } from "./GearRow";
@@ -59,11 +58,13 @@ export function GearShelf({
   const moveGear = useAppStore((s) => s.moveGear);
   const deleteGear = useAppStore((s) => s.deleteGear);
   const setGearHidden = useAppStore((s) => s.setGearHidden);
+  const updateGear = useAppStore((s) => s.updateGear);
 
   const [editMode, setEditMode] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  // ♥ in the bottom bar: show only hearted gear
+  const [favOnly, setFavOnly] = useState(false);
   const [query, setQuery] = useState("");
-  const [activeCat, setActiveCat] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   // Rows the user explicitly collapsed, overriding auto-open (e.g. when selected).
@@ -121,34 +122,6 @@ export function GearShelf({
     if (searchOpen) setQuery("");
   }
 
-  useTopBar({
-    left: {
-      label: "프리셋",
-      icon: <Bookmark size={20} strokeWidth={2.1} />,
-      onTap: () => setPresetsOpen(true),
-    },
-    menu: [
-      {
-        id: "edit",
-        label: editMode ? "편집 완료" : "장비 편집",
-        icon: editMode ? <Check size={19} /> : <SquarePen size={18} />,
-        onSelect: toggleEditMode,
-      },
-      {
-        id: "presets",
-        label: "프리셋",
-        icon: <Bookmark size={18} />,
-        group: true,
-        onSelect: () => setPresetsOpen(true),
-      },
-      {
-        id: "categories",
-        label: "대분류 추가·정렬",
-        icon: <SlidersHorizontal size={18} />,
-        onSelect: () => setCatMgrOpen(true),
-      },
-    ],
-  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -210,8 +183,6 @@ export function GearShelf({
     return ordered.filter(([, items]) => items.length > 0);
   }, [gear, gearOrder, categories, addOnIdSet]);
 
-  const chipCats = useMemo(() => allGroups.map(([c]) => c), [allGroups]);
-
   const hiddenItems = useMemo(
     () =>
       gearOrder
@@ -235,12 +206,12 @@ export function GearShelf({
   const q = query.trim().toLowerCase();
   const visibleGroups = useMemo(() => {
     return allGroups
-      .filter(([m]) => activeCat === "all" || m === activeCat)
       .map(([m, items]) => {
+        const pool = favOnly && !editMode ? items.filter((g) => g.favorite) : items;
         const filtered =
           editMode || !q
-            ? items
-            : items.filter(
+            ? pool
+            : pool.filter(
                 (g) =>
                   g.name.toLowerCase().includes(q) ||
                   (g.brand ?? "").toLowerCase().includes(q) ||
@@ -249,7 +220,49 @@ export function GearShelf({
         return [m, filtered] as [string, GearItem[]];
       })
       .filter(([, items]) => items.length > 0);
-  }, [allGroups, activeCat, editMode, q]);
+  }, [allGroups, editMode, q, favOnly]);
+  const scrubCats = useMemo(() => visibleGroups.map(([m]) => m), [visibleGroups]);
+
+  useTopBar({
+    // the 대분류 scrubber sits in the bar's centre (not while editing)
+    centerSlot: !editMode && scrubCats.length > 1 ? <CategoryScrubber cats={scrubCats} /> : undefined,
+    centerKey: scrubCats.join("|"),
+    favorite: {
+      on: favOnly,
+      toggle: () => {
+        setFavOnly((v) => !v);
+        setSwipeOpenId(null);
+        window.scrollTo(0, 0);
+      },
+    },
+    onSearch: toggleSearch,
+    searching: searchOpen,
+    onAdd: () => setEditor({ open: true, gear: null }),
+    addLabel: "장비 추가",
+    // selection (Pack) and edit mode bring their own bottom actions
+    hideNav: selected.size > 0 || editMode,
+    menu: [
+      {
+        id: "edit",
+        label: editMode ? "편집 완료" : "장비 편집",
+        icon: editMode ? <Check size={19} /> : <SquarePen size={18} />,
+        onSelect: toggleEditMode,
+      },
+      {
+        id: "presets",
+        label: "프리셋",
+        icon: <Bookmark size={18} />,
+        group: true,
+        onSelect: () => setPresetsOpen(true),
+      },
+      {
+        id: "categories",
+        label: "대분류 추가·정렬",
+        icon: <SlidersHorizontal size={18} />,
+        onSelect: () => setCatMgrOpen(true),
+      },
+    ],
+  });
 
   const selectedStats = useMemo(
     () =>
@@ -373,28 +386,6 @@ export function GearShelf({
         </div>
       )}
 
-      {!editMode && chipCats.length > 0 && (
-        // Bottom padding holds the tags' shadow inside the scroll strip (an
-        // overflow-x container clips it). No negative margin: anything
-        // overlapping that padding would paint over the shadow.
-        <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-4 pb-3.5 pt-2">
-          {/* search sits apart from the category tags */}
-          <TagChip
-            active={searchOpen}
-            onClick={toggleSearch}
-            aria-label={searchOpen ? "검색 닫기" : "검색"}
-            className="mr-1.5 grid w-8 place-items-center px-0"
-          >
-            {searchOpen ? <X size={15} /> : <Search size={15} />}
-          </TagChip>
-          {["all", ...chipCats].map((c) => (
-            <TagChip key={c} active={c === activeCat} onClick={() => setActiveCat(c)}>
-              {c === "all" ? "전체" : c}
-            </TagChip>
-          ))}
-        </div>
-      )}
-
       {editMode && (
         <div className="px-4 pb-1 pt-2">
           <button
@@ -422,7 +413,7 @@ export function GearShelf({
           }}
         >
         {visibleGroups.map(([major, items]) => {
-          const collapsible = !editMode && !q && activeCat === "all";
+          const collapsible = !editMode && !q;
           const isCollapsed = collapsible && collapsedCats.has(major);
           return (
           // layout="position": sections glide to their new spot via composited
@@ -431,6 +422,7 @@ export function GearShelf({
           // mount cost, then transform-only animation frames.
           <motion.section
             key={major}
+            data-gear-cat={major}
             layout={collapsible ? "position" : false}
             transition={{ type: "spring", stiffness: 550, damping: 45 }}
           >
@@ -512,6 +504,8 @@ export function GearShelf({
                         onDelete: () => deleteGear(g.id),
                         onToggleHidden: () => setGearHidden(g.id, true),
                         hidden: false,
+                        onToggleFavorite: () => updateGear(g.id, { favorite: !g.favorite }),
+                        favorite: Boolean(g.favorite),
                       }}
                       swipeOpenId={swipeOpenId}
                       onSwipeOpenChange={setSwipeOpenId}
@@ -584,7 +578,7 @@ export function GearShelf({
           </section>
         )}
 
-        {!editMode && activeCat === "all" && hiddenItems.length > 0 && (
+        {!editMode && !favOnly && hiddenItems.length > 0 && (
           <motion.section
             layout="position"
             transition={{ type: "spring", stiffness: 550, damping: 45 }}
@@ -618,6 +612,8 @@ export function GearShelf({
                   onDelete: () => deleteGear(g.id),
                   onToggleHidden: () => setGearHidden(g.id, false),
                   hidden: true,
+                  onToggleFavorite: () => updateGear(g.id, { favorite: !g.favorite }),
+                  favorite: Boolean(g.favorite),
                 }}
                 swipeOpenId={swipeOpenId}
                 onSwipeOpenChange={setSwipeOpenId}
@@ -626,14 +622,19 @@ export function GearShelf({
           </motion.section>
         )}
 
-        {visibleGroups.length === 0 && (q || hiddenItems.length === 0) && (
-          <p className="px-4 py-16 text-center text-[15px] text-secondary">
-            {q ? "검색 결과가 없습니다." : "장비가 없습니다."}
+        {visibleGroups.length === 0 && (q || favOnly || hiddenItems.length === 0) && (
+          <p className="px-6 py-16 text-center text-[15px] leading-relaxed text-secondary">
+            {q
+              ? "검색 결과가 없습니다."
+              : favOnly
+                ? "하트를 누른 장비가 없어요. 장비를 왼쪽으로 밀어 하트를 눌러 보세요."
+                : "장비가 없습니다."}
           </p>
         )}
       </div>
 
-      {/* Primary action: add gear · finish editing · pack the selection */}
+      {/* Bottom actions while selecting (Pack) or editing; adding gear lives
+          in the bottom bar, which steps aside for these modes. */}
       {selecting && !editMode ? (
         <>
         {/* Soft scrim so the clear-glass cancel button reads against the list */}
@@ -666,28 +667,22 @@ export function GearShelf({
           </InkButton>
         </div>
         </>
-      ) : (
+      ) : editMode ? (
         <div className="fixed right-4 z-40" style={{ bottom: "var(--bar-bottom)" }}>
-          {editMode ? (
-            <div className="flex items-center gap-2">
-              <GlassButton
-                onClick={() => setCancelEditOpen(true)}
-                aria-label="편집 취소"
-                className="w-[46px]"
-              >
-                <X size={21} />
-              </GlassButton>
-              <InkButton onClick={toggleEditMode}>
-                <Check size={20} strokeWidth={2.4} /> 완료
-              </InkButton>
-            </div>
-          ) : (
-            <InkButton size="lg" onClick={() => setEditor({ open: true, gear: null })}>
-              <Plus size={22} strokeWidth={2.4} /> Add
+          <div className="flex items-center gap-2">
+            <GlassButton
+              onClick={() => setCancelEditOpen(true)}
+              aria-label="편집 취소"
+              className="w-[46px]"
+            >
+              <X size={21} />
+            </GlassButton>
+            <InkButton onClick={toggleEditMode}>
+              <Check size={20} strokeWidth={2.4} /> 완료
             </InkButton>
-          )}
+          </div>
         </div>
-      )}
+      ) : null}
 
       {peek && (
         <NotePopup note={peek.note} priceText={peek.priceText} rect={peek.rect} />

@@ -33,7 +33,6 @@ import { cn } from "@/lib/cn";
 import { Donut } from "../Donut";
 import { useTopBar } from "../TopBar";
 import { pinPane, unpinPane } from "../useTabSwipe";
-import { InkButton } from "../ui/Glass";
 import { QtyStepper } from "../ui/QtyStepper";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { ExportSheet } from "./ExportSheet";
@@ -219,6 +218,8 @@ export function TripDetail({
   ).length;
   useTopBar({
     onBack,
+    onAdd: () => setPickerOpen(true),
+    addLabel: "장비 담기",
     actions: [
       {
         id: "export",
@@ -786,12 +787,6 @@ export function TripDetail({
         }}
         onCancel={() => setRemoveCandidate(null)}
       />
-
-      <div className="fixed right-4 z-40" style={{ bottom: "var(--bar-bottom)" }}>
-        <InkButton size="lg" onClick={() => setPickerOpen(true)}>
-          <Plus size={22} strokeWidth={2.4} /> Add
-        </InkButton>
-      </div>
 
       <ExportSheet open={exportOpen} onClose={() => setExportOpen(false)} tripId={tripId} />
 

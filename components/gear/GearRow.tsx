@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { ChevronDown, Eye, EyeOff, SquarePen } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, Heart, SquarePen } from "lucide-react";
 import type { GearItem, WeightUnit } from "@/lib/types";
 import { formatWeight } from "@/lib/units";
 import { cn } from "@/lib/cn";
@@ -14,6 +14,8 @@ export interface SwipeActions {
   onDelete: () => void;
   onToggleHidden: () => void;
   hidden: boolean;
+  onToggleFavorite?: () => void;
+  favorite?: boolean;
 }
 
 export interface GearRowProps {
@@ -103,7 +105,7 @@ export function GearRow({
       openId={swipeOpenId ?? null}
       onOpenChange={onSwipeOpenChange ?? (() => {})}
       swipeDisabled={!hasSwipe}
-      rightWidth={112}
+      rightWidth={swipeActions?.onToggleFavorite ? 168 : 112}
       leftWidth={56}
       edgeBand={10}
       selected={Boolean(selected) && !editMode}
@@ -111,6 +113,24 @@ export function GearRow({
         swipeActions
           ? (close, rowOpen) => (
               <>
+                {swipeActions.onToggleFavorite && (
+                  <button
+                    type="button"
+                    aria-label={swipeActions.favorite ? "하트 해제" : "하트"}
+                    aria-pressed={Boolean(swipeActions.favorite)}
+                    onClick={() => {
+                      swipeActions.onToggleFavorite?.();
+                      close();
+                    }}
+                    className="grid w-14 touch-manipulation place-items-center bg-[#e5e5ea] text-black active:opacity-80 dark:bg-[#48484a] dark:text-white"
+                  >
+                    <Heart
+                      size={20}
+                      strokeWidth={2.1}
+                      fill={swipeActions.favorite ? "currentColor" : "none"}
+                    />
+                  </button>
+                )}
                 <button
                   type="button"
                   aria-label="수정"

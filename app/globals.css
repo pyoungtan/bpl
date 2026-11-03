@@ -464,6 +464,40 @@
   backdrop-filter: blur(6px);
   -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent);
   mask-image: linear-gradient(to bottom, #000 45%, transparent);
+  transition: height 0.42s var(--ease-tuck);
+}
+
+/* Scroll tuck (Instagram-style): scrolling down slides the top controls up
+   out of view and shrinks the bottom bar; scrolling back restores both. */
+:root {
+  --ease-tuck: cubic-bezier(0.32, 0.72, 0, 1);
+}
+html[data-bars="tucked"] .scroll-edge-top {
+  height: calc(env(safe-area-inset-top) + 14px);
+}
+.top-bar-row {
+  transition:
+    transform 0.42s var(--ease-tuck),
+    opacity 0.3s ease;
+}
+.top-bar-row[data-tucked] {
+  transform: translateY(calc(-100% - 16px));
+  opacity: 0;
+}
+.bottom-nav {
+  --gnb-h: 62px;
+  --gnb-item: 76px;
+  transition:
+    transform 0.42s var(--ease-tuck),
+    opacity 0.3s ease;
+}
+.bottom-nav[data-compact] {
+  --gnb-h: 52px;
+  --gnb-item: 64px;
+}
+.bottom-nav[data-hidden] {
+  transform: translateY(calc(100% + var(--bar-bottom) + 16px));
+  opacity: 0;
 }
 
 /* Category-fold reveal: rows stay mounted and folding toggles display:none, so

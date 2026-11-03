@@ -23,6 +23,8 @@ export interface GearItem {
   note?: string;
   /** Hidden from the active shelf — collected under a "숨겨짐" group. */
   hidden?: boolean;
+  /** Hearted: the bottom bar's ♥ toggle shows only these. */
+  favorite?: boolean;
   /** Other gear ids that travel with this item (add-ons). */
   addOnIds: string[];
 }

@@ -175,6 +175,8 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
   }
 
   useTopBar({
+    onAdd: () => onOpen(createTrip()),
+    addLabel: "새 트립",
     searching: searchOpen,
     onSearch: () => {
       setSearchOpen((o) => !o);
@@ -280,16 +282,6 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
         </div>
       )}
 
-      {tripOrder.length > 0 && (
-        <div
-          className="fixed right-4 z-40"
-          style={{ bottom: "var(--bar-bottom)" }}
-        >
-          <InkButton size="lg" onClick={() => onOpen(createTrip())}>
-            <Plus size={22} strokeWidth={2.4} /> Add
-          </InkButton>
-        </div>
-      )}
     </div>
   );
 }
