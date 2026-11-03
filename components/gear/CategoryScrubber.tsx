@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { hapticTick } from "@/lib/haptics";
 import { quietScrollTuck } from "../TopBar";
 
@@ -11,8 +12,9 @@ const STEP = 28;
 const TICK = 18;
 /** How far the row gives toward the next step before it clicks over. */
 const GIVE = 0.12;
-/** The click: a quick move that overshoots a hair and settles. */
-const SNAP = "transform 0.22s cubic-bezier(0.25, 1.6, 0.45, 1)";
+/** The click: a quick plain ease — no overshoot, so fast scrubs stay calm. */
+const SNAP = "transform 0.18s ease-out";
+const noop = () => () => {};
 
 /** Where the list's sections sit under the top bar: the shown tab pane's top
  *  padding, which already resolves the safe-area maths. */
@@ -41,14 +43,15 @@ function jumpTo(cat: string) {
 /**
  * Gear category scrubber: a row of ticks, one per 대분류. Dragging steps
  * through the categories with a detent (and a haptic tick) per step; the
- * category you'd land on floats below as a hint, and letting go jumps the
- * list there. Tapping left/right of centre steps by the tapped distance.
+ * category you're on shows large in the middle of the screen, and the list
+ * follows each step live. Tapping left/right of centre steps by the tapped distance.
  * Between scrubs it follows the list's scroll position, wordlessly.
  */
 export function CategoryScrubber({ cats }: { cats: string[] }) {
   const [index, setIndex] = useState(0);
   const [raw, setRaw] = useState<number | null>(null); // fractional while dragging
   const [hint, setHint] = useState<string | null>(null);
+  const mounted = useSyncExternalStore(noop, () => true, () => false);
   const max = Math.max(0, cats.length - 1);
   const cur = Math.min(index, max);
   const st = useRef({ pid: -1, sx: 0, start: 0, idx: 0, moved: false });
@@ -134,6 +137,7 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
       s.idx = i;
       hapticTick();
       setIndex(i);
+      jumpTo(cats[i]); // the list follows before you let go
     }
     setRaw(r);
     showHint(cats[i], true);
@@ -150,7 +154,6 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
     }
     if (s.moved) {
       showHint(cats[s.idx], false);
-      jumpTo(cats[s.idx]);
       return;
     }
     // a tap: step by however many ticks away from centre it landed
@@ -204,7 +207,7 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
                 <span
                   key={c}
                   aria-hidden="true"
-                  className="absolute top-0 w-[2.5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-label transition-[height,opacity] duration-200 ease-[cubic-bezier(0.3,1.8,0.5,1)]"
+                  className="absolute top-0 w-[2.5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-label transition-[height,opacity] duration-150 ease-out"
                   style={{
                     left: i * TICK,
                     height: on ? 18 : 9,
@@ -216,19 +219,21 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
           </div>
         </div>
       </div>
-      {/* where letting go would land */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-full mt-2 -translate-x-1/2 transition-opacity duration-200"
-        style={{ opacity: hint ? 1 : 0 }}
-      >
-        <span className="glass-strong flex h-8 items-center whitespace-nowrap rounded-full px-3.5 text-[14px] font-semibold tracking-[0.02em] text-label">
-          {/* re-keyed per step so each click pops the name in */}
-          <span key={hint ?? cats[cur]} className="scrub-snap">
-            {hint ?? cats[cur]}
-          </span>
-        </span>
-      </div>
+      {/* the category you're on, large in the middle of the screen (portalled:
+          the top bar's transforms would otherwise anchor it) */}
+      {mounted &&
+        createPortal(
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-0 z-[55] grid place-items-center transition-opacity duration-200 ease-out"
+            style={{ opacity: hint ? 1 : 0 }}
+          >
+            <span className="glass-strong flex h-[68px] items-center whitespace-nowrap rounded-full px-8 text-[28px] font-bold tracking-[-0.01em] text-label">
+              {hint ?? cats[cur]}
+            </span>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

@@ -480,17 +480,6 @@ html[data-bars="tucked"] .scroll-edge-top {
     transform 0.42s var(--ease-tuck),
     opacity 0.3s ease;
 }
-/* Category scrubber hint: each detent pops the new name in. */
-@keyframes scrubSnap {
-  from {
-    transform: scale(0.88);
-    opacity: 0.5;
-  }
-}
-.scrub-snap {
-  display: inline-block;
-  animation: scrubSnap 0.2s cubic-bezier(0.25, 1.6, 0.45, 1);
-}
 .bottom-nav[data-hidden] {
   transform: translateY(calc(100% + var(--bar-bottom) + 16px));
   opacity: 0;
