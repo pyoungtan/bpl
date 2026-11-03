@@ -8,6 +8,7 @@ import { formatWeightSmart } from "@/lib/units";
 import { formatTripRange, tripStart } from "@/lib/dates";
 import { tripCompanions } from "@/lib/trips";
 import { cn } from "@/lib/cn";
+import { keepRowInPlace } from "@/lib/scrollAnchor";
 
 /** "-5~12℃", a single bound like "12℃", or "" when no temps are set. */
 function tempRange(low?: string, high?: string): string {
@@ -185,9 +186,9 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
     favorite: {
       on: favOnly,
       toggle: () => {
+        keepRowInPlace();
         setFavOnly((v) => !v);
         setSwipeOpenId(null);
-        window.scrollTo(0, 0);
       },
     },
     searching: searchOpen,
@@ -343,10 +344,8 @@ function TripRow({
         <>
           <SwipeHeartButton
             on={Boolean(trip.favorite)}
-            onToggle={() => {
-              onToggleFavorite();
-              close();
-            }}
+            onToggle={onToggleFavorite}
+            onDone={close}
           />
           <SwipeDeleteButton rowOpen={rowOpen} onDelete={onDelete} />
         </>

@@ -116,10 +116,8 @@ export function GearRow({
                 {swipeActions.onToggleFavorite && (
                   <SwipeHeartButton
                     on={Boolean(swipeActions.favorite)}
-                    onToggle={() => {
-                      swipeActions.onToggleFavorite?.();
-                      close();
-                    }}
+                    onToggle={() => swipeActions.onToggleFavorite?.()}
+                    onDone={close}
                   />
                 )}
                 <button

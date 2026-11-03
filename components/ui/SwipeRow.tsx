@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { animate, motion, useDragControls, useMotionValue, useTransform } from "framer-motion";
 import { Check, Heart, Trash2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { hapticTick } from "@/lib/haptics";
 
 type OpenState = "closed" | "right" | "left";
 
@@ -107,6 +108,7 @@ export function SwipeRow({
   return (
     <div
       data-swipe-row
+      data-row-id={id}
       data-swipe-band={edgeBand || undefined}
       className="relative overflow-hidden"
     >
@@ -195,17 +197,71 @@ export function SwipeRow({
  * Destructive action button for a SwipeRow: first tap arms (turns into a
  * check), second tap confirms. Re-arms to safe whenever the row closes.
  */
-/** Swipe action: heart / un-heart (the bottom bar's ♥ shows only hearted rows). */
-export function SwipeHeartButton({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+const BURST_DOTS = [0, 60, 120, 180, 240, 300];
+
+/** Swipe action: heart / un-heart (the bottom bar's ♥ shows only hearted
+ *  rows). Hearting plays a short pop — the heart swells and bursts — before
+ *  `onDone` closes the row; un-hearting closes right away. */
+export function SwipeHeartButton({
+  on,
+  onToggle,
+  onDone,
+}: {
+  on: boolean;
+  onToggle: () => void;
+  onDone: () => void;
+}) {
+  const [burst, setBurst] = useState(0);
   return (
     <button
       type="button"
       aria-label={on ? "하트 해제" : "하트"}
       aria-pressed={on}
-      onClick={onToggle}
-      className="grid w-14 touch-manipulation place-items-center bg-[#e5e5ea] text-black active:opacity-80 dark:bg-[#48484a] dark:text-white"
+      onClick={() => {
+        onToggle();
+        if (on) {
+          window.setTimeout(onDone, 140);
+          return;
+        }
+        setBurst((b) => b + 1);
+        hapticTick();
+        window.setTimeout(onDone, 560);
+      }}
+      className="grid w-14 touch-manipulation place-items-center bg-[#e5e5ea] text-black dark:bg-[#48484a] dark:text-white"
     >
-      <Heart size={20} strokeWidth={2.1} fill={on ? "currentColor" : "none"} />
+      <span className="relative grid place-items-center">
+        {burst > 0 && (
+          <span key={burst} aria-hidden="true" className="pointer-events-none absolute inset-0">
+            <motion.span
+              className="absolute left-1/2 top-1/2 -ml-3 -mt-3 h-6 w-6 rounded-full border-2 border-current"
+              initial={{ scale: 0.3, opacity: 0.8 }}
+              animate={{ scale: 1.9, opacity: 0 }}
+              transition={{ duration: 0.42, ease: "easeOut", delay: 0.06 }}
+            />
+            {BURST_DOTS.map((deg) => {
+              const a = (deg * Math.PI) / 180;
+              return (
+                <motion.span
+                  key={deg}
+                  className="absolute left-1/2 top-1/2 -ml-[2px] -mt-[2px] h-1 w-1 rounded-full bg-current"
+                  initial={{ x: 0, y: 0, scale: 1, opacity: 0 }}
+                  animate={{ x: Math.cos(a) * 19, y: Math.sin(a) * 19, scale: 0.5, opacity: [0, 1, 0] }}
+                  transition={{ duration: 0.44, ease: "easeOut", delay: 0.1 }}
+                />
+              );
+            })}
+          </span>
+        )}
+        <motion.span
+          key={`h${burst}`}
+          className="grid place-items-center"
+          initial={false}
+          animate={burst > 0 ? { scale: [1, 1.5, 0.9, 1.06, 1] } : { scale: 1 }}
+          transition={{ duration: 0.5, times: [0, 0.3, 0.55, 0.78, 1], ease: "easeOut" }}
+        >
+          <Heart size={20} strokeWidth={2.1} fill={on ? "currentColor" : "none"} />
+        </motion.span>
+      </span>
     </button>
   );
 }

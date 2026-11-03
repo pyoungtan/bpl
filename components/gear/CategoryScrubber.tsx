@@ -33,8 +33,9 @@ function jumpTo(cat: string) {
     (s) => s.dataset.gearCat === cat && s.offsetParent !== null,
   );
   if (!el) return;
-  // the header's own top padding (pt-6) keeps the name clear of the bar
-  const y = el.getBoundingClientRect().top + window.scrollY - (contentTop() - 20);
+  // the header's own top padding (pt-6) keeps the name clear of the bar and
+  // of the fade under it
+  const y = el.getBoundingClientRect().top + window.scrollY - (contentTop() - 16);
   quietScrollTuck();
   window.scrollTo({ top: Math.max(0, y), behavior: "instant" });
   jumpedAt = window.scrollY;

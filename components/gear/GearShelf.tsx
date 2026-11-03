@@ -33,6 +33,7 @@ import type { GearItem, WeightUnit } from "@/lib/types";
 import { computeStats } from "@/lib/calc";
 import { formatPrice, formatWeight, formatWeightSmart } from "@/lib/units";
 import { cn } from "@/lib/cn";
+import { keepRowInPlace } from "@/lib/scrollAnchor";
 import { useTopBar } from "../TopBar";
 import { GlassButton, InkButton } from "../ui/Glass";
 import { QtyStepper } from "../ui/QtyStepper";
@@ -230,9 +231,9 @@ export function GearShelf({
     favorite: {
       on: favOnly,
       toggle: () => {
+        keepRowInPlace();
         setFavOnly((v) => !v);
         setSwipeOpenId(null);
-        window.scrollTo(0, 0);
       },
     },
     onSearch: toggleSearch,
