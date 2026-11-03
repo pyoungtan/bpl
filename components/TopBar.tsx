@@ -347,8 +347,8 @@ function TabGlyph({ k, on }: { k: TabKey; on: boolean }) {
   const holes = g.holes ?? [];
   return (
     <svg
-      width={25}
-      height={25}
+      width={26}
+      height={26}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -385,7 +385,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "map", label: "Map" },
 ];
 
-/** Touch light that follows the finger across one glass island. */
+/** Touch light that follows the finger across the glass bar. */
 function glow(e: React.PointerEvent<HTMLElement>, on: boolean) {
   const el = e.currentTarget;
   const r = el.getBoundingClientRect();
@@ -400,11 +400,49 @@ const glowHandlers = {
   onPointerLeave: (e: React.PointerEvent<HTMLElement>) => glow(e, false),
 };
 
+/** Press feedback: the icon sinks while held and springs back on release.
+ *  The sink always completes first, so even a quick tap reads as a press. */
+const PRESS_IN = 90;
+const pressAnims = new WeakMap<Element, { anim: Animation; at: number }>();
+function pressIcon(e: React.PointerEvent<HTMLElement>, down: boolean) {
+  const icon = e.currentTarget.querySelector("[data-press]");
+  if (!icon) return;
+  const held = pressAnims.get(icon);
+  if (down) {
+    held?.anim.cancel();
+    const anim = icon.animate([{ transform: "scale(1)" }, { transform: "scale(0.84)" }], {
+      duration: PRESS_IN,
+      easing: "ease-out",
+      fill: "forwards",
+    });
+    pressAnims.set(icon, { anim, at: performance.now() });
+    return;
+  }
+  if (!held) return;
+  pressAnims.delete(icon);
+  const out = icon.animate([{ transform: "scale(0.84)" }, { transform: "scale(1)" }], {
+    duration: 240,
+    delay: Math.max(0, PRESS_IN - (performance.now() - held.at)),
+    easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+    fill: "forwards",
+  });
+  out.onfinish = () => {
+    held.anim.cancel();
+    out.cancel();
+  };
+}
+const pressHandlers = {
+  onPointerDown: (e: React.PointerEvent<HTMLElement>) => pressIcon(e, true),
+  onPointerUp: (e: React.PointerEvent<HTMLElement>) => pressIcon(e, false),
+  onPointerCancel: (e: React.PointerEvent<HTMLElement>) => pressIcon(e, false),
+  onPointerLeave: (e: React.PointerEvent<HTMLElement>) => pressIcon(e, false),
+};
+
 /**
- * Two floating glass islands, a little apart: the tabs (one selection platter
- * glides between them) and the screen's actions (♥, +). Scrolling down
- * shrinks them (`compact`), scrolling back restores them; `hidden` slides them
- * away for modes that bring their own bottom actions.
+ * Floating glass capsule: the tabs (one selection platter glides between
+ * them), then the screen's actions (♥, +). Scrolling down shrinks it
+ * (`compact`), scrolling back restores it; `hidden` slides it away for modes
+ * that bring their own bottom actions.
  */
 function BottomNav({
   tab,
@@ -426,8 +464,6 @@ function BottomNav({
   fav?: { on: boolean; toggle: () => void };
   favLabel: string;
 }) {
-  const island =
-    "gnb-island glass pointer-events-auto relative flex h-[var(--gnb-h)] rounded-full p-[5px] transition-[height] duration-[var(--dur-morph)] ease-[var(--spring-morph)]";
   const item =
     "relative grid h-full w-[var(--gnb-item)] touch-manipulation place-items-center rounded-full text-label outline-none transition-[width] duration-[var(--dur-morph)] ease-[var(--spring-morph)]";
   const iconWrap =
@@ -441,80 +477,88 @@ function BottomNav({
           bottom: "var(--bar-bottom)",
           // sizes live here, not in the stylesheet: without them the items
           // would collapse to their icons
-          "--gnb-h": compact ? "50px" : "58px",
-          "--gnb-item": compact ? "52px" : "58px",
+          "--gnb-h": compact ? "52px" : "62px",
+          "--gnb-item": compact ? "54px" : "62px",
         } as React.CSSProperties
       }
       data-compact={compact || undefined}
       data-hidden={hidden || undefined}
       inert={hidden}
     >
-      <nav aria-label="하단 바" className="flex gap-4">
-        <div className={island} {...glowHandlers}>
-          <span className="g-glow" />
-          {/* one selection platter that glides between the tabs */}
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-y-[5px] left-[5px] w-[var(--gnb-item)] rounded-full bg-black/[0.075] dark:bg-white/[0.14]"
-            style={{
-              transform: `translateX(calc(var(--gnb-item) * ${Math.max(0, TABS.findIndex((t) => t.key === tab))}))`,
-              transition:
-                "transform 0.45s var(--ease-tuck), width var(--dur-morph) var(--spring-morph)",
-            }}
-          />
-          {TABS.map((t) => {
-            const on = t.key === tab;
-            return (
-              <button
-                key={t.key}
-                type="button"
-                aria-label={t.label}
-                aria-current={on ? "page" : undefined}
-                onClick={() => onTab(t.key)}
-                className={item}
-              >
-                <span className={iconWrap}>
+      <nav
+        aria-label="하단 바"
+        className="gnb-island glass pointer-events-auto relative flex h-[var(--gnb-h)] rounded-full p-[5px] transition-[height] duration-[var(--dur-morph)] ease-[var(--spring-morph)]"
+        {...glowHandlers}
+      >
+        <span className="g-glow" />
+        {/* one selection platter that glides between the tabs */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-[5px] left-[5px] w-[var(--gnb-item)] rounded-full bg-black/[0.075] dark:bg-white/[0.14]"
+          style={{
+            transform: `translateX(calc(var(--gnb-item) * ${Math.max(0, TABS.findIndex((t) => t.key === tab))}))`,
+            transition:
+              "transform 0.45s var(--ease-tuck), width var(--dur-morph) var(--spring-morph)",
+          }}
+        />
+        {TABS.map((t) => {
+          const on = t.key === tab;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              aria-label={t.label}
+              aria-current={on ? "page" : undefined}
+              onClick={() => onTab(t.key)}
+              className={item}
+              {...pressHandlers}
+            >
+              <span className={iconWrap}>
+                <span data-press className="grid place-items-center">
                   <TabGlyph k={t.key} on={on} />
                 </span>
-              </button>
-            );
-          })}
-        </div>
-        <div className={island} {...glowHandlers}>
-          <span className="g-glow" />
-          {/* ♥: hearted only — filled while on; folds away where there's
-              nothing to heart (a trip's own page, the map) */}
-          <button
-            type="button"
-            aria-label={favLabel}
-            aria-pressed={Boolean(fav?.on)}
-            aria-hidden={!fav}
-            tabIndex={fav ? undefined : -1}
-            onClick={() => fav?.toggle()}
-            className={cn(
-              item,
-              "transition-[width,opacity]",
-              !fav && "pointer-events-none w-0 opacity-0",
-            )}
-          >
-            <span className={iconWrap}>
-              <Heart size={25} strokeWidth={1.8} fill={fav?.on ? "currentColor" : "none"} />
+              </span>
+            </button>
+          );
+        })}
+        {/* ♥: hearted only — filled while on; folds away where there's
+            nothing to heart (a trip's own page, the map) */}
+        <button
+          type="button"
+          aria-label={favLabel}
+          aria-pressed={Boolean(fav?.on)}
+          aria-hidden={!fav}
+          tabIndex={fav ? undefined : -1}
+          onClick={() => fav?.toggle()}
+          className={cn(
+            item,
+            "transition-[width,opacity]",
+            !fav && "pointer-events-none w-0 opacity-0",
+          )}
+          {...pressHandlers}
+        >
+          <span className={iconWrap}>
+            <span data-press className="grid place-items-center">
+              <Heart size={26} strokeWidth={1.8} fill={fav?.on ? "currentColor" : "none"} />
             </span>
-          </button>
-          {/* plain + (drawn a touch larger: a bare cross reads small next to
-              the boxed icons) */}
-          <button
-            type="button"
-            aria-label={addLabel ?? "Add"}
-            onClick={() => onAdd?.()}
-            disabled={!onAdd}
-            className={cn(item, "disabled:opacity-35")}
-          >
-            <span className={iconWrap}>
-              <Plus size={29} strokeWidth={1.7} />
+          </span>
+        </button>
+        {/* plain + (drawn a touch larger: a bare cross reads small next to
+            the boxed icons) */}
+        <button
+          type="button"
+          aria-label={addLabel ?? "Add"}
+          onClick={() => onAdd?.()}
+          disabled={!onAdd}
+          className={cn(item, "disabled:opacity-35")}
+          {...pressHandlers}
+        >
+          <span className={iconWrap}>
+            <span data-press className="grid place-items-center">
+              <Plus size={30} strokeWidth={1.7} />
             </span>
-          </button>
-        </div>
+          </span>
+        </button>
       </nav>
     </div>
   );

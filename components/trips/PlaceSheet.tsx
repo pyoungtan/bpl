@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MapPin, Search, X } from "lucide-react";
+import { MapPin, PencilLine, Search, X } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { PinMap } from "../map/PinMap";
 import { Sheet } from "../ui/Sheet";
@@ -16,8 +16,10 @@ type Pos = { lat: number; lng: number };
 
 /**
  * A trip's place: search for it, or tap the map to drop a pin (the name is
- * filled in from what's there, and can be edited). Saving stores the name
- * and the coordinates, so the Map tab doesn't have to look it up again.
+ * filled in from what's there, and can be edited). When a search finds
+ * nothing, the typed words can be kept as the name as they are — then pin it
+ * on the map, or leave it unplaced. Saving stores the name and the
+ * coordinates, so the Map tab doesn't have to look it up again.
  */
 export function PlaceSheet({
   open,
@@ -36,6 +38,9 @@ export function PlaceSheet({
   const [results, setResults] = useState<Place[] | null>(null);
   const [busy, setBusy] = useState<"search" | "pin" | null>(null);
   const reverseSeq = useRef(0);
+  /** The name is the user's own (typed, or kept from the search box): a pin
+   *  dropped afterwards places it without renaming it. */
+  const [ownName, setOwnName] = useState(false);
 
   // Each opening starts from the trip as it is.
   const [wasOpen, setWasOpen] = useState(open);
@@ -46,6 +51,7 @@ export function PlaceSheet({
       setPos(trip?.lat != null && trip?.lng != null ? { lat: trip.lat, lng: trip.lng } : null);
       setQuery("");
       setResults(null);
+      setOwnName(Boolean(trip?.place?.trim()));
     }
   }
 
@@ -95,10 +101,25 @@ export function PlaceSheet({
   function choose(p: Place) {
     setPos({ lat: p.lat, lng: p.lng });
     setName(p.name);
+    setOwnName(false);
     setQuery("");
     setResults(null);
     (document.activeElement as HTMLElement | null)?.blur();
   }
+
+  /** Keep the searched words as the place's name, as typed. */
+  function keepTyped() {
+    setName(q);
+    setOwnName(true);
+    setQuery("");
+    setResults(null);
+    (document.activeElement as HTMLElement | null)?.blur();
+  }
+
+  const ownNameRef = useRef(ownName);
+  useEffect(() => {
+    ownNameRef.current = ownName;
+  }, [ownName]);
 
   function pin(lat: number, lng: number) {
     setPos({ lat, lng });
@@ -108,7 +129,7 @@ export function PlaceSheet({
     fetch(`/api/geocode?lat=${lat}&lng=${lng}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((j: Place | null) => {
-        if (seq === reverseSeq.current && j?.name) setName(j.name);
+        if (seq === reverseSeq.current && j?.name && !ownNameRef.current) setName(j.name);
       })
       .catch(() => {})
       .finally(() => {
@@ -166,12 +187,14 @@ export function PlaceSheet({
 
       {results && (
         <div className="mt-1">
-          {results.length === 0 ? (
-            <p className="px-5 py-4 text-[14px] text-secondary">
-              {busy === "search" ? "찾는 중…" : "검색 결과가 없어요."}
+          {results.length === 0 && (
+            <p className="px-5 pb-1 pt-3 text-[14px] text-secondary">
+              {busy === "search"
+                ? "찾는 중…"
+                : "검색 결과가 없어요. 이 이름 그대로 정하거나, 아래 지도를 눌러 핀을 찍어 보세요."}
             </p>
-          ) : (
-            results.map((r) => (
+          )}
+          {results.map((r) => (
               <button
                 key={`${r.lat},${r.lng}`}
                 type="button"
@@ -188,7 +211,19 @@ export function PlaceSheet({
                   </div>
                 </div>
               </button>
-            ))
+          ))}
+          {busy !== "search" && q && (
+            <button
+              type="button"
+              onClick={keepTyped}
+              className="flex w-full items-center gap-3 px-5 py-2.5 text-left active:opacity-60"
+            >
+              <PencilLine size={16} className="shrink-0 text-tertiary" />
+              <div className="min-w-0 flex-1 truncate text-[15px] leading-tight text-label">
+                <span className="font-semibold">‘{q}’</span>
+                <span className="text-secondary"> 이름으로 정하기</span>
+              </div>
+            </button>
           )}
         </div>
       )}
@@ -197,7 +232,11 @@ export function PlaceSheet({
         <PinMap pos={pos} onPick={pin} />
       </div>
       <p className="mt-2 px-5 text-[12.5px] text-tertiary">
-        {busy === "pin" ? "이 위치의 이름을 찾는 중…" : "지도를 눌러 위치를 찍을 수 있어요."}
+        {busy === "pin"
+          ? "이 위치의 이름을 찾는 중…"
+          : ownName && name.trim()
+            ? `지도를 눌러 ‘${name.trim()}’의 위치를 찍을 수 있어요.`
+            : "지도를 눌러 위치를 찍을 수 있어요."}
       </p>
 
       <div className="mt-3 px-4">
@@ -205,7 +244,10 @@ export function PlaceSheet({
           <MapPin size={17} className="shrink-0 text-tertiary" />
           <input
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              setOwnName(Boolean(e.target.value.trim()));
+            }}
             placeholder="장소 이름"
             enterKeyHint="done"
             className="min-w-0 flex-1 bg-transparent text-[16px] text-label outline-none placeholder:text-tertiary"
@@ -215,6 +257,7 @@ export function PlaceSheet({
               type="button"
               onClick={() => {
                 setName("");
+                setOwnName(false);
                 setPos(null);
               }}
               aria-label="장소 지우기"
