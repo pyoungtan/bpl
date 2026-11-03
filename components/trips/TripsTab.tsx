@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { ArrowDown, ArrowUp, ChevronRight, Map, Plus, Search, X } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { Trip } from "@/lib/types";
@@ -23,19 +24,20 @@ import { SwipeRow, SwipeDeleteButton, SwipeHeartButton } from "../ui/SwipeRow";
 import { TripDetail } from "./TripDetail";
 import { TbdTag } from "./TbdTag";
 
-type TripSort = "date" | "created" | "companions";
+type TripSort = "date" | "created";
 
 const SORTS: { key: TripSort; label: string }[] = [
   { key: "date", label: "Date" },
   { key: "created", label: "Created" },
-  { key: "companions", label: "With" },
 ];
 
 const SORT_KEY = "bpl-trip-sort";
 const SORT_DIR_KEY = "bpl-trip-sort-dir";
 type SortDir = "asc" | "desc";
-/** Each sort's natural order: newest first for dates, 가나다 for names. */
-const DEFAULT_DIR: Record<TripSort, SortDir> = { date: "desc", created: "desc", companions: "asc" };
+/** Each sort's natural order: newest first. */
+const DEFAULT_DIR: Record<TripSort, SortDir> = { date: "desc", created: "desc" };
+/** With: an on/off layer over any sort — each row shows who came along. */
+const WITH_KEY = "bpl-trip-with";
 
 export function TripsTab({
   openTripId,
@@ -109,8 +111,21 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
   const [sort, setSort] = useState<TripSort>(() => {
     if (typeof window === "undefined") return "created";
     const v = localStorage.getItem(SORT_KEY);
-    return v === "date" || v === "companions" ? v : "created";
+    return v === "date" ? v : "created";
   });
+  const [showWith, setShowWith] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(WITH_KEY) === "1";
+  });
+  function toggleWith() {
+    const next = !showWith;
+    setShowWith(next);
+    try {
+      localStorage.setItem(WITH_KEY, next ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }
   const [dir, setDir] = useState<SortDir>(() => {
     if (typeof window === "undefined") return "desc";
     const v = localStorage.getItem(SORT_DIR_KEY);
@@ -136,25 +151,14 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
     const flip = dir === "asc" ? 1 : -1;
     // tripOrder is newest-created first
     if (sort === "created") return dir === "desc" ? ids : [...ids].reverse();
-    if (sort === "date") {
-      // undated trips sink to the bottom either way
-      return [...ids].sort((a, b) => {
-        const sa = tripStart(trips[a]) ?? "";
-        const sb = tripStart(trips[b]) ?? "";
-        if (!sa && !sb) return 0;
-        if (!sa) return 1;
-        if (!sb) return -1;
-        return sa.localeCompare(sb) * flip;
-      });
-    }
-    // 함께한 사람 가나다순; trips without companions sink to the bottom.
+    // by date: undated trips sink to the bottom either way
     return [...ids].sort((a, b) => {
-      const ca = tripCompanions(trips[a]).join(", ");
-      const cb = tripCompanions(trips[b]).join(", ");
-      if (!ca && !cb) return 0;
-      if (!ca) return 1;
-      if (!cb) return -1;
-      return ca.localeCompare(cb, "ko") * flip;
+      const sa = tripStart(trips[a]) ?? "";
+      const sb = tripStart(trips[b]) ?? "";
+      if (!sa && !sb) return 0;
+      if (!sa) return 1;
+      if (!sb) return -1;
+      return sa.localeCompare(sb) * flip;
     });
   }, [tripOrder, trips, sort, dir]);
 
@@ -180,7 +184,7 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
       <TripRow
         key={id}
         trip={t}
-        showCompanions={sort === "companions" && !tbdOnly}
+        showCompanions={showWith}
         onOpen={() => {
           if (swipeOpenId) {
             setSwipeOpenId(null);
@@ -226,6 +230,7 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
         group: i === 0,
         onSelect: () => changeSort(s.key),
       })),
+      { id: "with", label: "With", checked: showWith, onSelect: toggleWith },
     ],
   }, active);
 
@@ -279,6 +284,10 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
                 </span>
               </TagChip>
             ))}
+            {/* not a sort: shows who came along, over whichever sort is on */}
+            <TagChip active={showWith} onClick={toggleWith}>
+              With
+            </TagChip>
             {(hasTbd || tbdOnly) && (
               <TagChip active={tbdOnly} onClick={() => setTbdOnly((v) => !v)}>
                 TBD
@@ -341,7 +350,7 @@ function TripRow({
   onSwipeOpenChange,
 }: {
   trip: Trip;
-  /** 함께한 사람 sort active → companion tags show under the date/temp line. */
+  /** With on → companion tags slide in under the date/temp line. */
   showCompanions: boolean;
   onOpen: () => void;
   onDelete: () => void;
@@ -398,18 +407,29 @@ function TripRow({
               </span>
             )}
           </div>
-          {showCompanions && tripCompanions(trip).length > 0 && (
-            <div className="mt-1 flex flex-wrap items-center gap-1">
-              {tripCompanions(trip).map((name, i) => (
-                <span
-                  key={`${name}-${i}`}
-                  className="rounded-full bg-fill px-2 py-[1.5px] text-[12px] font-medium text-secondary"
-                >
-                  {name}
-                </span>
-              ))}
-            </div>
-          )}
+          <AnimatePresence initial={false}>
+            {showCompanions && tripCompanions(trip).length > 0 && (
+              <motion.div
+                key="with"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                className="overflow-hidden"
+              >
+                <div className="flex flex-wrap items-center gap-1 pt-1">
+                  {tripCompanions(trip).map((name, i) => (
+                    <span
+                      key={`${name}-${i}`}
+                      className="rounded-full bg-fill px-2 py-[1.5px] text-[12px] font-medium text-secondary"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         <span className="min-w-[52px] shrink-0 whitespace-nowrap text-right tabular text-[14px] text-secondary">
           {formatWeightSmart(totalG, unit)}
