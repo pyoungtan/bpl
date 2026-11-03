@@ -78,7 +78,7 @@ function jumpTo(sf: Surface, cat: string, lead: number) {
  * Between scrubs it follows the list's scroll position, wordlessly.
  *
  * By default it drives the page; give it `scroller` to drive that scroll
- * area instead (a sheet's list), with the veil over just that area.
+ * area instead (a sheet's list), with the veil over that sheet.
  */
 export function CategoryScrubber({
   cats,
@@ -90,7 +90,7 @@ export function CategoryScrubber({
   lead?: number;
 }) {
   const surface = () => (scroller?.current ? areaSurface(scroller.current) : pageSurface());
-  /** In a scroll area, the veil covers just that area (viewport rect). */
+  /** With a scroller, the veil covers its sheet (viewport rect). */
   const [area, setArea] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const [index, setIndex] = useState(0);
   const [hint, setHint] = useState<string | null>(null);
@@ -143,7 +143,9 @@ export function CategoryScrubber({
   function showHint(text: string, hold: boolean) {
     window.clearTimeout(hintTimer.current);
     if (!hint && scroller?.current) {
-      const r = scroller.current.getBoundingClientRect();
+      // the whole sheet panel (not just its list), corners and all
+      const panel = scroller.current.closest<HTMLElement>("[role=dialog]") ?? scroller.current;
+      const r = panel.getBoundingClientRect();
       setArea({ top: r.top, left: r.left, width: r.width, height: r.height });
     }
     setHint(text);
@@ -275,7 +277,7 @@ export function CategoryScrubber({
       {/* the category you're on: a faint page-coloured veil over the list
           with the name in the middle, fading out a moment after you let go.
           Under the bars (z-40), so the scrubber itself stays clear; in a
-          sheet, over just its list. Portalled: the top bar's transforms would
+          sheet, over the whole sheet (a lighter veil). Portalled: the top bar's transforms would
           otherwise anchor it. */}
       {mounted &&
         createPortal(
@@ -283,7 +285,7 @@ export function CategoryScrubber({
             aria-hidden="true"
             className={cn(
               "pointer-events-none fixed grid place-items-center",
-              scroller ? "z-[60]" : "inset-0 z-40",
+              scroller ? "z-[60] rounded-[32px]" : "inset-0 z-40",
             )}
             style={{
               ...(scroller ? (area ?? { top: 0, left: 0, width: 0, height: 0 }) : null),
@@ -292,7 +294,8 @@ export function CategoryScrubber({
               transition: hint
                 ? "opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1)"
                 : "opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-              background: "color-mix(in srgb, var(--bg) 60%, transparent)",
+              // lighter over a sheet: it already sits on a dimmed page
+              background: `color-mix(in srgb, var(--bg) ${scroller ? 45 : 60}%, transparent)`,
               // a touch of blur so the list recedes behind the name
               WebkitBackdropFilter: "blur(2px)",
               backdropFilter: "blur(2px)",
