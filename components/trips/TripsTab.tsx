@@ -18,7 +18,7 @@ function tempRange(low?: string, high?: string): string {
 import { useTopBar } from "../TopBar";
 import { InkButton } from "../ui/Glass";
 import { TagChip } from "../ui/TagChip";
-import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
+import { SwipeRow, SwipeDeleteButton, SwipeHeartButton } from "../ui/SwipeRow";
 import { TripDetail } from "./TripDetail";
 import { TbdTag } from "./TbdTag";
 
@@ -91,6 +91,9 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
   const tripOrder = useAppStore((s) => s.tripOrder);
   const createTrip = useAppStore((s) => s.createTrip);
   const deleteTrip = useAppStore((s) => s.deleteTrip);
+  const updateTrip = useAppStore((s) => s.updateTrip);
+  // ♥ in the bottom bar: only hearted trips (not remembered).
+  const [favOnly, setFavOnly] = useState(false);
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -140,14 +143,15 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
 
   const q = query.trim().toLowerCase();
   const shownIds = useMemo(() => {
-    if (!q) return sortedIds;
-    return sortedIds.filter((id) => {
+    const ids = favOnly ? sortedIds.filter((id) => trips[id].favorite) : sortedIds;
+    if (!q) return ids;
+    return ids.filter((id) => {
       const t = trips[id];
       return [t.name, t.place ?? "", ...tripCompanions(t)].some((v) =>
         v.toLowerCase().includes(q),
       );
     });
-  }, [sortedIds, trips, q]);
+  }, [sortedIds, trips, q, favOnly]);
   // Settled trips first; TBD ones get their own group at the bottom.
   const plannedIds = shownIds.filter((id) => !trips[id].tbd);
   const tbdIds = shownIds.filter((id) => trips[id].tbd);
@@ -168,6 +172,7 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
           onOpen(id);
         }}
         onDelete={() => deleteTrip(id)}
+        onToggleFavorite={() => updateTrip(id, { favorite: !t.favorite })}
         swipeOpenId={swipeOpenId}
         onSwipeOpenChange={setSwipeOpenId}
       />
@@ -177,6 +182,14 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
   useTopBar({
     onAdd: () => onOpen(createTrip()),
     addLabel: "새 트립",
+    favorite: {
+      on: favOnly,
+      toggle: () => {
+        setFavOnly((v) => !v);
+        setSwipeOpenId(null);
+        window.scrollTo(0, 0);
+      },
+    },
     searching: searchOpen,
     onSearch: () => {
       setSearchOpen((o) => !o);
@@ -268,7 +281,12 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
                 )}
               </>
             )}
-            {tbdOnly && !q && tbdIds.length === 0 && (
+            {favOnly && !q && shownIds.length === 0 && (
+              <p className="px-4 py-12 text-center text-[15px] text-secondary">
+                하트를 누른 트립이 없어요. 트립을 왼쪽으로 밀어 하트를 눌러 보세요.
+              </p>
+            )}
+            {tbdOnly && !favOnly && !q && tbdIds.length === 0 && (
               <p className="px-4 py-12 text-center text-[15px] text-secondary">
                 계획 미정인 트립이 없어요.
               </p>
@@ -291,6 +309,7 @@ function TripRow({
   showCompanions,
   onOpen,
   onDelete,
+  onToggleFavorite,
   swipeOpenId,
   onSwipeOpenChange,
 }: {
@@ -299,6 +318,7 @@ function TripRow({
   showCompanions: boolean;
   onOpen: () => void;
   onDelete: () => void;
+  onToggleFavorite: () => void;
   swipeOpenId: string | null;
   onSwipeOpenChange: (id: string | null) => void;
 }) {
@@ -316,11 +336,20 @@ function TripRow({
       id={trip.id}
       openId={swipeOpenId}
       onOpenChange={onSwipeOpenChange}
-      rightWidth={56}
+      rightWidth={112}
       edgeBand={12}
       bgClassName="bg-bg"
-      renderRight={(_close, rowOpen) => (
-        <SwipeDeleteButton rowOpen={rowOpen} onDelete={onDelete} />
+      renderRight={(close, rowOpen) => (
+        <>
+          <SwipeHeartButton
+            on={Boolean(trip.favorite)}
+            onToggle={() => {
+              onToggleFavorite();
+              close();
+            }}
+          />
+          <SwipeDeleteButton rowOpen={rowOpen} onDelete={onDelete} />
+        </>
       )}
     >
       <button

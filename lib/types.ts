@@ -59,6 +59,8 @@ export interface Trip {
   memoLocked?: boolean;
   /** Plan not settled yet (TBD): tagged in the list and grouped at its bottom. */
   tbd?: boolean;
+  /** Hearted: the bottom bar's ♥ on the trip list shows only these. */
+  favorite?: boolean;
   /** Manual extra weight in grams, counted into totals without picking gear
    *  (e.g. "I remember carrying ~2kg of misc"). */
   extraWeightG?: number;

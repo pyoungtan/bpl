@@ -8,10 +8,10 @@ import { quietScrollTuck } from "../TopBar";
 /** Finger travel per category — long enough that each step is a deliberate
  *  click rather than a glide. */
 const STEP = 28;
+/** Extra travel (in steps) past the halfway line before a step counts. */
+const HYST = 0.15;
 /** Tick spacing. */
 const TICK = 18;
-/** How far the row gives toward the next step before it clicks over. */
-const GIVE = 0.12;
 /** The click: a quick plain ease — no overshoot, so fast scrubs stay calm. */
 const SNAP = "transform 0.18s ease-out";
 const noop = () => () => {};
@@ -49,7 +49,6 @@ function jumpTo(cat: string) {
  */
 export function CategoryScrubber({ cats }: { cats: string[] }) {
   const [index, setIndex] = useState(0);
-  const [raw, setRaw] = useState<number | null>(null); // fractional while dragging
   const [hint, setHint] = useState<string | null>(null);
   const mounted = useSyncExternalStore(noop, () => true, () => false);
   const max = Math.max(0, cats.length - 1);
@@ -132,14 +131,16 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
     let r = s.start - dx / STEP;
     if (r < 0) r *= 0.25;
     else if (r > max) r = max + (r - max) * 0.25;
-    const i = Math.max(0, Math.min(max, Math.round(r)));
+    // Hysteresis: a step needs the finger well past the halfway line, so a
+    // touch wobbling right on it can't flick back and forth.
+    const i =
+      Math.abs(r - s.idx) > 0.5 + HYST ? Math.max(0, Math.min(max, Math.round(r))) : s.idx;
     if (i !== s.idx) {
       s.idx = i;
       hapticTick();
       setIndex(i);
       jumpTo(cats[i]); // the list follows before you let go
     }
-    setRaw(r);
     showHint(cats[i], true);
   };
   const finish = (e: React.PointerEvent<HTMLDivElement>, cancelled: boolean) => {
@@ -147,7 +148,6 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
     if (e.pointerId !== s.pid) return;
     s.pid = -1;
     dragging.current = false;
-    setRaw(null);
     if (cancelled) {
       setHint(null);
       return;
@@ -161,8 +161,10 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
     step(cur + Math.round((e.clientX - (r.left + r.width / 2)) / TICK));
   };
 
-  // Detent: between steps the row barely gives, then snaps a whole tick.
-  const pos = raw === null ? cur : cur + (raw - cur) * GIVE;
+  // Pure detent: the row holds still between steps and only ever moves a
+  // whole tick. (Following the finger even slightly made it quiver under a
+  // real touch, whose position wobbles by a pixel or two.)
+  const pos = cur;
 
   return (
     <div className="relative">
@@ -174,7 +176,7 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
         aria-valuemax={max}
         aria-valuenow={cur}
         aria-valuetext={cats[cur]}
-        className="relative h-11 w-[min(216px,calc(100vw-150px))] touch-pan-y select-none overflow-hidden rounded-full outline-none"
+        className="relative h-11 w-[min(216px,calc(100vw-150px))] touch-none select-none overflow-hidden rounded-full outline-none"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={(e) => finish(e, false)}
@@ -228,7 +230,7 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
             className="pointer-events-none fixed inset-0 z-[55] grid place-items-center transition-opacity duration-200 ease-out"
             style={{ opacity: hint ? 1 : 0 }}
           >
-            <span className="glass-strong flex h-12 items-center whitespace-nowrap rounded-full px-5 text-[19px] font-semibold tracking-[-0.01em] text-label">
+            <span className="glass-strong flex h-[60px] items-center whitespace-nowrap rounded-full px-9 text-[19px] font-semibold tracking-[-0.01em] text-label">
               {hint ?? cats[cur]}
             </span>
           </div>,

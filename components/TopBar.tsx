@@ -386,8 +386,8 @@ function BottomNav({
   onTab,
   onAdd,
   addLabel,
-  favOn,
-  onFav,
+  fav,
+  favLabel,
 }: {
   tab: TabKey;
   compact: boolean;
@@ -395,8 +395,9 @@ function BottomNav({
   onTab: (t: TabKey) => void;
   onAdd?: () => void;
   addLabel?: string;
-  favOn: boolean;
-  onFav: () => void;
+  /** The screen's hearted-only toggle; without one the ♥ folds away. */
+  fav?: { on: boolean; toggle: () => void };
+  favLabel: string;
 }) {
   const navRef = useRef<HTMLDivElement>(null);
   const glow = (e: React.PointerEvent, on: boolean) => {
@@ -438,6 +439,16 @@ function BottomNav({
         onPointerLeave={(e) => glow(e, false)}
       >
         <span className="g-glow" />
+        {/* one selection platter that glides between the tabs */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-[5px] left-[5px] w-[var(--gnb-item)] rounded-full bg-black/[0.075] dark:bg-white/[0.14]"
+          style={{
+            transform: `translateX(calc(var(--gnb-item) * ${TABS.findIndex((t) => t.key === tab)}))`,
+            transition:
+              "transform 0.45s var(--ease-tuck), width var(--dur-morph) var(--spring-morph)",
+          }}
+        />
         {TABS.map((t) => {
           const on = t.key === tab;
           return (
@@ -449,29 +460,29 @@ function BottomNav({
               onClick={() => onTab(t.key)}
               className={item}
             >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "pointer-events-none absolute inset-0 -z-10 rounded-full bg-black/[0.075] transition-opacity duration-300 ease-out dark:bg-white/[0.14]",
-                  on ? "opacity-100" : "opacity-0",
-                )}
-              />
               <span className={cn(iconWrap, "[[data-compact]_&]:scale-[0.9]")}>
                 <TabGlyph k={t.key} on={on} />
               </span>
             </button>
           );
         })}
-        {/* ♥: favourites only — filled while on */}
+        {/* ♥: hearted only — filled while on; folds away where there's nothing
+            to heart (a trip's own page) */}
         <button
           type="button"
-          aria-label="하트한 장비만 보기"
-          aria-pressed={favOn}
-          onClick={onFav}
-          className={item}
+          aria-label={favLabel}
+          aria-pressed={Boolean(fav?.on)}
+          aria-hidden={!fav}
+          tabIndex={fav ? undefined : -1}
+          onClick={() => fav?.toggle()}
+          className={cn(
+            item,
+            "transition-[width,opacity]",
+            !fav && "pointer-events-none w-0 opacity-0",
+          )}
         >
           <span className={cn(iconWrap, "[[data-compact]_&]:scale-[0.9]")}>
-            <Heart size={26} strokeWidth={1.8} fill={favOn ? "currentColor" : "none"} />
+            <Heart size={26} strokeWidth={1.8} fill={fav?.on ? "currentColor" : "none"} />
           </span>
         </button>
         {/* plain + (drawn a touch larger: a bare cross reads small next to
@@ -965,17 +976,17 @@ export function TopBarProvider({
             : undefined
         }
         addLabel={config?.addLabel}
-        favOn={Boolean(configs.shelf?.favorite?.on)}
-        onFav={() => {
-          if (closeIfOpen()) return;
-          const fav = configs.shelf?.favorite;
-          if (!fav) return;
-          // From another tab the heart takes you to your hearted gear.
-          if (tab !== "shelf") {
-            onTabChange("shelf");
-            if (!fav.on) fav.toggle();
-          } else fav.toggle();
-        }}
+        fav={
+          config?.favorite
+            ? {
+                on: config.favorite.on,
+                toggle: () => {
+                  if (!closeIfOpen()) config.favorite?.toggle();
+                },
+              }
+            : undefined
+        }
+        favLabel={tab === "trips" ? "하트한 트립만 보기" : "하트한 장비만 보기"}
       />
     </TopBarCtx.Provider>
   );

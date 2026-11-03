@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { animate, motion, useDragControls, useMotionValue, useTransform } from "framer-motion";
-import { Check, Trash2 } from "lucide-react";
+import { Check, Heart, Trash2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 type OpenState = "closed" | "right" | "left";
@@ -195,6 +195,21 @@ export function SwipeRow({
  * Destructive action button for a SwipeRow: first tap arms (turns into a
  * check), second tap confirms. Re-arms to safe whenever the row closes.
  */
+/** Swipe action: heart / un-heart (the bottom bar's ♥ shows only hearted rows). */
+export function SwipeHeartButton({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={on ? "하트 해제" : "하트"}
+      aria-pressed={on}
+      onClick={onToggle}
+      className="grid w-14 touch-manipulation place-items-center bg-[#e5e5ea] text-black active:opacity-80 dark:bg-[#48484a] dark:text-white"
+    >
+      <Heart size={20} strokeWidth={2.1} fill={on ? "currentColor" : "none"} />
+    </button>
+  );
+}
+
 export function SwipeDeleteButton({
   rowOpen,
   onDelete,
