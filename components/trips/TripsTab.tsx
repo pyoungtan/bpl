@@ -269,10 +269,11 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
                 {plannedIds.map(renderRow)}
                 {tbdIds.length > 0 && (
                   <>
+                    {/* styled like a Gear category header */}
                     <h2
                       className={cn(
-                        "px-4 pb-1.5 text-[13px] font-semibold tracking-[0.04em] text-tertiary",
-                        plannedIds.length > 0 ? "pt-7" : "pt-1",
+                        "px-4 pb-3 text-[17px] font-bold tracking-[-0.01em] text-tertiary",
+                        plannedIds.length > 0 ? "pt-6" : "pt-1",
                       )}
                     >
                       계획 미정
@@ -354,16 +355,17 @@ function TripRow({
       <button
         type="button"
         onClick={onOpen}
-        className="flex w-full touch-manipulation items-center gap-3 px-4 py-3 text-left transition active:bg-fill"
+        // same type and spacing as a Gear row
+        className="flex w-full touch-manipulation select-none items-center gap-2.5 px-4 py-2.5 text-left active:opacity-60"
       >
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-[17px] font-semibold tracking-[-0.01em] text-label">
+            <span className="min-w-0 truncate text-[15px] font-semibold leading-tight text-label">
               {trip.name}
             </span>
             {trip.tbd && <TbdTag />}
           </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[13px] text-tertiary">
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[12.5px] leading-tight text-secondary">
             <span>{formatTripRange(tripStart(trip))}</span>
             {tempRange(trip.tempLow, trip.tempHigh) && (
               <span className="tabular">
@@ -384,10 +386,10 @@ function TripRow({
             </div>
           )}
         </div>
-        <span className="shrink-0 tabular text-[15px] font-medium text-label">
+        <span className="min-w-[52px] shrink-0 whitespace-nowrap text-right tabular text-[14px] text-secondary">
           {formatWeightSmart(totalG, unit)}
         </span>
-        <ChevronRight size={18} className="-mr-1 shrink-0 text-tertiary" />
+        <ChevronRight size={16} className="-ml-1 -mr-1.5 shrink-0 text-tertiary" />
       </button>
     </SwipeRow>
   );

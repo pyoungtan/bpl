@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { cn } from "@/lib/cn";
 import { hapticTick } from "@/lib/haptics";
 import { quietScrollTuck } from "../TopBar";
 
@@ -222,16 +223,27 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
           </div>
         </div>
       </div>
-      {/* the category you're on, large in the middle of the screen (portalled:
-          the top bar's transforms would otherwise anchor it) */}
+      {/* the category you're on: a faint page-coloured veil over the list
+          with the name in the middle, fading out a moment after you let go.
+          Under the bars (z-40), so the scrubber itself stays clear.
+          Portalled: the top bar's transforms would otherwise anchor it. */}
       {mounted &&
         createPortal(
           <div
             aria-hidden="true"
-            className="pointer-events-none fixed inset-0 z-[55] grid place-items-center transition-opacity duration-200 ease-out"
-            style={{ opacity: hint ? 1 : 0 }}
+            className={cn(
+              "pointer-events-none fixed inset-0 z-40 grid place-items-center transition-opacity ease-out",
+              hint ? "duration-150" : "duration-300",
+            )}
+            style={{
+              opacity: hint ? 1 : 0,
+              background: "color-mix(in srgb, var(--bg) 72%, transparent)",
+              // a touch of blur so the list recedes behind the name
+              WebkitBackdropFilter: "blur(3px)",
+              backdropFilter: "blur(3px)",
+            }}
           >
-            <span className="glass-strong flex h-[60px] items-center whitespace-nowrap rounded-full px-9 text-[19px] font-semibold tracking-[-0.01em] text-label">
+            <span className="whitespace-nowrap text-[19px] font-bold tracking-[-0.01em] text-label">
               {hint ?? cats[cur]}
             </span>
           </div>,
