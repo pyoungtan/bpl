@@ -228,7 +228,7 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
             className="pointer-events-none fixed inset-0 z-[55] grid place-items-center transition-opacity duration-200 ease-out"
             style={{ opacity: hint ? 1 : 0 }}
           >
-            <span className="glass-strong flex h-[68px] items-center whitespace-nowrap rounded-full px-8 text-[28px] font-bold tracking-[-0.01em] text-label">
+            <span className="glass-strong flex h-12 items-center whitespace-nowrap rounded-full px-5 text-[19px] font-semibold tracking-[-0.01em] text-label">
               {hint ?? cats[cur]}
             </span>
           </div>,
