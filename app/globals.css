@@ -502,14 +502,14 @@ html[data-bars="tucked"] .scroll-edge-top {
 /* The bottom bar: a thinner, more frosted pane than the other glass — the
    content behind reads through the whole bar, not just around the selection
    (no centre dim). */
-.bottom-nav > .glass {
+.bottom-nav .gnb-island {
   --gnb-tint: rgba(255, 255, 255, 0.44);
   background-color: var(--gnb-tint);
   background-image: linear-gradient(180deg, var(--g-sheen), transparent 55%);
   -webkit-backdrop-filter: blur(18px) saturate(180%) brightness(var(--g-bright));
   backdrop-filter: blur(18px) saturate(180%) brightness(var(--g-bright));
 }
-.dark .bottom-nav > .glass {
+.dark .bottom-nav .gnb-island {
   --gnb-tint: rgba(52, 52, 56, 0.3);
 }
 .bottom-nav[data-hidden] {
@@ -539,4 +539,93 @@ html[data-bars="tucked"] .scroll-edge-top {
   .press-fx {
     transition-duration: 0.01s;
   }
+}
+
+/* ---------- Map tab ---------- */
+.tw-map.leaflet-container,
+.tw-map {
+  background: var(--bg);
+  font: inherit;
+  /* keep the map's own z-indexed panes (400+) under the cards over it */
+  isolation: isolate;
+}
+/* OSM tiles in the app's monochrome: greyscale, and inverted for dark */
+.tw-map .leaflet-tile-pane {
+  filter: grayscale(1) contrast(0.92) brightness(1.04);
+}
+.dark .tw-map .leaflet-tile-pane {
+  filter: grayscale(1) invert(1) contrast(0.85) brightness(0.9);
+}
+/* attribution sits above the bottom bar */
+.tw-map .leaflet-bottom {
+  bottom: calc(var(--bar-bottom) + 70px);
+}
+.tw-map .leaflet-control-attribution {
+  font-size: 9.5px;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  color: var(--tertiary);
+}
+.tw-map .leaflet-control-attribution a {
+  color: inherit;
+}
+/* Trip spot: an ink dot ringed in the page colour (a count when several
+   trips share it), its place name beneath with a halo for legibility. */
+.tw-pin-wrap {
+  background: none;
+  border: 0;
+  width: 0;
+  height: 0;
+}
+.tw-pin {
+  position: relative;
+  width: 0;
+  height: 0;
+  cursor: pointer;
+}
+.tw-pin-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--label);
+  color: var(--bg);
+  border: 2.5px solid var(--bg);
+  box-sizing: content-box;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.28);
+  transform: translate(-50%, -50%);
+  transition: transform 0.2s ease-out;
+}
+.tw-pin-dot:empty {
+  min-width: 11px;
+  height: 11px;
+  padding: 0;
+}
+.tw-pin[data-on] .tw-pin-dot {
+  transform: translate(-50%, -50%) scale(1.3);
+}
+.tw-pin-label {
+  position: absolute;
+  left: 0;
+  top: 13px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--label);
+  text-shadow:
+    0 0 3px var(--bg),
+    0 0 3px var(--bg),
+    0 0 2px var(--bg);
+}
+.tw-pin[data-on] .tw-pin-label {
+  font-weight: 700;
 }

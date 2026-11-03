@@ -11,6 +11,7 @@ import {
 import { TopBarPane, TopBarProvider, type TabKey } from "./TopBar";
 import { GearShelf } from "./gear/GearShelf";
 import { TripsTab } from "./trips/TripsTab";
+import { MapTab } from "./map/MapTab";
 import { SettingsSheet } from "./SettingsSheet";
 import { PullToRefresh } from "./PullToRefresh";
 import { pinPane, unpinPane, useTabSwipe } from "./useTabSwipe";
@@ -23,7 +24,7 @@ export function AppShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tripToOpen, setTripToOpen] = useState<string | null>(null);
   const cloud = useCloudSync();
-  // Both tabs stay mounted (switching only toggles visibility, so the long
+  // All tabs stay mounted (switching only toggles visibility, so the long
   // Gear list is never rebuilt mid-transition, and a swipe can show the real
   // neighbouring screen). Each keeps its own scroll offset, like a native tab
   // bar.
@@ -82,6 +83,11 @@ export function AppShell() {
   const tripsScreen = useMemo(
     () => <TripsTab openTripId={tripToOpen} onConsumeOpen={consumeTripToOpen} />,
     [tripToOpen, consumeTripToOpen],
+  );
+  const mapActive = tab === "map";
+  const mapScreen = useMemo(
+    () => <MapTab active={mapActive} onOpenTrip={openTripFromShelf} />,
+    [mapActive, openTripFromShelf],
   );
 
   useLayoutEffect(() => {
@@ -173,6 +179,9 @@ export function AppShell() {
         </TabPane>
         <TabPane pane="trips" active={tab === "trips"} elRef={registerPane}>
           {tripsScreen}
+        </TabPane>
+        <TabPane pane="map" active={mapActive} elRef={registerPane}>
+          {mapScreen}
         </TabPane>
         <SettingsSheet
           open={settingsOpen}

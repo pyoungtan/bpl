@@ -85,7 +85,14 @@ export function PullToRefresh() {
       );
     }
     function onStart(e: TouchEvent) {
-      if (e.touches.length !== 1 || window.scrollY > 2 || blocked() || moved.current.length) {
+      if (
+        e.touches.length !== 1 ||
+        window.scrollY > 2 ||
+        blocked() ||
+        moved.current.length ||
+        // a surface that owns its drags (the map)
+        (e.target as Element | null)?.closest?.("[data-no-ptr]")
+      ) {
         active.current = false;
         return;
       }

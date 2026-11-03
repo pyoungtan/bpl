@@ -45,9 +45,11 @@ export interface Trip {
   endDate?: string;
   /** Free-text location label. */
   place?: string;
-  /** Legacy geocoded coordinates (map feature removed) — kept so old data loads. */
+  /** Where `place` is on the map (geocoded from it, cached for the Map tab). */
   lat?: number;
   lng?: number;
+  /** The `place` text lat/lng were found for — a changed place re-geocodes. */
+  geoQ?: string;
   /** Companion tags ("누구와") — also a trip-list sort key. Legacy data may
    *  hold a free-text string; read through tripCompanions() to normalize. */
   companions?: string[];
