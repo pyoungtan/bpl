@@ -279,17 +279,20 @@ export function usePressFx<T extends HTMLElement>(opts: PressOpts) {
   return { fxRef, handlers };
 }
 
-/** Round Liquid Glass icon button with press physics. */
+/** Round Liquid Glass icon button with press physics. `plain` drops the
+ *  glass: a bare icon, as in the top bar. */
 export function GlassCircle({
   label,
   onTap,
   children,
   className,
+  plain,
 }: {
   label: string;
   onTap: () => void;
   children: React.ReactNode;
   className?: string;
+  plain?: boolean;
 }) {
   const { fxRef, handlers } = usePressFx<HTMLButtonElement>({ scale: 1.16, onTap });
   return (
@@ -298,7 +301,8 @@ export function GlassCircle({
       type="button"
       aria-label={label}
       className={cn(
-        "glass press-fx grid h-11 w-11 touch-none place-items-center rounded-full text-label",
+        "press-fx grid h-11 w-11 touch-none place-items-center rounded-full text-label",
+        !plain && "glass",
         className,
       )}
       {...handlers}
@@ -306,7 +310,7 @@ export function GlassCircle({
         if (e.detail === 0) onTap(); // keyboard activation
       }}
     >
-      <span className="g-glow" />
+      {!plain && <span className="g-glow" />}
       {children}
     </button>
   );
@@ -448,7 +452,7 @@ function BottomNav({
               <span
                 aria-hidden="true"
                 className={cn(
-                  "pointer-events-none absolute inset-0 -z-10 rounded-[18px] bg-black/[0.075] transition-opacity duration-300 ease-out dark:bg-white/[0.14]",
+                  "pointer-events-none absolute inset-0 -z-10 rounded-full bg-black/[0.075] transition-opacity duration-300 ease-out dark:bg-white/[0.14]",
                   on ? "opacity-100" : "opacity-0",
                 )}
               />
@@ -626,7 +630,8 @@ function MorphMenu({
         ref={fxRef}
         className={cn(
           "press-fx absolute right-0 top-0 overflow-hidden text-label",
-          open ? "glass-strong" : "glass",
+          // a bare ⋯ in the bar; the glass only comes with the open menu
+          open && "glass-strong",
         )}
         style={{
           width: open ? MENU_W : 44,
@@ -636,7 +641,7 @@ function MorphMenu({
             "width var(--dur-morph) var(--spring-morph), height var(--dur-morph) var(--spring-morph), border-radius var(--dur-morph) var(--spring-morph), background-color 0.3s ease, transform var(--t-dur, var(--dur-press)) var(--t-ease, var(--spring-press))",
         }}
       >
-        <span className="g-glow" />
+        {open && <span className="g-glow" />}
         <button
           type="button"
           aria-label="더보기"
@@ -875,9 +880,10 @@ export function TopBarProvider({
           data-tucked={tucked || undefined}
           inert={tucked}
         >
-        <div className="pointer-events-auto flex h-12 items-center">
+        <div className="pointer-events-auto -ml-2.5 flex h-12 items-center">
           {config?.onBack ? (
             <GlassCircle
+              plain
               label="뒤로"
               onTap={() => {
                 if (!closeIfOpen()) config.onBack?.();
@@ -887,6 +893,7 @@ export function TopBarProvider({
             </GlassCircle>
           ) : config?.left ? (
             <GlassCircle
+              plain
               label={config.left.label}
               onTap={() => {
                 if (!closeIfOpen()) config.left?.onTap();
@@ -896,15 +903,16 @@ export function TopBarProvider({
             </GlassCircle>
           ) : config?.onSearch ? (
             <GlassCircle
+              plain
               label={config.searching ? "검색 닫기" : "검색"}
               onTap={() => {
                 if (!closeIfOpen()) config.onSearch?.();
               }}
             >
               {config.searching ? (
-                <X size={22} strokeWidth={2.2} />
+                <X size={25} strokeWidth={2} />
               ) : (
-                <Search size={21} strokeWidth={2.2} />
+                <Search size={24} strokeWidth={2} />
               )}
             </GlassCircle>
           ) : (
@@ -918,14 +926,15 @@ export function TopBarProvider({
           </div>
         ) : config?.center ? (
           <div className="pointer-events-auto absolute left-1/2 top-[var(--bar-top)] flex h-12 -translate-x-1/2 items-center">
-            <span className="glass flex h-11 items-center rounded-full px-[18px] text-[17px] font-medium tabular tracking-[-0.01em] text-label">
+            <span className="flex h-11 items-center px-2 text-[17px] font-semibold tabular tracking-[-0.01em] text-label">
               {config.center}
             </span>
           </div>
         ) : null}
-        <div className="pointer-events-auto flex h-12 items-center gap-2">
+        <div className="pointer-events-auto -mr-2.5 flex h-12 items-center">
           {config?.actions?.map((a) => (
             <GlassCircle
+              plain
               key={a.id}
               label={a.label}
               onTap={() => {

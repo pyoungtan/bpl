@@ -171,7 +171,7 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
         aria-valuemax={max}
         aria-valuenow={cur}
         aria-valuetext={cats[cur]}
-        className="glass relative h-11 w-[min(216px,calc(100vw-150px))] touch-pan-y select-none overflow-hidden rounded-full outline-none"
+        className="relative h-11 w-[min(216px,calc(100vw-150px))] touch-pan-y select-none overflow-hidden rounded-full outline-none"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={(e) => finish(e, false)}

@@ -445,25 +445,16 @@
   }
 }
 
-/* iOS 26 scroll-edge effect: content softly fades out under the floating top
-   controls instead of colliding with them. One fixed element, masked blur. */
+/* The top area (Instagram-style): a solid page-coloured band behind the bare
+   top controls; tucked, it shrinks to the status bar. */
 .scroll-edge-top {
   position: fixed;
   inset-inline: 0;
   top: 0;
   z-index: 35;
-  height: calc(var(--bar-top) + 68px);
+  height: calc(var(--bar-top) + 54px);
   pointer-events: none;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--bg) 88%, transparent) 0%,
-    color-mix(in srgb, var(--bg) 55%, transparent) 55%,
-    color-mix(in srgb, var(--bg) 0%, transparent) 100%
-  );
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent);
-  mask-image: linear-gradient(to bottom, #000 45%, transparent);
+  background: var(--bg);
   transition: height 0.42s var(--ease-tuck);
 }
 
@@ -473,7 +464,7 @@
   --ease-tuck: cubic-bezier(0.32, 0.72, 0, 1);
 }
 html[data-bars="tucked"] .scroll-edge-top {
-  height: calc(env(safe-area-inset-top) + 14px);
+  height: env(safe-area-inset-top);
 }
 .top-bar-row {
   transition:
