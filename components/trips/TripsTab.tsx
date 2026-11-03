@@ -216,7 +216,7 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
   return (
     <div className="pb-40">
       {searchOpen && (
-        <div className="px-4 pb-1 pt-1">
+        <div className="px-[var(--gutter)] pb-1 pt-1">
           <div className="flex h-11 items-center gap-2.5 rounded-full bg-fill px-4">
             <Search size={17} className="shrink-0 text-tertiary" />
             <input
@@ -244,7 +244,7 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
         <EmptyTrips onCreate={() => onOpen(createTrip())} />
       ) : (
         <div>
-          <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-4 pb-3.5 pt-2">
+          <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-[var(--gutter)] pb-3.5 pt-2">
             {SORTS.map((s) => (
               <TagChip
                 key={s.key}
@@ -272,7 +272,7 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
                     {/* styled like a Gear category header */}
                     <h2
                       className={cn(
-                        "px-4 pb-3 text-[17px] font-bold tracking-[-0.01em] text-tertiary",
+                        "px-[var(--gutter)] pb-3 text-[17px] font-bold tracking-[-0.01em] text-tertiary",
                         plannedIds.length > 0 ? "pt-6" : "pt-1",
                       )}
                     >
@@ -284,17 +284,17 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
               </>
             )}
             {favOnly && !q && shownIds.length === 0 && (
-              <p className="px-4 py-12 text-center text-[15px] text-secondary">
+              <p className="px-[var(--gutter)] py-12 text-center text-[15px] text-secondary">
                 하트를 누른 트립이 없어요. 트립을 왼쪽으로 밀어 하트를 눌러 보세요.
               </p>
             )}
             {tbdOnly && !favOnly && !q && tbdIds.length === 0 && (
-              <p className="px-4 py-12 text-center text-[15px] text-secondary">
+              <p className="px-[var(--gutter)] py-12 text-center text-[15px] text-secondary">
                 계획 미정인 트립이 없어요.
               </p>
             )}
             {q && (tbdOnly ? tbdIds : shownIds).length === 0 && (
-              <p className="px-4 py-12 text-center text-[15px] text-secondary">
+              <p className="px-[var(--gutter)] py-12 text-center text-[15px] text-secondary">
                 검색 결과가 없습니다.
               </p>
             )}
@@ -356,7 +356,7 @@ function TripRow({
         type="button"
         onClick={onOpen}
         // same type and spacing as a Gear row
-        className="flex w-full touch-manipulation select-none items-center gap-2.5 px-4 py-2.5 text-left active:opacity-60"
+        className="flex w-full touch-manipulation select-none items-center gap-2.5 px-[var(--gutter)] py-3 text-left active:opacity-60"
       >
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1.5">

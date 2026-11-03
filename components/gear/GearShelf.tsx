@@ -363,7 +363,7 @@ export function GearShelf({
     <div className="pb-40">
       <div>
       {!editMode && searchOpen && (
-        <div className="px-4 pb-1 pt-1">
+        <div className="px-[var(--gutter)] pb-1 pt-1">
           <div className="flex h-11 items-center gap-2.5 rounded-full bg-fill px-4">
             <Search size={17} className="shrink-0 text-tertiary" />
             <input
@@ -388,7 +388,7 @@ export function GearShelf({
       )}
 
       {editMode && (
-        <div className="px-4 pb-1 pt-2">
+        <div className="px-[var(--gutter)] pb-1 pt-2">
           <button
             type="button"
             onClick={() => setCatMgrOpen(true)}
@@ -432,7 +432,7 @@ export function GearShelf({
               onClick={collapsible ? () => toggleCatCollapsed(major) : undefined}
               disabled={!collapsible}
               aria-expanded={!isCollapsed}
-              className="flex w-full touch-manipulation items-baseline justify-between px-4 pb-3 pt-6 text-left"
+              className="flex w-full touch-manipulation items-baseline justify-between px-[var(--gutter)] pb-3 pt-6 text-left"
             >
               <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
                 {major}
@@ -561,7 +561,7 @@ export function GearShelf({
 
         {editMode && addonItems.length > 0 && (
           <section>
-            <div className="flex items-baseline justify-between px-4 pb-3 pt-6">
+            <div className="flex items-baseline justify-between px-[var(--gutter)] pb-3 pt-6">
               <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
                 애드온
               </span>
@@ -584,7 +584,7 @@ export function GearShelf({
             layout="position"
             transition={{ type: "spring", stiffness: 550, damping: 45 }}
           >
-            <div className="flex items-baseline justify-between px-4 pb-3 pt-6">
+            <div className="flex items-baseline justify-between px-[var(--gutter)] pb-3 pt-6">
               <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
                 숨겨짐
               </span>
@@ -865,7 +865,7 @@ function AddonRow({
         }
       }}
       className={cn(
-        "flex w-full cursor-pointer touch-manipulation select-none items-center gap-2.5 py-2 pl-9 pr-4 text-left outline-none transition",
+        "flex w-full cursor-pointer touch-manipulation select-none items-center gap-2.5 py-2 pl-10 pr-[var(--gutter)] text-left outline-none transition",
         selected && "bg-selected",
       )}
     >

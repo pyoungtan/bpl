@@ -8,6 +8,8 @@
   /* Top of the floating glass bar: flush with the status-bar safe area
      (iOS standalone), with a small gutter in a regular browser tab. */
   --bar-top: max(env(safe-area-inset-top), 10px);
+  /* side margin of the main screens' content (lists, headers, top bar) */
+  --gutter: 20px;
   --bar-bottom: max(calc(env(safe-area-inset-bottom) + 4px), 16px);
   /* Canvas + surfaces */
   --bg: #ffffff;
@@ -557,7 +559,7 @@ html[data-bars="tucked"] .scroll-edge-top {
   filter: grayscale(1) invert(1) contrast(0.85) brightness(0.9);
 }
 /* attribution sits above the bottom bar */
-.tw-map .leaflet-bottom {
+.tw-map-tab .leaflet-bottom {
   bottom: calc(var(--bar-bottom) + 70px);
 }
 .tw-map .leaflet-control-attribution {

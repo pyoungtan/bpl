@@ -39,6 +39,8 @@ import { ExportSheet } from "./ExportSheet";
 import { TbdTag } from "./TbdTag";
 import { RangeCalendar } from "../ui/RangeCalendar";
 import { Sheet } from "../ui/Sheet";
+import { CategoryScrubber } from "../gear/CategoryScrubber";
+import { PlaceSheet } from "./PlaceSheet";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
 import { Checkbox } from "../ui/Checkbox";
 import { GearFlags } from "../ui/GearFlags";
@@ -114,6 +116,7 @@ export function TripDetail({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [placeOpen, setPlaceOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Minus at quantity 1 asks before taking the item out of the trip.
@@ -350,7 +353,7 @@ export function TripDetail({
           }
           className={cn(
             "flex w-full items-center gap-2.5 py-2.5 text-left transition",
-            nested ? "pl-9 pr-4" : "px-4",
+            nested ? "pl-10 pr-[var(--gutter)]" : "px-[var(--gutter)]",
             "cursor-pointer active:bg-fill",
             selected && "bg-selected",
             dim && "opacity-25",
@@ -434,7 +437,7 @@ export function TripDetail({
 
   return (
     <div ref={rootRef} data-no-tab-swipe className="min-h-dvh pb-40">
-      <div className="space-y-4 px-4 pt-2">
+      <div className="space-y-4 px-[var(--gutter)] pt-2">
         <div className="px-1">
           {trip.tbd ? (
             // Sized to its text (an invisible twin sets the width) so the
@@ -557,12 +560,17 @@ export function TripDetail({
           </div>
           <div className="mt-1.5 flex items-center gap-1.5">
             <MapPin size={15} className="shrink-0 text-tertiary" />
-            <input
-              value={trip.place ?? ""}
-              onChange={(e) => updateTrip(tripId, { place: e.target.value })}
-              placeholder="장소"
-              className="min-w-0 flex-1 bg-transparent text-[14px] text-secondary outline-none placeholder:text-tertiary"
-            />
+            {/* opens the place sheet: search, or pin it on the map */}
+            <button
+              type="button"
+              onClick={() => setPlaceOpen(true)}
+              className={cn(
+                "min-w-0 flex-1 truncate text-left text-[14px] active:opacity-60",
+                trip.place?.trim() ? "text-secondary" : "text-tertiary",
+              )}
+            >
+              {trip.place?.trim() || "장소"}
+            </button>
           </div>
           {/* 기온 — 최저 ~ 최고 range */}
           <div className="mt-1.5 flex items-center gap-1.5">
@@ -694,7 +702,7 @@ export function TripDetail({
       {/* Packed gear — flat list */}
       <div className="mt-3">
         {/* Manual extra weight — reflected in totals without picking gear */}
-        <div className="flex items-center gap-2.5 px-4 py-2.5">
+        <div className="flex items-center gap-2.5 px-[var(--gutter)] py-2.5">
           <Weight size={16} className="shrink-0 text-tertiary" />
           <span className="min-w-0 flex-1 text-[15px] font-medium text-secondary">
             무게 추가
@@ -719,7 +727,7 @@ export function TripDetail({
         </div>
         {groups.map(([major, rows]) => (
           <section key={major}>
-            <div className="flex items-baseline justify-between px-4 pb-3 pt-5">
+            <div className="flex items-baseline justify-between px-[var(--gutter)] pb-3 pt-5">
               <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
                 {major}
               </span>
@@ -753,13 +761,13 @@ export function TripDetail({
         ))}
 
         {groups.length === 0 && (
-          <p className="px-4 py-12 text-center text-[15px] text-secondary">
+          <p className="px-[var(--gutter)] py-12 text-center text-[15px] text-secondary">
             아직 챙긴 장비가 없어요. Add로 추가해보세요.
           </p>
         )}
       </div>
 
-      <div className="mt-6 space-y-3 px-4">
+      <div className="mt-6 space-y-3 px-[var(--gutter)]">
         <button
           ref={deleteBtnRef}
           type="button"
@@ -790,6 +798,7 @@ export function TripDetail({
 
       <ExportSheet open={exportOpen} onClose={() => setExportOpen(false)} tripId={tripId} />
 
+      <PlaceSheet open={placeOpen} tripId={tripId} onClose={() => setPlaceOpen(false)} />
       <GearPickerSheet
         open={pickerOpen}
         tripId={tripId}
@@ -1018,6 +1027,7 @@ function GearPickerSheet({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
+  const bodyRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (open) {
       setPicked(new Set());
@@ -1237,6 +1247,15 @@ function GearPickerSheet({
         disabled: picked.size === 0,
         prominent: true,
       }}
+      bodyRef={bodyRef}
+      header={
+        // same 대분류 scrubber as the Gear tab, driving this list
+        !q && groups.length > 1 ? (
+          <div className="flex justify-center pb-1">
+            <CategoryScrubber cats={groups.map(([m]) => m)} scroller={bodyRef} lead={4} />
+          </div>
+        ) : undefined
+      }
     >
       <div className="px-4 pb-1">
         <div className="flex h-11 items-center gap-2.5 rounded-full bg-fill px-4">
@@ -1267,7 +1286,7 @@ function GearPickerSheet({
       ) : (
         <div className="pb-2">
           {groups.map(([major, items]) => (
-            <section key={major}>
+            <section key={major} data-gear-cat={major}>
               <div className="flex items-baseline justify-between px-4 pb-3 pt-4">
                 <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
                   {major}

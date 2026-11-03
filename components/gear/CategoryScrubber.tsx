@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { cn } from "@/lib/cn";
 import { hapticTick } from "@/lib/haptics";
 import { quietScrollTuck } from "../TopBar";
 
@@ -16,29 +17,57 @@ const TICK = 18;
 const SNAP = "transform 0.18s ease-out";
 const noop = () => () => {};
 
-/** Where the list's sections sit under the top bar: the shown tab pane's top
- *  padding, which already resolves the safe-area maths. */
-function contentTop(): number {
+/** What the scrubber drives: the page (a tab's list under the top bar) or a
+ *  scroll area of its own (a sheet's list). */
+interface Surface {
+  /** Where the `[data-gear-cat]` sections live. */
+  root: ParentNode;
+  /** Viewport y of the line sections tuck under. */
+  line: () => number;
+  y: () => number;
+  to: (y: number) => void;
+  target: Window | HTMLElement;
+}
+
+function pageSurface(): Surface {
   const pane = document.querySelector<HTMLElement>("[data-tab-pane]:not([hidden])");
-  return pane ? parseFloat(getComputedStyle(pane).paddingTop) || 0 : 0;
+  return {
+    root: pane ?? document,
+    // the pane's top padding already resolves the safe-area maths
+    line: () => (pane ? parseFloat(getComputedStyle(pane).paddingTop) || 0 : 0),
+    y: () => window.scrollY,
+    to: (y) => {
+      quietScrollTuck();
+      window.scrollTo({ top: Math.max(0, y), behavior: "instant" });
+    },
+    target: window,
+  };
+}
+
+function areaSurface(el: HTMLElement): Surface {
+  return {
+    root: el,
+    line: () => el.getBoundingClientRect().top,
+    y: () => el.scrollTop,
+    to: (y) => el.scrollTo({ top: Math.max(0, y), behavior: "instant" }),
+    target: el,
+  };
 }
 
 /** Scroll offset right after a jump: until the list is scrolled by hand the
- *  picked category stays current, even if the page end kept it from reaching
- *  the top. */
+ *  picked category stays current, even if the list's end kept it from
+ *  reaching the top. */
 let jumpedAt: number | null = null;
 
-function jumpTo(cat: string) {
-  const el = Array.from(document.querySelectorAll<HTMLElement>("[data-gear-cat]")).find(
+function jumpTo(sf: Surface, cat: string, lead: number) {
+  const el = Array.from(sf.root.querySelectorAll<HTMLElement>("[data-gear-cat]")).find(
     (s) => s.dataset.gearCat === cat && s.offsetParent !== null,
   );
   if (!el) return;
-  // the header's own top padding (pt-6) keeps the name clear of the bar and
-  // of the fade under it
-  const y = el.getBoundingClientRect().top + window.scrollY - (contentTop() - 16);
-  quietScrollTuck();
-  window.scrollTo({ top: Math.max(0, y), behavior: "instant" });
-  jumpedAt = window.scrollY;
+  // `lead`: how far the section's top may sit above the line — its header's
+  // own top padding keeps the name clear (of the bar and the fade under it)
+  sf.to(el.getBoundingClientRect().top - sf.line() + sf.y() + lead);
+  jumpedAt = sf.y();
 }
 
 /**
@@ -47,8 +76,22 @@ function jumpTo(cat: string) {
  * category you're on shows large in the middle of the screen, and the list
  * follows each step live. Tapping left/right of centre steps by the tapped distance.
  * Between scrubs it follows the list's scroll position, wordlessly.
+ *
+ * By default it drives the page; give it `scroller` to drive that scroll
+ * area instead (a sheet's list), with the veil over just that area.
  */
-export function CategoryScrubber({ cats }: { cats: string[] }) {
+export function CategoryScrubber({
+  cats,
+  scroller,
+  lead = 16,
+}: {
+  cats: string[];
+  scroller?: React.RefObject<HTMLElement | null>;
+  lead?: number;
+}) {
+  const surface = () => (scroller?.current ? areaSurface(scroller.current) : pageSurface());
+  /** In a scroll area, the veil covers just that area (viewport rect). */
+  const [area, setArea] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const [index, setIndex] = useState(0);
   const [hint, setHint] = useState<string | null>(null);
   const mounted = useSyncExternalStore(noop, () => true, () => false);
@@ -66,16 +109,17 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
   // passed under the bar.
   useEffect(() => {
     let raf = 0;
+    const sf = scroller?.current ? areaSurface(scroller.current) : pageSurface();
     const read = () => {
       raf = 0;
       if (dragging.current) return;
       if (jumpedAt !== null) {
-        if (Math.abs(window.scrollY - jumpedAt) < 4) return;
+        if (Math.abs(sf.y() - jumpedAt) < 4) return;
         jumpedAt = null;
       }
-      const line = contentTop() + 4;
+      const line = sf.line() + 4;
       let found = 0;
-      for (const el of document.querySelectorAll<HTMLElement>("[data-gear-cat]")) {
+      for (const el of sf.root.querySelectorAll<HTMLElement>("[data-gear-cat]")) {
         if (el.offsetParent === null) continue;
         if (el.getBoundingClientRect().top > line) break;
         const i = catsRef.current.indexOf(el.dataset.gearCat ?? "");
@@ -87,17 +131,21 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
       if (!raf) raf = requestAnimationFrame(read);
     };
     read();
-    window.addEventListener("scroll", onScroll, { passive: true });
+    sf.target.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      window.removeEventListener("scroll", onScroll);
+      sf.target.removeEventListener("scroll", onScroll);
       cancelAnimationFrame(raf);
     };
-  }, [cats]);
+  }, [cats, scroller]);
 
   useEffect(() => () => window.clearTimeout(hintTimer.current), []);
 
   function showHint(text: string, hold: boolean) {
     window.clearTimeout(hintTimer.current);
+    if (!hint && scroller?.current) {
+      const r = scroller.current.getBoundingClientRect();
+      setArea({ top: r.top, left: r.left, width: r.width, height: r.height });
+    }
     setHint(text);
     if (!hold) hintTimer.current = window.setTimeout(() => setHint(null), 650);
   }
@@ -107,7 +155,7 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
     if (i !== cur) hapticTick();
     setIndex(i);
     showHint(cats[i], false);
-    jumpTo(cats[i]);
+    jumpTo(surface(), cats[i], lead);
   }
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -140,7 +188,7 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
       s.idx = i;
       hapticTick();
       setIndex(i);
-      jumpTo(cats[i]); // the list follows before you let go
+      jumpTo(surface(), cats[i], lead); // the list follows before you let go
     }
     showHint(cats[i], true);
   };
@@ -226,14 +274,19 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
       </div>
       {/* the category you're on: a faint page-coloured veil over the list
           with the name in the middle, fading out a moment after you let go.
-          Under the bars (z-40), so the scrubber itself stays clear.
-          Portalled: the top bar's transforms would otherwise anchor it. */}
+          Under the bars (z-40), so the scrubber itself stays clear; in a
+          sheet, over just its list. Portalled: the top bar's transforms would
+          otherwise anchor it. */}
       {mounted &&
         createPortal(
           <div
             aria-hidden="true"
-            className="pointer-events-none fixed inset-0 z-40 grid place-items-center"
+            className={cn(
+              "pointer-events-none fixed grid place-items-center",
+              scroller ? "z-[60]" : "inset-0 z-40",
+            )}
             style={{
+              ...(scroller ? (area ?? { top: 0, left: 0, width: 0, height: 0 }) : null),
               opacity: hint ? 1 : 0,
               // in: a soft, slightly longer ease; out: quicker and smooth
               transition: hint

@@ -20,6 +20,11 @@ interface SheetProps {
   leftLabel?: string;
   rightAction?: SheetAction;
   children: React.ReactNode;
+  /** Fixed content between the title row and the scrolling body (e.g. a
+   *  category scrubber for the list below). */
+  header?: React.ReactNode;
+  /** Receives the scrolling body element. */
+  bodyRef?: React.RefObject<HTMLDivElement | null>;
   /** Kept for call-site compatibility; every sheet is now a glass panel. */
   grouped?: boolean;
 }
@@ -31,6 +36,8 @@ export function Sheet({
   leftLabel = "취소",
   rightAction,
   children,
+  header,
+  bodyRef,
 }: SheetProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -209,8 +216,12 @@ export function Sheet({
                 <span />
               )}
             </div>
+            {header && <div className="shrink-0">{header}</div>}
             <div
-              ref={scrollRef}
+              ref={(el) => {
+                scrollRef.current = el;
+                if (bodyRef) bodyRef.current = el;
+              }}
               className="grow overflow-y-auto overscroll-contain pb-5 pt-2"
             >
               {children}

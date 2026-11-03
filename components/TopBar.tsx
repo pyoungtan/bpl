@@ -347,8 +347,8 @@ function TabGlyph({ k, on }: { k: TabKey; on: boolean }) {
   const holes = g.holes ?? [];
   return (
     <svg
-      width={26}
-      height={26}
+      width={25}
+      height={25}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -441,15 +441,15 @@ function BottomNav({
           bottom: "var(--bar-bottom)",
           // sizes live here, not in the stylesheet: without them the items
           // would collapse to their icons
-          "--gnb-h": compact ? "52px" : "62px",
-          "--gnb-item": compact ? "54px" : "62px",
+          "--gnb-h": compact ? "50px" : "58px",
+          "--gnb-item": compact ? "52px" : "58px",
         } as React.CSSProperties
       }
       data-compact={compact || undefined}
       data-hidden={hidden || undefined}
       inert={hidden}
     >
-      <nav aria-label="하단 바" className="flex gap-2.5">
+      <nav aria-label="하단 바" className="flex gap-4">
         <div className={island} {...glowHandlers}>
           <span className="g-glow" />
           {/* one selection platter that glides between the tabs */}
@@ -498,7 +498,7 @@ function BottomNav({
             )}
           >
             <span className={iconWrap}>
-              <Heart size={26} strokeWidth={1.8} fill={fav?.on ? "currentColor" : "none"} />
+              <Heart size={25} strokeWidth={1.8} fill={fav?.on ? "currentColor" : "none"} />
             </span>
           </button>
           {/* plain + (drawn a touch larger: a bare cross reads small next to
@@ -511,7 +511,7 @@ function BottomNav({
             className={cn(item, "disabled:opacity-35")}
           >
             <span className={iconWrap}>
-              <Plus size={30} strokeWidth={1.7} />
+              <Plus size={29} strokeWidth={1.7} />
             </span>
           </button>
         </div>
@@ -904,7 +904,7 @@ export function TopBarProvider({
       >
         {/* The tuck slides this inner row; pull-to-refresh moves the nav itself. */}
         <div
-          className="top-bar-row relative flex items-center justify-between px-4 pt-[var(--bar-top)]"
+          className="top-bar-row relative flex items-center justify-between px-[var(--gutter)] pt-[var(--bar-top)]"
           data-tucked={tucked || undefined}
           inert={tucked}
         >

@@ -165,7 +165,7 @@ export function GearRow({
           handleTap();
         }}
         className={cn(
-          "flex cursor-pointer items-center gap-2.5 px-4 py-2.5",
+          "flex cursor-pointer items-center gap-2.5 px-[var(--gutter)] py-2.5",
           dimmed && "opacity-45",
         )}
       >

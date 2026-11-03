@@ -98,5 +98,5 @@ export function LeafletMap({ points, selected, onSelect, active, fitTick }: MapV
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, active, sig]);
 
-  return <div ref={el} className="tw-map h-full w-full" />;
+  return <div ref={el} className="tw-map tw-map-tab h-full w-full" />;
 }
