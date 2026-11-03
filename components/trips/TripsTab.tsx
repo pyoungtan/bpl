@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, Map, Plus, Search, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, Map, Plus, Search, X } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { Trip } from "@/lib/types";
 import { formatWeightSmart } from "@/lib/units";
@@ -26,12 +26,16 @@ import { TbdTag } from "./TbdTag";
 type TripSort = "date" | "created" | "companions";
 
 const SORTS: { key: TripSort; label: string }[] = [
-  { key: "date", label: "Trip Date" },
+  { key: "date", label: "Date" },
   { key: "created", label: "Created" },
-  { key: "companions", label: "Companions" },
+  { key: "companions", label: "With" },
 ];
 
 const SORT_KEY = "bpl-trip-sort";
+const SORT_DIR_KEY = "bpl-trip-sort-dir";
+type SortDir = "asc" | "desc";
+/** Each sort's natural order: newest first for dates, 가나다 for names. */
+const DEFAULT_DIR: Record<TripSort, SortDir> = { date: "desc", created: "desc", companions: "asc" };
 
 export function TripsTab({
   openTripId,
@@ -107,11 +111,21 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
     const v = localStorage.getItem(SORT_KEY);
     return v === "date" || v === "companions" ? v : "created";
   });
+  const [dir, setDir] = useState<SortDir>(() => {
+    if (typeof window === "undefined") return "desc";
+    const v = localStorage.getItem(SORT_DIR_KEY);
+    return v === "asc" || v === "desc" ? v : DEFAULT_DIR[sort];
+  });
+  /** Picking a sort applies it in its natural order; picking the one already
+   *  applied flips the order. */
   function changeSort(s: TripSort) {
+    const next = !tbdOnly && s === sort ? (dir === "asc" ? "desc" : "asc") : DEFAULT_DIR[s];
     setSort(s);
+    setDir(next);
     setTbdOnly(false);
     try {
       localStorage.setItem(SORT_KEY, s);
+      localStorage.setItem(SORT_DIR_KEY, next);
     } catch {
       /* ignore */
     }
@@ -119,16 +133,18 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
 
   const sortedIds = useMemo(() => {
     const ids = tripOrder.filter((id) => trips[id]);
-    if (sort === "created") return ids; // tripOrder is newest-created first
+    const flip = dir === "asc" ? 1 : -1;
+    // tripOrder is newest-created first
+    if (sort === "created") return dir === "desc" ? ids : [...ids].reverse();
     if (sort === "date") {
-      // Most recent trip first; undated trips sink to the bottom.
+      // undated trips sink to the bottom either way
       return [...ids].sort((a, b) => {
         const sa = tripStart(trips[a]) ?? "";
         const sb = tripStart(trips[b]) ?? "";
         if (!sa && !sb) return 0;
         if (!sa) return 1;
         if (!sb) return -1;
-        return sb.localeCompare(sa);
+        return sa.localeCompare(sb) * flip;
       });
     }
     // 함께한 사람 가나다순; trips without companions sink to the bottom.
@@ -138,9 +154,9 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
       if (!ca && !cb) return 0;
       if (!ca) return 1;
       if (!cb) return -1;
-      return ca.localeCompare(cb, "ko");
+      return ca.localeCompare(cb, "ko") * flip;
     });
-  }, [tripOrder, trips, sort]);
+  }, [tripOrder, trips, sort, dir]);
 
   const q = query.trim().toLowerCase();
   const shownIds = useMemo(() => {
@@ -251,7 +267,16 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
                 active={!tbdOnly && sort === s.key}
                 onClick={() => changeSort(s.key)}
               >
-                {s.label}
+                <span className="flex items-center gap-1">
+                  {s.label}
+                  {/* the applied sort shows its order; tap again to flip */}
+                  {!tbdOnly && sort === s.key &&
+                    (dir === "asc" ? (
+                      <ArrowUp size={13} strokeWidth={2.6} aria-label="오름차순" />
+                    ) : (
+                      <ArrowDown size={13} strokeWidth={2.6} aria-label="내림차순" />
+                    ))}
+                </span>
               </TagChip>
             ))}
             {(hasTbd || tbdOnly) && (

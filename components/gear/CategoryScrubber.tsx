@@ -299,8 +299,10 @@ export function CategoryScrubber({
             }}
           >
             <span
-              className="whitespace-nowrap text-[21px] font-bold tracking-[-0.01em] text-label"
+              className="whitespace-nowrap text-[23px] font-bold tracking-[-0.01em] text-label"
               style={{
+                // Space Grotesk for Latin names; Hangul falls back to the UI font
+                fontFamily: "var(--font-grotesk), var(--font-sans)",
                 transform: hint ? "none" : "scale(0.97)",
                 transition: hint
                   ? "transform 0.32s cubic-bezier(0.22, 1, 0.36, 1)"

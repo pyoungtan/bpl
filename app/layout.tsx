@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
+import { Inter, JetBrains_Mono, Newsreader, Space_Grotesk } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 
@@ -18,6 +18,13 @@ const newsreader = Newsreader({
 const jbmono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jbmono",
+});
+
+// the Gear scrubber's category name (display only)
+const grotesk = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  variable: "--font-grotesk",
 });
 
 export const metadata: Metadata = {
@@ -72,7 +79,7 @@ export default function RootLayout({
     <html
       lang="ko"
       suppressHydrationWarning
-      className={`${inter.variable} ${newsreader.variable} ${jbmono.variable}`}
+      className={`${inter.variable} ${newsreader.variable} ${jbmono.variable} ${grotesk.variable}`}
     >
       <body className="min-h-dvh bg-bg font-sans text-label antialiased">
         <Script id="theme-init" strategy="beforeInteractive">
