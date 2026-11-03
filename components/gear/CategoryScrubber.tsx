@@ -154,7 +154,9 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
       return;
     }
     if (s.moved) {
-      showHint(cats[s.idx], false);
+      // the name was on screen the whole drag: fade the moment you let go
+      window.clearTimeout(hintTimer.current);
+      setHint(null);
       return;
     }
     // a tap: step by however many ticks away from centre it landed
