@@ -4,8 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { hapticTick } from "@/lib/haptics";
 import { quietScrollTuck } from "../TopBar";
 
-/** Finger travel (and tick spacing) per category. */
-const STEP = 18;
+/** Finger travel per category — long enough that each step is a deliberate
+ *  click rather than a glide. */
+const STEP = 28;
+/** Tick spacing. */
+const TICK = 18;
+/** How far the row gives toward the next step before it clicks over. */
+const GIVE = 0.12;
+/** The click: a quick move that overshoots a hair and settles. */
+const SNAP = "transform 0.22s cubic-bezier(0.25, 1.6, 0.45, 1)";
 
 /** Where the list's sections sit under the top bar: the shown tab pane's top
  *  padding, which already resolves the safe-area maths. */
@@ -148,11 +155,11 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
     }
     // a tap: step by however many ticks away from centre it landed
     const r = e.currentTarget.getBoundingClientRect();
-    step(cur + Math.round((e.clientX - (r.left + r.width / 2)) / STEP));
+    step(cur + Math.round((e.clientX - (r.left + r.width / 2)) / TICK));
   };
 
-  // Detent: between steps the row only gives a little, then clicks over.
-  const pos = raw === null ? cur : cur + (raw - cur) * 0.4;
+  // Detent: between steps the row barely gives, then snaps a whole tick.
+  const pos = raw === null ? cur : cur + (raw - cur) * GIVE;
 
   return (
     <div className="relative">
@@ -187,9 +194,8 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
           <div
             className="absolute left-1/2 top-1/2"
             style={{
-              transform: `translateX(${-pos * STEP}px)`,
-              transition:
-                raw === null ? "transform var(--dur-press) var(--spring-press)" : "none",
+              transform: `translateX(${-pos * TICK}px)`,
+              transition: SNAP,
             }}
           >
             {cats.map((c, i) => {
@@ -198,9 +204,9 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
                 <span
                   key={c}
                   aria-hidden="true"
-                  className="absolute top-0 w-[2.5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-label transition-[height,opacity] duration-200"
+                  className="absolute top-0 w-[2.5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-label transition-[height,opacity] duration-200 ease-[cubic-bezier(0.3,1.8,0.5,1)]"
                   style={{
-                    left: i * STEP,
+                    left: i * TICK,
                     height: on ? 18 : 9,
                     opacity: on ? 1 : Math.max(0.14, 0.42 - Math.abs(i - pos) * 0.05),
                   }}
@@ -217,7 +223,10 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
         style={{ opacity: hint ? 1 : 0 }}
       >
         <span className="glass-strong flex h-8 items-center whitespace-nowrap rounded-full px-3.5 text-[14px] font-semibold tracking-[0.02em] text-label">
-          {hint ?? cats[cur]}
+          {/* re-keyed per step so each click pops the name in */}
+          <span key={hint ?? cats[cur]} className="scrub-snap">
+            {hint ?? cats[cur]}
+          </span>
         </span>
       </div>
     </div>

@@ -5,16 +5,15 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import {
-  Backpack,
   Check,
   ChevronLeft,
-  Map as MapIcon,
   Moon,
   Search,
   Settings,
@@ -314,9 +313,60 @@ export function GlassCircle({
 }
 
 /* ---------- bottom bar: Gear · Trip tabs + Add (Instagram-style) ---------- */
-const TABS: { key: TabKey; label: string; Icon: typeof Backpack }[] = [
-  { key: "shelf", label: "Gear", Icon: Backpack },
-  { key: "trips", label: "Trip", Icon: MapIcon },
+/** Tab glyphs (lucide's backpack and map). Selected, the shape fills solid
+ *  and its inner lines are cut out of the fill instead of drawn — the stroke
+ *  weight never changes. */
+const TAB_GLYPHS: Record<TabKey, { shape: string[]; detail: string[] }> = {
+  shelf: {
+    shape: ["M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"],
+    detail: ["M8 10h8", "M8 18h8", "M8 22v-6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6"],
+  },
+  trips: {
+    shape: [
+      "M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z",
+    ],
+    detail: ["M15 5.764v15", "M9 3.236v15"],
+  },
+};
+const BACKPACK_HANDLE = "M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2";
+
+function TabGlyph({ k, on }: { k: TabKey; on: boolean }) {
+  const mask = useId();
+  const g = TAB_GLYPHS[k];
+  return (
+    <svg
+      width={26}
+      height={26}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {on && (
+        <mask id={mask} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+          <rect width="24" height="24" fill="#fff" stroke="none" />
+          {g.detail.map((d) => (
+            <path key={d} d={d} stroke="#000" strokeWidth={1.7} />
+          ))}
+        </mask>
+      )}
+      <g mask={on ? `url(#${mask})` : undefined}>
+        {g.shape.map((d) => (
+          <path key={d} d={d} fill={on ? "currentColor" : "none"} />
+        ))}
+      </g>
+      {!on && g.detail.map((d) => <path key={d} d={d} />)}
+      {k === "shelf" && <path d={BACKPACK_HANDLE} />}
+    </svg>
+  );
+}
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "shelf", label: "Gear" },
+  { key: "trips", label: "Trip" },
 ];
 
 /**
@@ -361,7 +411,15 @@ function BottomNav({
   return (
     <div
       className="bottom-nav pointer-events-none fixed inset-x-0 z-50 flex justify-center"
-      style={{ bottom: "var(--bar-bottom)" }}
+      style={
+        {
+          bottom: "var(--bar-bottom)",
+          // sizes live here, not in the stylesheet: without them the items
+          // would collapse to their icons
+          "--gnb-h": compact ? "52px" : "62px",
+          "--gnb-item": compact ? "64px" : "76px",
+        } as React.CSSProperties
+      }
       data-compact={compact || undefined}
       data-hidden={hidden || undefined}
       inert={hidden}
@@ -390,12 +448,12 @@ function BottomNav({
               <span
                 aria-hidden="true"
                 className={cn(
-                  "pointer-events-none absolute inset-0 -z-10 rounded-full bg-black/[0.075] transition-opacity duration-300 ease-out dark:bg-white/[0.14]",
+                  "pointer-events-none absolute inset-0 -z-10 rounded-[18px] bg-black/[0.075] transition-opacity duration-300 ease-out dark:bg-white/[0.14]",
                   on ? "opacity-100" : "opacity-0",
                 )}
               />
               <span className={cn(iconWrap, "[[data-compact]_&]:scale-[0.9]")}>
-                <t.Icon size={26} strokeWidth={on ? 2.3 : 1.8} />
+                <TabGlyph k={t.key} on={on} />
               </span>
             </button>
           );
@@ -409,7 +467,7 @@ function BottomNav({
           className={item}
         >
           <span className={cn(iconWrap, "[[data-compact]_&]:scale-[0.9]")}>
-            <Heart size={26} strokeWidth={favOn ? 2.1 : 1.8} fill={favOn ? "currentColor" : "none"} />
+            <Heart size={26} strokeWidth={1.8} fill={favOn ? "currentColor" : "none"} />
           </span>
         </button>
         {/* plain + (drawn a touch larger: a bare cross reads small next to
