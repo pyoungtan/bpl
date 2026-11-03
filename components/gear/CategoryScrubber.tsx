@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import { cn } from "@/lib/cn";
 import { hapticTick } from "@/lib/haptics";
 import { quietScrollTuck } from "../TopBar";
 
@@ -231,19 +230,28 @@ export function CategoryScrubber({ cats }: { cats: string[] }) {
         createPortal(
           <div
             aria-hidden="true"
-            className={cn(
-              "pointer-events-none fixed inset-0 z-40 grid place-items-center transition-opacity ease-out",
-              hint ? "duration-150" : "duration-300",
-            )}
+            className="pointer-events-none fixed inset-0 z-40 grid place-items-center"
             style={{
               opacity: hint ? 1 : 0,
-              background: "color-mix(in srgb, var(--bg) 72%, transparent)",
+              // in: a soft, slightly longer ease; out: quicker and smooth
+              transition: hint
+                ? "opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1)"
+                : "opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+              background: "color-mix(in srgb, var(--bg) 60%, transparent)",
               // a touch of blur so the list recedes behind the name
-              WebkitBackdropFilter: "blur(3px)",
-              backdropFilter: "blur(3px)",
+              WebkitBackdropFilter: "blur(2px)",
+              backdropFilter: "blur(2px)",
             }}
           >
-            <span className="whitespace-nowrap text-[19px] font-bold tracking-[-0.01em] text-label">
+            <span
+              className="whitespace-nowrap text-[21px] font-bold tracking-[-0.01em] text-label"
+              style={{
+                transform: hint ? "none" : "scale(0.97)",
+                transition: hint
+                  ? "transform 0.32s cubic-bezier(0.22, 1, 0.36, 1)"
+                  : "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
+            >
               {hint ?? cats[cur]}
             </span>
           </div>,
