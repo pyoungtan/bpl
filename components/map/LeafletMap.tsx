@@ -9,13 +9,21 @@ import {
   DEFAULT_VIEW,
   FIT_MAX_ZOOM,
   FIT_PAD,
+  KOREA_BOUNDS,
   pinHtml,
   type MapViewProps,
 } from "./types";
 
 /** Keyless fallback: Leaflet over OpenStreetMap's own tiles, drawn in
  *  greyscale (inverted in dark mode) by globals.css to match the app. */
-export function LeafletMap({ points, selected, onSelect, active, fitTick }: MapViewProps) {
+export function LeafletMap({
+  points,
+  selected,
+  onSelect,
+  active,
+  fitTick,
+  koreaTick,
+}: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const st = useRef<{ L: typeof Leaflet; map: Leaflet.Map; layer: Leaflet.LayerGroup } | null>(
     null,
@@ -131,6 +139,22 @@ export function LeafletMap({ points, selected, onSelect, active, fitTick }: MapV
     // points is read through sig
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, active, sig]);
+
+  useEffect(() => {
+    const s = st.current;
+    if (!ready || !s || !koreaTick) return;
+    const k = KOREA_BOUNDS;
+    s.map.fitBounds(
+      [
+        [k.south, k.west],
+        [k.north, k.east],
+      ],
+      {
+        paddingTopLeft: [FIT_PAD.side / 2, FIT_PAD.top],
+        paddingBottomRight: [FIT_PAD.side / 2, FIT_PAD.bottom],
+      },
+    );
+  }, [ready, koreaTick]);
 
   return <div ref={el} className="tw-map tw-map-tab h-full w-full" />;
 }

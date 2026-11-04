@@ -7,6 +7,7 @@ import {
   DEFAULT_VIEW,
   FIT_MAX_ZOOM,
   FIT_PAD,
+  KOREA_BOUNDS,
   pinHtml,
   type MapViewProps,
 } from "./types";
@@ -48,6 +49,7 @@ export function NaverMap({
   onSelect,
   active,
   fitTick,
+  koreaTick,
 }: MapViewProps & { apiKey: string }) {
   const el = useRef<HTMLDivElement>(null);
   const st = useRef<{ n: NaverMaps; map: NaverMaps; markers: NaverMaps[] } | null>(null);
@@ -163,6 +165,16 @@ export function NaverMap({
     // points is read through sig
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, active, sig]);
+
+  useEffect(() => {
+    const s = st.current;
+    if (!ready || !s || !koreaTick) return;
+    const k = KOREA_BOUNDS;
+    s.map.fitBounds(
+      new s.n.LatLngBounds(new s.n.LatLng(k.south, k.west), new s.n.LatLng(k.north, k.east)),
+      { top: FIT_PAD.top, bottom: FIT_PAD.bottom, left: FIT_PAD.side / 2, right: FIT_PAD.side / 2 },
+    );
+  }, [ready, koreaTick]);
 
   return <div ref={el} className="tw-map tw-map-tab h-full w-full" />;
 }

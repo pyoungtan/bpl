@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Scan } from "lucide-react";
+import { ChevronRight, Maximize2 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { Trip } from "@/lib/types";
 import { formatTripRange, tripStart } from "@/lib/dates";
@@ -101,6 +101,7 @@ export function MapTab({
   const createTrip = useAppStore((s) => s.createTrip);
   const [selected, setSelected] = useState<string | null>(null);
   const [fitTick, setFitTick] = useState(0);
+  const [koreaTick, setKoreaTick] = useState(0);
 
   const placesSig = tripOrder.map((id) => `${id}:${trips[id]?.place ?? ""}`).join("\n");
   const locating = useGeocodeTrips(active, placesSig);
@@ -127,7 +128,21 @@ export function MapTab({
   const shown = selected ? (byKey.get(selected) ?? null) : null;
 
   useTopBar({
-    left: { label: "전체 보기", icon: <Scan size={22} strokeWidth={2} />, onTap: () => setFitTick((n) => n + 1) },
+    // every trip in view
+    left: {
+      label: "전체 보기",
+      icon: <Maximize2 size={22} strokeWidth={2} />,
+      onTap: () => setFitTick((n) => n + 1),
+    },
+    // the whole country
+    actions: [
+      {
+        id: "korea",
+        label: "우리나라 보기",
+        icon: <span className="text-[14px] font-bold tracking-[0.02em]">KR</span>,
+        onTap: () => setKoreaTick((n) => n + 1),
+      },
+    ],
     onAdd: () => onOpenTrip(createTrip()),
     addLabel: "새 트립",
   });
@@ -138,7 +153,7 @@ export function MapTab({
       return g ? sum + g.weightG * p.quantity : sum;
     }, 0) + (t.extraWeightG ?? 0);
 
-  const view = { points, selected, onSelect: setSelected, active, fitTick };
+  const view = { points, selected, onSelect: setSelected, active, fitTick, koreaTick };
 
   return (
     // the map owns every drag: no tab paging, no pull-to-refresh
