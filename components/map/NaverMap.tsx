@@ -7,7 +7,7 @@ import {
   DEFAULT_VIEW,
   FIT_MAX_ZOOM,
   FIT_PAD,
-  KOREA_BOUNDS,
+  KOREA_VIEW,
   pinHtml,
   type MapViewProps,
 } from "./types";
@@ -169,11 +169,13 @@ export function NaverMap({
   useEffect(() => {
     const s = st.current;
     if (!ready || !s || !koreaTick) return;
-    const k = KOREA_BOUNDS;
+    const k = KOREA_VIEW;
+    // fit the coast-to-coast width, edge to edge, then centre
     s.map.fitBounds(
-      new s.n.LatLngBounds(new s.n.LatLng(k.south, k.west), new s.n.LatLng(k.north, k.east)),
-      { top: FIT_PAD.top, bottom: FIT_PAD.bottom, left: FIT_PAD.side / 2, right: FIT_PAD.side / 2 },
+      new s.n.LatLngBounds(new s.n.LatLng(k.lat - 0.01, k.west), new s.n.LatLng(k.lat + 0.01, k.east)),
+      { top: 0, bottom: 0, left: 0, right: 0 },
     );
+    s.map.setCenter(new s.n.LatLng(k.lat, k.lng));
   }, [ready, koreaTick]);
 
   return <div ref={el} className="tw-map tw-map-tab h-full w-full" />;

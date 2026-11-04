@@ -9,7 +9,7 @@ import {
   DEFAULT_VIEW,
   FIT_MAX_ZOOM,
   FIT_PAD,
-  KOREA_BOUNDS,
+  KOREA_VIEW,
   pinHtml,
   type MapViewProps,
 } from "./types";
@@ -46,7 +46,7 @@ export function LeafletMap({
         zoomControl: false,
         center: [DEFAULT_VIEW.lat, DEFAULT_VIEW.lng],
         zoom: DEFAULT_VIEW.zoom,
-        zoomSnap: 0.5,
+        zoomSnap: 0.25,
       });
       map.attributionControl.setPrefix(false);
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -143,17 +143,17 @@ export function LeafletMap({
   useEffect(() => {
     const s = st.current;
     if (!ready || !s || !koreaTick) return;
-    const k = KOREA_BOUNDS;
-    s.map.fitBounds(
+    const k = KOREA_VIEW;
+    // fit the coast-to-coast width, edge to edge
+    const z = s.map.getBoundsZoom(
       [
-        [k.south, k.west],
-        [k.north, k.east],
+        [k.lat, k.west],
+        [k.lat, k.east],
       ],
-      {
-        paddingTopLeft: [FIT_PAD.side / 2, FIT_PAD.top],
-        paddingBottomRight: [FIT_PAD.side / 2, FIT_PAD.bottom],
-      },
+      false,
+      s.L.point(0, 0),
     );
+    s.map.flyTo([k.lat, k.lng], z, { duration: 0.5 });
   }, [ready, koreaTick]);
 
   return <div ref={el} className="tw-map tw-map-tab h-full w-full" />;

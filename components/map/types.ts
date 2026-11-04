@@ -16,7 +16,7 @@ export interface MapViewProps {
   active: boolean;
   /** Bumped by the "show all" button to re-frame every point. */
   fitTick: number;
-  /** Bumped by the "country" button to frame all of South Korea. */
+  /** Bumped by the "country" button to show the whole mainland. */
   koreaTick: number;
 }
 
@@ -26,8 +26,9 @@ export const FIT_PAD = { top: 120, bottom: 170, side: 48 };
 export const FIT_MAX_ZOOM = 12;
 /** All of South Korea, before any trip has a place. */
 export const DEFAULT_VIEW = { lat: 36.2, lng: 127.9, zoom: 7 };
-/** South Korea's extent — Jeju to the DMZ, the west islands to Ulleungdo. */
-export const KOREA_BOUNDS = { south: 33.1, west: 124.6, north: 38.65, east: 130.95 };
+/** The "country" view: the mainland filling the screen's width (west coast
+ *  to the east coast at Pohang), centred on Daejeon's latitude. */
+export const KOREA_VIEW = { lat: 36.35, lng: 127.69, west: 125.72, east: 129.65 };
 
 const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);

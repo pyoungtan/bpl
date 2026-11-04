@@ -87,6 +87,27 @@ function useGeocodeTrips(active: boolean, placesSig: string) {
   return busy;
 }
 
+/** South Korea, simplified: the mainland's outline and Jeju (traced from
+ *  real coordinates, drawn like the other line icons). */
+function KoreaIcon() {
+  return (
+    <svg
+      width={24}
+      height={24}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M7.6 5.1L10 3.9L14.6 1.6L15.6 3.4L17.6 6.5L18.9 10.2L19.4 12.2L18.8 14.5L17.4 16L14.8 17L11.6 17.8L7.8 19.1L6.2 17.8L7 15.7L7.3 13.3L5.8 9.7L7.2 8.2L7.7 6.3Z" />
+      <ellipse cx="7" cy="22.2" rx="1.6" ry="0.85" />
+    </svg>
+  );
+}
+
 export function MapTab({
   active,
   onOpenTrip,
@@ -134,12 +155,12 @@ export function MapTab({
       icon: <Maximize2 size={22} strokeWidth={2} />,
       onTap: () => setFitTick((n) => n + 1),
     },
-    // the whole country
-    actions: [
+    // the whole country, right beside it
+    leftActions: [
       {
         id: "korea",
         label: "우리나라 보기",
-        icon: <span className="text-[14px] font-bold tracking-[0.02em]">KR</span>,
+        icon: <KoreaIcon />,
         onTap: () => setKoreaTick((n) => n + 1),
       },
     ],

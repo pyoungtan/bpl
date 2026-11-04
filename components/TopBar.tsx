@@ -53,6 +53,8 @@ export interface TopBarConfig {
   searching?: boolean;
   /** Left glass button with a custom action (takes precedence over search). */
   left?: { label: string; icon: React.ReactNode; onTap: () => void };
+  /** More bare buttons right after the left one (e.g. the map's views). */
+  leftActions?: { id: string; label: string; icon: React.ReactNode; onTap: () => void }[];
   /** Glass circle buttons placed left of the ⋯ menu. */
   actions?: { id: string; label: string; icon: React.ReactNode; onTap: () => void }[];
   menu?: TopBarMenuItem[];
@@ -90,6 +92,7 @@ export function useTopBar(config: TopBarConfig, active = true) {
     search: Boolean(config.onSearch),
     searching: Boolean(config.searching),
     left: config.left?.label ?? null,
+    leftActions: config.leftActions?.map((a) => [a.id, a.label]),
     actions: config.actions?.map((a) => [a.id, a.label]),
     menu: config.menu?.map((i) => [i.id, i.label, !!i.checked, !!i.danger, !!i.group]),
     add: Boolean(config.onAdd),
@@ -114,6 +117,10 @@ export function useTopBar(config: TopBarConfig, active = true) {
         onSearch: c.onSearch ? () => ref.current.onSearch?.() : undefined,
         searching: c.searching,
         left: c.left ? { ...c.left, onTap: () => ref.current.left?.onTap() } : undefined,
+        leftActions: c.leftActions?.map((a) => ({
+          ...a,
+          onTap: () => ref.current.leftActions?.find((x) => x.id === a.id)?.onTap(),
+        })),
         actions: c.actions?.map((a) => ({
           ...a,
           onTap: () => ref.current.actions?.find((x) => x.id === a.id)?.onTap(),
@@ -990,6 +997,18 @@ export function TopBarProvider({
           ) : (
             <span className="block w-11" aria-hidden="true" />
           )}
+          {config?.leftActions?.map((a) => (
+            <GlassCircle
+              plain
+              key={a.id}
+              label={a.label}
+              onTap={() => {
+                if (!closeIfOpen()) a.onTap();
+              }}
+            >
+              {a.icon}
+            </GlassCircle>
+          ))}
         </div>
         {/* centred on the bar itself, whatever the side groups' widths */}
         {config?.centerSlot ? (
