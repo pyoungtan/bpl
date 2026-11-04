@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { DEFAULT_VIEW, FIT_MAX_ZOOM, FIT_PAD, pinHtml, type MapViewProps } from "./types";
+import {
+  clusterHtml,
+  clusterPoints,
+  DEFAULT_VIEW,
+  FIT_MAX_ZOOM,
+  FIT_PAD,
+  pinHtml,
+  type MapViewProps,
+} from "./types";
 
 /* The Naver Maps JS API (v3) has no published types; only the handful of
    calls below are used. */
@@ -44,6 +52,8 @@ export function NaverMap({
   const el = useRef<HTMLDivElement>(null);
   const st = useRef<{ n: NaverMaps; map: NaverMaps; markers: NaverMaps[] } | null>(null);
   const [ready, setReady] = useState(false);
+  /** Re-cluster when the zoom changes. */
+  const [zoom, setZoom] = useState<number>(DEFAULT_VIEW.zoom);
   const onSelectRef = useRef(onSelect);
   useEffect(() => {
     onSelectRef.current = onSelect;
@@ -64,6 +74,7 @@ export function NaverMap({
           logoControlOptions: { position: n.Position.BOTTOM_LEFT },
         });
         n.Event.addListener(map, "click", () => onSelectRef.current(null));
+        n.Event.addListener(map, "zoom_changed", (z: number) => setZoom(z));
         st.current = { n, map, markers: [] };
         setReady(true);
       })
@@ -89,18 +100,44 @@ export function NaverMap({
     const s = st.current;
     if (!ready || !s) return;
     for (const m of s.markers) m.setMap(null);
-    s.markers = points.map((p) => {
-      const on = p.key === selected;
+    const proj = s.map.getProjection();
+    const clusters = clusterPoints(points, (p) =>
+      proj.fromCoordToOffset(new s.n.LatLng(p.lat, p.lng)),
+    );
+    s.markers = clusters.map((c) => {
+      const single = c.members.length === 1 ? c.members[0] : null;
+      const on = single?.key === selected;
       const m = new s.n.Marker({
-        position: new s.n.LatLng(p.lat, p.lng),
+        position: new s.n.LatLng(c.lat, c.lng),
         map: s.map,
-        icon: { content: `<div class="tw-pin-wrap">${pinHtml(p, on)}</div>`, anchor: new s.n.Point(0, 0) },
-        zIndex: on ? 1000 : 0,
+        icon: {
+          content: `<div class="tw-pin-wrap">${single ? pinHtml(single, on) : clusterHtml(c)}</div>`,
+          anchor: new s.n.Point(0, 0),
+        },
+        zIndex: on ? 1000 : single ? 0 : 500,
       });
-      s.n.Event.addListener(m, "click", () => onSelectRef.current(p.key));
+      s.n.Event.addListener(m, "click", () => {
+        if (single) {
+          onSelectRef.current(single.key);
+          return;
+        }
+        // a merged marker opens up: zoom to its spots
+        onSelectRef.current(null);
+        const b = new s.n.LatLngBounds(
+          new s.n.LatLng(c.members[0].lat, c.members[0].lng),
+          new s.n.LatLng(c.members[0].lat, c.members[0].lng),
+        );
+        for (const p of c.members) b.extend(new s.n.LatLng(p.lat, p.lng));
+        s.map.fitBounds(b, {
+          top: FIT_PAD.top,
+          bottom: FIT_PAD.bottom,
+          left: FIT_PAD.side,
+          right: FIT_PAD.side,
+        });
+      });
       return m;
     });
-  }, [ready, points, selected]);
+  }, [ready, points, selected, zoom]);
 
   const sig = `${points.map((p) => p.key).join("|")}#${fitTick}`;
   useEffect(() => {

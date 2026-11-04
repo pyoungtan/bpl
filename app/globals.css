@@ -610,6 +610,13 @@ html[data-bars="tucked"] .scroll-edge-top {
   height: 11px;
   padding: 0;
 }
+/* merged spots (zoomed out): a larger ink disc with the trip total */
+.tw-pin[data-cluster] .tw-pin-dot {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  font-size: 12px;
+}
 .tw-pin[data-on] .tw-pin-dot {
   transform: translate(-50%, -50%) scale(1.3);
 }

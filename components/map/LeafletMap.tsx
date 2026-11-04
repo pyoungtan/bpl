@@ -3,7 +3,15 @@
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
 import type * as Leaflet from "leaflet";
-import { DEFAULT_VIEW, FIT_MAX_ZOOM, FIT_PAD, pinHtml, type MapViewProps } from "./types";
+import {
+  clusterHtml,
+  clusterPoints,
+  DEFAULT_VIEW,
+  FIT_MAX_ZOOM,
+  FIT_PAD,
+  pinHtml,
+  type MapViewProps,
+} from "./types";
 
 /** Keyless fallback: Leaflet over OpenStreetMap's own tiles, drawn in
  *  greyscale (inverted in dark mode) by globals.css to match the app. */
@@ -13,6 +21,8 @@ export function LeafletMap({ points, selected, onSelect, active, fitTick }: MapV
     null,
   );
   const [ready, setReady] = useState(false);
+  /** Re-cluster when the zoom changes. */
+  const [zoom, setZoom] = useState<number>(DEFAULT_VIEW.zoom);
   const onSelectRef = useRef(onSelect);
   useEffect(() => {
     onSelectRef.current = onSelect;
@@ -42,6 +52,7 @@ export function LeafletMap({ points, selected, onSelect, active, fitTick }: MapV
         if ((e.originalEvent.target as Element | null)?.closest?.(".tw-pin")) return;
         onSelectRef.current(null);
       });
+      map.on("zoomend", () => setZoom(map.getZoom()));
       st.current = { L, map, layer };
       setReady(true);
     });
@@ -65,17 +76,40 @@ export function LeafletMap({ points, selected, onSelect, active, fitTick }: MapV
     const s = st.current;
     if (!ready || !s) return;
     s.layer.clearLayers();
-    for (const p of points) {
-      const on = p.key === selected;
-      s.L.marker([p.lat, p.lng], {
-        icon: s.L.divIcon({ className: "tw-pin-wrap", html: pinHtml(p, on), iconSize: [0, 0] }),
+    const z = s.map.getZoom();
+    for (const c of clusterPoints(points, (p) => s.map.project([p.lat, p.lng], z))) {
+      if (c.members.length === 1) {
+        const p = c.members[0];
+        const on = p.key === selected;
+        s.L.marker([p.lat, p.lng], {
+          icon: s.L.divIcon({ className: "tw-pin-wrap", html: pinHtml(p, on), iconSize: [0, 0] }),
+          keyboard: false,
+          zIndexOffset: on ? 1000 : 0,
+        })
+          .on("click", () => onSelectRef.current(p.key))
+          .addTo(s.layer);
+        continue;
+      }
+      // a merged marker opens up: zoom to its spots
+      s.L.marker([c.lat, c.lng], {
+        icon: s.L.divIcon({ className: "tw-pin-wrap", html: clusterHtml(c), iconSize: [0, 0] }),
         keyboard: false,
-        zIndexOffset: on ? 1000 : 0,
+        zIndexOffset: 500,
       })
-        .on("click", () => onSelectRef.current(p.key))
+        .on("click", () => {
+          onSelectRef.current(null);
+          s.map.flyToBounds(
+            s.L.latLngBounds(c.members.map((m) => [m.lat, m.lng] as [number, number])),
+            {
+              paddingTopLeft: [FIT_PAD.side, FIT_PAD.top],
+              paddingBottomRight: [FIT_PAD.side, FIT_PAD.bottom],
+              duration: 0.5,
+            },
+          );
+        })
         .addTo(s.layer);
     }
-  }, [ready, points, selected]);
+  }, [ready, points, selected, zoom]);
 
   // Frame every point — when first shown, when the set of spots changes, and
   // on "show all"; not on every tab switch (that would undo your panning).
