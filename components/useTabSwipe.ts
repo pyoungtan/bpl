@@ -3,11 +3,12 @@
 import { useEffect, useRef } from "react";
 import type { TabKey } from "./TopBar";
 
-const ORDER: TabKey[] = ["shelf", "trips"];
+const ORDER: TabKey[] = ["shelf", "trips", "map"];
 
 /** Touches that start here keep their own gestures (chip strips, fields, drag
  *  handles) instead of paging between tabs. Swipe rows are handled below. */
-const EXCLUDE = ".overflow-x-auto, input, textarea, select, [contenteditable], .touch-none";
+const EXCLUDE =
+  ".overflow-x-auto, input, textarea, select, [contenteditable], .touch-none, .tw-map";
 
 /** Rows own a horizontal drag (their swipe actions) — except within a row's
  *  edge band (data-swipe-band px at top/bottom), the gap between rows. */
@@ -79,7 +80,8 @@ interface Options {
 }
 
 /**
- * Horizontal swipe on non-item areas pages between the Gear and Trip tabs
+ * Horizontal swipe on non-item areas pages between the Gear, Trip and Map tabs
+ * (on the map itself, only from its left-edge strip — the map pans)
  * with both real screens moving under the finger. While dragging, each pane
  * is pinned to the viewport (position:fixed) and scrolled to its own offset,
  * so the incoming screen shows exactly what it will be — not a blank page.

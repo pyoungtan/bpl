@@ -177,9 +177,13 @@ export function MapTab({
   const view = { points, selected, onSelect: setSelected, active, fitTick, koreaTick };
 
   return (
-    // the map owns every drag: no tab paging, no pull-to-refresh
-    <div data-no-tab-swipe data-no-ptr className="fixed inset-0 z-0">
+    // the map owns its drags (no pull-to-refresh; tab paging only from the
+    // left-edge strip below)
+    <div data-no-ptr className="fixed inset-0 z-0">
       {NAVER_KEY ? <NaverMap apiKey={NAVER_KEY} {...view} /> : <LeafletMap {...view} />}
+      {/* a thin strip along the left edge, above the map: a swipe from the
+          edge pages back to the Trip tab instead of panning */}
+      <div aria-hidden="true" className="absolute inset-y-0 left-0 z-10 w-5" />
 
       {locating && (
         <div className="pointer-events-none fixed inset-x-0 top-[calc(var(--bar-top)+64px)] z-[36] flex justify-center">
