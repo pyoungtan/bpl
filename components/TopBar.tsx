@@ -599,14 +599,16 @@ function useScrollTuck(resetKey: unknown) {
       const y = window.scrollY;
       const dy = y - s.last;
       s.last = y;
-      if (performance.now() < Math.max(s.quietUntil, quietUntilGlobal)) return;
       if (document.body.style.position === "fixed") return; // a sheet holds the page
-      if (Math.abs(dy) > 240) return; // scroll restore, not a gesture
+      // At the top the bars are always out — however we got there (a jump to
+      // a new screen included).
       if (y < 24) {
         s.acc = 0;
         setTucked(false);
         return;
       }
+      if (performance.now() < Math.max(s.quietUntil, quietUntilGlobal)) return;
+      if (Math.abs(dy) > 240) return; // scroll restore, not a gesture
       if (dy === 0) return;
       if (dy > 0 !== s.acc > 0) s.acc = 0;
       s.acc += dy;
@@ -903,7 +905,11 @@ export function TopBarProvider({
     return true;
   };
   // Scrolling down tucks the top bar away and shrinks the bottom one.
-  const tucked = useScrollTuck(`${tab}|${Boolean(config?.onBack)}`) && !menuOpen;
+  // The bars stay out while the menu is open or a search is on (its ✕ lives
+  // in the bar); a new screen, or opening/closing search, starts them out.
+  const searching = Boolean(config?.searching);
+  const tucked =
+    useScrollTuck(`${tab}|${Boolean(config?.onBack)}|${searching}`) && !menuOpen && !searching;
   useEffect(() => {
     const root = document.documentElement;
     if (tucked) root.dataset.bars = "tucked";
