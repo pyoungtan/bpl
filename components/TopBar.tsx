@@ -354,8 +354,8 @@ function TabGlyph({ k, on }: { k: TabKey; on: boolean }) {
   const holes = g.holes ?? [];
   return (
     <svg
-      width={26}
-      height={26}
+      width={25}
+      height={25}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -481,11 +481,19 @@ function BottomNav({
       className="bottom-nav pointer-events-none fixed inset-x-0 z-50 flex justify-center"
       style={
         {
-          bottom: "var(--bar-bottom)",
-          // sizes live here, not in the stylesheet: without them the items
-          // would collapse to their icons
-          "--gnb-h": compact ? "52px" : "62px",
-          "--gnb-item": compact ? "54px" : "62px",
+          // Expanded, sized like Instagram's bar: 22px from the screen's sides
+          // and bottom edge (inside the home-indicator area), 58px tall, five
+          // even slots. Compact keeps its smaller fixed size.
+          // Sizes live here, not in the stylesheet: without them the items
+          // would collapse to their icons.
+          bottom: "max(calc(env(safe-area-inset-bottom) - 12px), 14px)",
+          "--gnb-h": compact ? "52px" : "58px",
+          "--gnb-pad": compact ? "5px" : "8px",
+          "--gnb-item": compact
+            ? "54px"
+            : "min(76px, calc((min(100vw, 42rem) - 44px - 16px) / 5))",
+          // the selection platter reaches a little past its slot
+          "--gnb-plat": compact ? "0px" : "4px",
         } as React.CSSProperties
       }
       data-compact={compact || undefined}
@@ -494,18 +502,20 @@ function BottomNav({
     >
       <nav
         aria-label="하단 바"
-        className="gnb-island glass pointer-events-auto relative flex h-[var(--gnb-h)] rounded-full p-[5px] transition-[height] duration-[var(--dur-morph)] ease-[var(--spring-morph)]"
+        className="gnb-island glass pointer-events-auto relative flex h-[var(--gnb-h)] rounded-full px-[var(--gnb-pad)] transition-[height] duration-[var(--dur-morph)] ease-[var(--spring-morph)]"
         {...glowHandlers}
       >
         <span className="g-glow" />
         {/* one selection platter that glides between the tabs */}
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-[5px] left-[5px] w-[var(--gnb-item)] rounded-full bg-black/[0.075] dark:bg-white/[0.14]"
+          className="pointer-events-none absolute inset-y-[5px] rounded-full bg-black/[0.075] dark:bg-white/[0.14]"
           style={{
+            left: "calc(var(--gnb-pad) - var(--gnb-plat))",
+            width: "calc(var(--gnb-item) + 2 * var(--gnb-plat))",
             transform: `translateX(calc(var(--gnb-item) * ${Math.max(0, TABS.findIndex((t) => t.key === tab))}))`,
             transition:
-              "transform 0.45s var(--ease-tuck), width var(--dur-morph) var(--spring-morph)",
+              "transform 0.45s var(--ease-tuck), width var(--dur-morph) var(--spring-morph), left var(--dur-morph) var(--spring-morph)",
           }}
         />
         {TABS.map((t) => {
@@ -546,7 +556,7 @@ function BottomNav({
         >
           <span className={iconWrap}>
             <span data-press className="grid place-items-center">
-              <Heart size={26} strokeWidth={1.8} fill={fav?.on ? "currentColor" : "none"} />
+              <Heart size={25} strokeWidth={1.8} fill={fav?.on ? "currentColor" : "none"} />
             </span>
           </span>
         </button>
@@ -562,7 +572,7 @@ function BottomNav({
         >
           <span className={iconWrap}>
             <span data-press className="grid place-items-center">
-              <Plus size={30} strokeWidth={1.7} />
+              <Plus size={29} strokeWidth={1.7} />
             </span>
           </span>
         </button>
