@@ -481,17 +481,17 @@ function BottomNav({
       className="bottom-nav pointer-events-none fixed inset-x-0 z-50 flex justify-center"
       style={
         {
-          // Expanded, sized like Instagram's bar: 22px from the screen's sides
-          // and bottom edge (inside the home-indicator area), 58px tall, five
-          // even slots. Compact keeps its smaller fixed size.
+          // Expanded, after Instagram's bar: 32px in from the screen's sides,
+          // 22px above its bottom edge (inside the home-indicator area), 61px
+          // tall, five even slots. Compact keeps its smaller fixed size.
           // Sizes live here, not in the stylesheet: without them the items
           // would collapse to their icons.
           bottom: "max(calc(env(safe-area-inset-bottom) - 12px), 14px)",
-          "--gnb-h": compact ? "52px" : "58px",
+          "--gnb-h": compact ? "52px" : "61px",
           "--gnb-pad": compact ? "5px" : "8px",
           "--gnb-item": compact
             ? "54px"
-            : "min(76px, calc((min(100vw, 42rem) - 44px - 16px) / 5))",
+            : "min(74px, calc((min(100vw, 42rem) - 64px - 16px) / 5))",
           // the selection platter reaches a little past its slot
           "--gnb-plat": compact ? "0px" : "4px",
         } as React.CSSProperties
