@@ -85,7 +85,8 @@ export function TripDetail({
   underlayScroll,
 }: {
   tripId: string;
-  onBack: () => void;
+  /** `swiped`: the edge swipe already slid the screen away. */
+  onBack: (swiped?: boolean) => void;
   /** The trip list kept mounted underneath, revealed by the swipe-back. */
   underlay?: () => HTMLDivElement | null;
   underlayScroll?: () => number;
@@ -816,7 +817,7 @@ export function TripDetail({
  */
 function useSwipeBack(
   rootRef: React.RefObject<HTMLDivElement | null>,
-  onBack: () => void,
+  onBack: (swiped?: boolean) => void,
   underlay?: () => HTMLDivElement | null,
   underlayScroll?: () => number,
 ) {
@@ -867,7 +868,7 @@ function useSwipeBack(
       g.phase = "idle";
       g.list = null;
       if (commit) {
-        flushSync(() => latest.current.onBack());
+        flushSync(() => latest.current.onBack(true));
         unpinPane(list);
         window.scrollTo(0, latest.current.underlayScroll?.() ?? 0);
       } else {

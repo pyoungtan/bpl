@@ -42,9 +42,17 @@ const WITH_KEY = "bpl-trip-with";
 export function TripsTab({
   openTripId,
   onConsumeOpen,
+  returnTo,
 }: {
   openTripId: string | null;
   onConsumeOpen: () => void;
+  /** The trip was opened from another tab (the map): going back returns
+   *  there — its screen is what the swipe-back reveals — instead of to the
+   *  trip list. */
+  returnTo?: {
+    pane: () => HTMLDivElement | null;
+    go: (listScroll: number, swiped: boolean) => void;
+  } | null;
 }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const trips = useAppStore((s) => s.trips);
@@ -84,9 +92,12 @@ export function TripsTab({
         <TripDetail
           key={activeId}
           tripId={activeId}
-          onBack={() => setActiveId(null)}
-          underlay={() => listRef.current}
-          underlayScroll={() => listScroll.current}
+          onBack={(swiped) => {
+            setActiveId(null);
+            returnTo?.go(listScroll.current, Boolean(swiped));
+          }}
+          underlay={() => (returnTo ? returnTo.pane() : listRef.current)}
+          underlayScroll={() => (returnTo ? 0 : listScroll.current)}
         />
       )}
     </>

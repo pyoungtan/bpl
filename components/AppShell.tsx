@@ -23,6 +23,8 @@ export function AppShell() {
   const [tab, setTab] = useState<TabKey>("shelf");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tripToOpen, setTripToOpen] = useState<string | null>(null);
+  /** The tab a trip was opened from, when going back should return there. */
+  const [tripFrom, setTripFrom] = useState<TabKey | null>(null);
   const cloud = useCloudSync();
   // All tabs stay mounted (switching only toggles visibility, so the long
   // Gear list is never rebuilt mid-transition, and a swipe can show the real
@@ -56,10 +58,34 @@ export function AppShell() {
   );
   const openTripFromShelf = useCallback(
     (id: string) => {
+      setTripFrom(null);
       setTripToOpen(id);
       switchTab("trips", { scrollTo: 0 });
     },
     [switchTab],
+  );
+  // A trip opened from the map goes back to the map (swipe-back included).
+  const openTripFromMap = useCallback(
+    (id: string) => {
+      setTripFrom("map");
+      setTripToOpen(id);
+      switchTab("trips", { scrollTo: 0 });
+    },
+    [switchTab],
+  );
+  const tripReturn = useMemo(
+    () =>
+      tripFrom
+        ? {
+            pane: () => paneEls.current[tripFrom] ?? null,
+            go: (listScroll: number, swiped: boolean) => {
+              setTripFrom(null);
+              // the trip list keeps its own offset for the next visit
+              switchTab(tripFrom, { fromScroll: listScroll, dissolve: !swiped });
+            },
+          }
+        : null,
+    [tripFrom, switchTab],
   );
   const registerPane = useCallback((pane: TabKey, el: HTMLDivElement | null) => {
     paneEls.current[pane] = el;
@@ -81,13 +107,15 @@ export function AppShell() {
     [openTripFromShelf],
   );
   const tripsScreen = useMemo(
-    () => <TripsTab openTripId={tripToOpen} onConsumeOpen={consumeTripToOpen} />,
-    [tripToOpen, consumeTripToOpen],
+    () => (
+      <TripsTab openTripId={tripToOpen} onConsumeOpen={consumeTripToOpen} returnTo={tripReturn} />
+    ),
+    [tripToOpen, consumeTripToOpen, tripReturn],
   );
   const mapActive = tab === "map";
   const mapScreen = useMemo(
-    () => <MapTab active={mapActive} onOpenTrip={openTripFromShelf} />,
-    [mapActive, openTripFromShelf],
+    () => <MapTab active={mapActive} onOpenTrip={openTripFromMap} />,
+    [mapActive, openTripFromMap],
   );
 
   useLayoutEffect(() => {
