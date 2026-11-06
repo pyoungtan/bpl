@@ -15,7 +15,7 @@ import {
 /* The Naver Maps JS API (v3) has no published types; only the handful of
    calls below are used. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type NaverMaps = any;
+export type NaverMaps = any;
 
 declare global {
   interface Window {
@@ -24,7 +24,7 @@ declare global {
 }
 
 let loading: Promise<NaverMaps> | null = null;
-function loadNaver(key: string): Promise<NaverMaps> {
+export function loadNaver(key: string): Promise<NaverMaps> {
   if (window.naver?.maps) return Promise.resolve(window.naver.maps);
   loading ??= new Promise((resolve, reject) => {
     const s = document.createElement("script");
@@ -52,6 +52,9 @@ export function NaverMap({
   koreaTick,
 }: MapViewProps & { apiKey: string }) {
   const el = useRef<HTMLDivElement>(null);
+  /** The box the map fills. Naver pins its element to the size it measured
+   *  when created (0×0 while the tab was hidden), so it is sized from here. */
+  const box = useRef<HTMLDivElement>(null);
   const st = useRef<{ n: NaverMaps; map: NaverMaps; markers: NaverMaps[] } | null>(null);
   const [ready, setReady] = useState(false);
   /** Re-cluster when the zoom changes. */
@@ -89,7 +92,7 @@ export function NaverMap({
   }, [apiKey]);
 
   useEffect(() => {
-    const node = el.current;
+    const node = box.current;
     if (!ready || !node) return;
     const ro = new ResizeObserver(() =>
       st.current?.map.setSize(new st.current.n.Size(node.clientWidth, node.clientHeight)),
@@ -144,7 +147,7 @@ export function NaverMap({
   const sig = `${points.map((p) => p.key).join("|")}#${fitTick}`;
   useEffect(() => {
     const s = st.current;
-    const node = el.current;
+    const node = box.current;
     if (!ready || !s || !node || !active) return;
     s.map.setSize(new s.n.Size(node.clientWidth, node.clientHeight));
     if (fitted.current === sig) return;
@@ -178,5 +181,9 @@ export function NaverMap({
     s.map.setCenter(new s.n.LatLng(k.lat, k.lng));
   }, [ready, koreaTick]);
 
-  return <div ref={el} className="tw-map tw-map-tab h-full w-full" />;
+  return (
+    <div ref={box} className="tw-map-tab relative h-full w-full">
+      <div ref={el} className="tw-map absolute inset-0" />
+    </div>
+  );
 }
