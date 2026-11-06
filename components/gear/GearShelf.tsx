@@ -23,6 +23,7 @@ import {
   Check,
   ChevronDown,
   GripVertical,
+  Heart,
   Search,
   SlidersHorizontal,
   SquarePen,
@@ -654,18 +655,33 @@ export function GearShelf({
           >
             <X size={21} />
           </GlassButton>
-          <InkButton
-            size="lg"
-            onClick={() => setAddTripOpen(true)}
-            aria-label={`선택한 ${selected.size}개 Trip에 담기`}
-            className="pointer-events-auto"
-          >
-            <Backpack size={22} />
-            Pack
-            <span className="tabular font-medium opacity-60">
-              {formatWeightSmart(selectedStats.totalG, unit)}
-            </span>
-          </InkButton>
+          {/* Pack stays centred; the ♥ (hearted-only, as in the bottom bar it
+              replaces while packing) floats on its own at the right */}
+          <div className="relative flex w-full justify-center">
+            <InkButton
+              size="lg"
+              onClick={() => setAddTripOpen(true)}
+              aria-label={`선택한 ${selected.size}개 Trip에 담기`}
+              className="pointer-events-auto"
+            >
+              <Backpack size={22} />
+              Pack
+              <span className="tabular font-medium opacity-60">
+                {formatWeightSmart(selectedStats.totalG, unit)}
+              </span>
+            </InkButton>
+            <GlassButton
+              onClick={() => {
+                keepRowInPlace();
+                setFavOnly((v) => !v);
+                setSwipeOpenId(null);
+              }}
+              aria-label="하트한 장비만 보기"
+              className="pointer-events-auto absolute right-[var(--gutter)] top-1/2 h-[54px] w-[54px] -translate-y-1/2"
+            >
+              <Heart size={24} strokeWidth={1.8} fill={favOnly ? "currentColor" : "none"} />
+            </GlassButton>
+          </div>
         </div>
         </>
       ) : editMode ? (

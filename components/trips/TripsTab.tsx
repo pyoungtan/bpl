@@ -24,18 +24,29 @@ import { SwipeRow, SwipeDeleteButton, SwipeHeartButton } from "../ui/SwipeRow";
 import { TripDetail } from "./TripDetail";
 import { TbdTag } from "./TbdTag";
 
-type TripSort = "date" | "created";
+type TripSort = "date" | "created" | "temp";
 
 const SORTS: { key: TripSort; label: string }[] = [
   { key: "date", label: "Date" },
   { key: "created", label: "Created" },
+  { key: "temp", label: "Temp" },
 ];
 
 const SORT_KEY = "bpl-trip-sort";
 const SORT_DIR_KEY = "bpl-trip-sort-dir";
 type SortDir = "asc" | "desc";
-/** Each sort's natural order: newest first. */
-const DEFAULT_DIR: Record<TripSort, SortDir> = { date: "desc", created: "desc" };
+/** Each sort's natural order: newest first; coldest first for Temp. */
+const DEFAULT_DIR: Record<TripSort, SortDir> = { date: "desc", created: "desc", temp: "asc" };
+
+/** A trip's temperature for sorting: the middle of its low~high range, or
+ *  whichever bound it has; null without any. */
+function tripTemp(t: Trip): number | null {
+  const lo = parseFloat(t.tempLow ?? "");
+  const hi = parseFloat(t.tempHigh ?? "");
+  if (Number.isFinite(lo) && Number.isFinite(hi)) return (lo + hi) / 2;
+  if (Number.isFinite(lo)) return lo;
+  return Number.isFinite(hi) ? hi : null;
+}
 /** With: an on/off layer over any sort — each row shows who came along. */
 const WITH_KEY = "bpl-trip-with";
 
@@ -96,6 +107,10 @@ export function TripsTab({
             setActiveId(null);
             returnTo?.go(listScroll.current, Boolean(swiped));
           }}
+          onOpenTrip={(id) => {
+            setActiveId(id);
+            window.scrollTo(0, 0);
+          }}
           underlay={() => (returnTo ? returnTo.pane() : listRef.current)}
           underlayScroll={() => (returnTo ? 0 : listScroll.current)}
         />
@@ -122,7 +137,7 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
   const [sort, setSort] = useState<TripSort>(() => {
     if (typeof window === "undefined") return "created";
     const v = localStorage.getItem(SORT_KEY);
-    return v === "date" ? v : "created";
+    return v === "date" || v === "temp" ? v : "created";
   });
   const [showWith, setShowWith] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -162,6 +177,17 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
     const flip = dir === "asc" ? 1 : -1;
     // tripOrder is newest-created first
     if (sort === "created") return dir === "desc" ? ids : [...ids].reverse();
+    if (sort === "temp") {
+      // trips without a temperature sink to the bottom either way
+      return [...ids].sort((a, b) => {
+        const ta = tripTemp(trips[a]);
+        const tb = tripTemp(trips[b]);
+        if (ta === null && tb === null) return 0;
+        if (ta === null) return 1;
+        if (tb === null) return -1;
+        return (ta - tb) * flip;
+      });
+    }
     // by date: undated trips sink to the bottom either way
     return [...ids].sort((a, b) => {
       const sa = tripStart(trips[a]) ?? "";
@@ -211,7 +237,44 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
     ) : null;
   }
 
+  const chips =
+    tripOrder.length === 0 ? null : (
+      <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-[var(--gutter)] pb-2 pt-1">
+        {SORTS.map((s) => (
+          <TagChip
+            key={s.key}
+            active={!tbdOnly && sort === s.key}
+            onClick={() => changeSort(s.key)}
+          >
+            <span className="flex items-center gap-1">
+              {s.label}
+              {/* the applied sort shows its order; tap again to flip */}
+              {!tbdOnly &&
+                sort === s.key &&
+                (dir === "asc" ? (
+                  <ArrowUp size={13} strokeWidth={2.6} aria-label="오름차순" />
+                ) : (
+                  <ArrowDown size={13} strokeWidth={2.6} aria-label="내림차순" />
+                ))}
+            </span>
+          </TagChip>
+        ))}
+        {/* not a sort: shows who came along, over whichever sort is on */}
+        <TagChip active={showWith} onClick={toggleWith}>
+          With
+        </TagChip>
+        {(hasTbd || tbdOnly) && (
+          <TagChip active={tbdOnly} onClick={() => setTbdOnly((v) => !v)}>
+            TBD
+          </TagChip>
+        )}
+      </div>
+    );
+
   useTopBar({
+    // the filter chips ride in the top bar: they tuck away and come back with it
+    subSlot: chips,
+    subKey: chips ? `${sort}|${dir}|${showWith}|${tbdOnly}|${hasTbd}` : undefined,
     onAdd: () => onOpen(createTrip()),
     addLabel: "새 트립",
     favorite: {
@@ -247,6 +310,7 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
 
   return (
     <div className="pb-40">
+      {chips && <div aria-hidden="true" className="h-[var(--bar-sub)]" />}
       {searchOpen && (
         <div className="px-[var(--gutter)] pb-1 pt-1">
           <div className="flex h-11 items-center gap-2.5 rounded-full bg-fill px-4">
@@ -276,35 +340,6 @@ function TripList({ onOpen, active }: { onOpen: (id: string) => void; active: bo
         <EmptyTrips onCreate={() => onOpen(createTrip())} />
       ) : (
         <div>
-          <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-[var(--gutter)] pb-3.5 pt-2">
-            {SORTS.map((s) => (
-              <TagChip
-                key={s.key}
-                active={!tbdOnly && sort === s.key}
-                onClick={() => changeSort(s.key)}
-              >
-                <span className="flex items-center gap-1">
-                  {s.label}
-                  {/* the applied sort shows its order; tap again to flip */}
-                  {!tbdOnly && sort === s.key &&
-                    (dir === "asc" ? (
-                      <ArrowUp size={13} strokeWidth={2.6} aria-label="오름차순" />
-                    ) : (
-                      <ArrowDown size={13} strokeWidth={2.6} aria-label="내림차순" />
-                    ))}
-                </span>
-              </TagChip>
-            ))}
-            {/* not a sort: shows who came along, over whichever sort is on */}
-            <TagChip active={showWith} onClick={toggleWith}>
-              With
-            </TagChip>
-            {(hasTbd || tbdOnly) && (
-              <TagChip active={tbdOnly} onClick={() => setTbdOnly((v) => !v)}>
-                TBD
-              </TagChip>
-            )}
-          </div>
           {/* Dense flat list, like the Gear */}
           <div>
             {tbdOnly ? (

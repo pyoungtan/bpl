@@ -10,6 +10,8 @@
   --bar-top: max(env(safe-area-inset-top), 10px);
   /* side margin of the main screens' content (lists, headers, top bar) */
   --gutter: 20px;
+  /* height of the top bar's optional second row (set by the bar) */
+  --bar-sub: 0px;
   --bar-bottom: max(calc(env(safe-area-inset-bottom) + 4px), 16px);
   /* Canvas + surfaces */
   --bg: #ffffff;
@@ -454,7 +456,7 @@
   inset-inline: 0;
   top: 0;
   z-index: 35;
-  height: calc(var(--bar-top) + 54px);
+  height: calc(var(--bar-top) + 54px + var(--bar-sub, 0px));
   pointer-events: none;
   background: var(--bg);
   transition: height 0.42s var(--ease-tuck);

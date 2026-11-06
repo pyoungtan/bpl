@@ -4,11 +4,13 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { flushSync } from "react-dom";
 import {
+  BookmarkPlus,
   CalendarCheck,
   CalendarClock,
   CalendarDays,
   ChevronDown,
   CircleCheck,
+  Copy,
   ListChecks,
   MapPin,
   Minus,
@@ -39,6 +41,7 @@ import { ExportSheet } from "./ExportSheet";
 import { TbdTag } from "./TbdTag";
 import { RangeCalendar } from "../ui/RangeCalendar";
 import { Sheet } from "../ui/Sheet";
+import { TagChip } from "../ui/TagChip";
 import { CategoryScrubber } from "../gear/CategoryScrubber";
 import { PlaceSheet } from "./PlaceSheet";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
@@ -78,15 +81,66 @@ function groupByMajor(
   return [...map.entries()].sort((a, b) => rank(a[0]) - rank(b[0]));
 }
 
+/** How the memo opens: always open, always folded, or as you left it per trip. */
+type MemoMode = "open" | "closed" | "remember";
+const MEMO_MODES: { key: MemoMode; label: string }[] = [
+  { key: "open", label: "메모 항상 펼치기" },
+  { key: "closed", label: "메모 항상 접기" },
+  { key: "remember", label: "메모 펼침 상태 기억" },
+];
+const MEMO_MODE_KEY = "bpl-memo-mode";
+const MEMO_OPEN_KEY = "bpl-memo-open";
+
+function readMemoMode(): MemoMode {
+  try {
+    const v = localStorage.getItem(MEMO_MODE_KEY);
+    return v === "open" || v === "closed" ? v : "remember";
+  } catch {
+    return "remember";
+  }
+}
+function writeMemoMode(m: MemoMode) {
+  try {
+    localStorage.setItem(MEMO_MODE_KEY, m);
+  } catch {
+    /* ignore */
+  }
+}
+/** Trips whose memo was left open (remember mode). */
+function openMemos(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(MEMO_OPEN_KEY) ?? "[]") as string[]);
+  } catch {
+    return new Set();
+  }
+}
+function rememberMemoOpen(tripId: string, open: boolean) {
+  const set = openMemos();
+  if (open) set.add(tripId);
+  else set.delete(tripId);
+  try {
+    localStorage.setItem(MEMO_OPEN_KEY, JSON.stringify([...set]));
+  } catch {
+    /* ignore */
+  }
+}
+function initialMemoOpen(tripId: string): boolean {
+  const m = readMemoMode();
+  return m === "open" ? true : m === "closed" ? false : openMemos().has(tripId);
+}
+
 export function TripDetail({
   tripId,
   onBack,
+  onOpenTrip,
   underlay,
   underlayScroll,
 }: {
   tripId: string;
   /** `swiped`: the edge swipe already slid the screen away. */
   onBack: (swiped?: boolean) => void;
+  /** Show another trip in place of this one (a fresh duplicate). */
+  onOpenTrip?: (id: string) => void;
   /** The trip list kept mounted underneath, revealed by the swipe-back. */
   underlay?: () => HTMLDivElement | null;
   underlayScroll?: () => number;
@@ -102,7 +156,32 @@ export function TripDetail({
   const setEntryQuantity = useAppStore((s) => s.setEntryQuantity);
   const toggleChecked = useAppStore((s) => s.toggleTripChecked);
 
-  const [memoOpen, setMemoOpen] = useState(false);
+  const [memoMode, setMemoModeState] = useState<MemoMode>(readMemoMode);
+  const [memoOpen, setMemoOpenState] = useState(() => initialMemoOpen(tripId));
+  const setMemoOpen = (open: boolean) => {
+    setMemoOpenState(open);
+    if (memoMode === "remember") rememberMemoOpen(tripId, open);
+  };
+  function changeMemoMode(m: MemoMode) {
+    setMemoModeState(m);
+    writeMemoMode(m);
+    if (m === "open") setMemoOpenState(true);
+    else if (m === "closed") setMemoOpenState(false);
+    else rememberMemoOpen(tripId, memoOpen);
+  }
+  // Packed-list tools: search, and the manual extra-weight field.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [extraOpen, setExtraOpen] = useState(false);
+  const addPreset = useAppStore((s) => s.addPreset);
+  const createTrip = useAppStore((s) => s.createTrip);
+  const addEntriesToTrip = useAppStore((s) => s.addEntriesToTrip);
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 1800);
+    return () => window.clearTimeout(t);
+  }, [toast]);
   const [catOpen, setCatOpen] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
   const [companionDraft, setCompanionDraft] = useState("");
@@ -156,6 +235,30 @@ export function TripDetail({
         : [],
     [trip, gear, gearOrder, categories, nestedSet],
   );
+  // Searching the packed list: a row stays if it or one of its packed add-ons
+  // matches (name, brand, 소분류, 대분류).
+  const q = query.trim().toLowerCase();
+  const shownGroups = useMemo(() => {
+    if (!q) return groups;
+    const hit = (g: GearItem | undefined) =>
+      Boolean(g) &&
+      [g!.name, g!.brand ?? "", g!.minorCategory ?? "", g!.majorCategory].some((v) =>
+        v.toLowerCase().includes(q),
+      );
+    return groups
+      .map(
+        ([major, rows]) =>
+          [
+            major,
+            rows.filter(
+              ({ gear: g }) =>
+                hit(g) || g.addOnIds.some((aid) => packedQty.has(aid) && hit(gear[aid])),
+            ),
+          ] as typeof groups[number],
+      )
+      .filter(([, rows]) => rows.length > 0);
+  }, [groups, q, gear, packedQty]);
+
   // Stats count every packed item (parents + nested add-ons). A packed add-on
   // is logically part of its parent, so its weight is credited to the parent's
   // category (not the add-on's own) in the donut + breakdown.
@@ -257,6 +360,46 @@ export function TripDetail({
         icon: trip?.tbd ? <CalendarCheck size={20} /> : <CalendarClock size={20} />,
         onSelect: () => updateTrip(tripId, { tbd: !trip?.tbd }),
       },
+      {
+        id: "duplicate",
+        label: "그대로 새 트립에 담기",
+        icon: <Copy size={20} />,
+        group: true,
+        onSelect: () => {
+          if (!trip) return;
+          const id = createTrip(trip.name.trim() ? `${trip.name.trim()} 복사본` : undefined);
+          addEntriesToTrip(
+            id,
+            trip.packed.map((e) => ({ ...e })),
+          );
+          if (trip.extraWeightG) updateTrip(id, { extraWeightG: trip.extraWeightG });
+          onOpenTrip?.(id);
+        },
+      },
+      {
+        id: "preset",
+        label: "프리셋에 저장하기",
+        icon: <BookmarkPlus size={20} />,
+        onSelect: () => {
+          if (!trip || trip.packed.length === 0) {
+            setToast("담긴 장비가 없어요");
+            return;
+          }
+          const name = trip.name.trim() || "트립 프리셋";
+          addPreset(
+            name,
+            trip.packed.map((e) => e.gearId),
+          );
+          setToast(`프리셋 ‘${name}’에 저장했어요`);
+        },
+      },
+      ...MEMO_MODES.map((m, i) => ({
+        id: `memo-${m.key}`,
+        label: m.label,
+        checked: memoMode === m.key,
+        group: i === 0,
+        onSelect: () => changeMemoMode(m.key),
+      })),
       {
         id: "delete",
         label: "트립 삭제",
@@ -595,7 +738,7 @@ export function TripDetail({
         <div className="overflow-hidden rounded-[24px] bg-card">
           <button
             type="button"
-            onClick={() => setMemoOpen((o) => !o)}
+            onClick={() => setMemoOpen(!memoOpen)}
             className="flex h-12 w-full items-center justify-between px-4 active:bg-fill"
           >
             <span className="flex items-center gap-1.5 text-[15px] font-semibold text-label">
@@ -702,7 +845,53 @@ export function TripDetail({
 
       {/* Packed gear — flat list */}
       <div className="mt-3">
+        {/* Tools: search the packed gear; manual extra weight (opens its field) */}
+        <div className="flex gap-1.5 px-[var(--gutter)] pb-1 pt-1">
+          <TagChip
+            active={searchOpen}
+            onClick={() => {
+              setSearchOpen((o) => !o);
+              setQuery("");
+            }}
+          >
+            <span className="flex items-center gap-1">
+              <Search size={14} strokeWidth={2.4} /> 장비 검색
+            </span>
+          </TagChip>
+          <TagChip active={extraOpen} onClick={() => setExtraOpen((o) => !o)}>
+            <span className="flex items-center gap-1">
+              <Weight size={14} strokeWidth={2.4} />
+              {trip.extraWeightG ? `무게 추가 · ${formatWeightSmart(trip.extraWeightG, unit)}` : "무게 추가"}
+            </span>
+          </TagChip>
+        </div>
+        {searchOpen && (
+          <div className="px-[var(--gutter)] pb-1 pt-2">
+            <div className="flex h-11 items-center gap-2.5 rounded-full bg-fill px-4">
+              <Search size={17} className="shrink-0 text-tertiary" />
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="담은 장비 검색…"
+                enterKeyHint="search"
+                className="min-w-0 flex-1 bg-transparent text-[16px] text-label outline-none placeholder:text-tertiary"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label="검색 지우기"
+                  className="shrink-0 text-tertiary active:opacity-50"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         {/* Manual extra weight — reflected in totals without picking gear */}
+        {extraOpen && (
         <div className="flex items-center gap-2.5 px-[var(--gutter)] py-2.5">
           <Weight size={16} className="shrink-0 text-tertiary" />
           <span className="min-w-0 flex-1 text-[15px] font-medium text-secondary">
@@ -721,12 +910,14 @@ export function TripDetail({
             }}
             placeholder="0"
             inputMode="decimal"
+            autoFocus
             className="w-24 rounded-full bg-fill px-3 py-1 text-right tabular text-[14px] text-label outline-none placeholder:text-tertiary"
           />
           <span className="shrink-0 text-[14px] text-secondary">g</span>
           <span className="w-6 shrink-0" />
         </div>
-        {groups.map(([major, rows]) => (
+        )}
+        {shownGroups.map(([major, rows]) => (
           <section key={major}>
             <div className="flex items-baseline justify-between px-[var(--gutter)] pb-3 pt-5">
               <span className="text-[17px] font-bold tracking-[-0.01em] text-tertiary">
@@ -761,10 +952,16 @@ export function TripDetail({
           </section>
         ))}
 
-        {groups.length === 0 && (
+        {groups.length === 0 ? (
           <p className="px-[var(--gutter)] py-12 text-center text-[15px] text-secondary">
             아직 챙긴 장비가 없어요. Add로 추가해보세요.
           </p>
+        ) : (
+          shownGroups.length === 0 && (
+            <p className="px-[var(--gutter)] py-12 text-center text-[15px] text-secondary">
+              검색 결과가 없습니다.
+            </p>
+          )
         )}
       </div>
 
@@ -800,6 +997,13 @@ export function TripDetail({
       <ExportSheet open={exportOpen} onClose={() => setExportOpen(false)} tripId={tripId} />
 
       <PlaceSheet open={placeOpen} tripId={tripId} onClose={() => setPlaceOpen(false)} />
+      {toast && (
+        <div className="pointer-events-none fixed inset-x-0 top-[calc(var(--bar-top)+64px)] z-[55] flex justify-center">
+          <span className="glass-strong rounded-full px-4 py-2 text-[14px] font-medium text-label">
+            {toast}
+          </span>
+        </div>
+      )}
       <GearPickerSheet
         open={pickerOpen}
         tripId={tripId}

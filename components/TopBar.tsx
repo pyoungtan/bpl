@@ -48,6 +48,10 @@ export interface TopBarConfig {
    *  moment-to-moment state. */
   centerSlot?: React.ReactNode;
   centerKey?: string;
+  /** A second row under the bar (e.g. the trip list's filter chips): it
+   *  tucks away and comes back with the bar. Re-registers on `subKey`. */
+  subSlot?: React.ReactNode;
+  subKey?: string;
   /** Left glass button toggles this screen's search. */
   onSearch?: () => void;
   searching?: boolean;
@@ -89,6 +93,7 @@ export function useTopBar(config: TopBarConfig, active = true) {
     back: Boolean(config.onBack),
     center: config.center ?? null,
     centerKey: config.centerSlot ? (config.centerKey ?? "") : null,
+    subKey: config.subSlot ? (config.subKey ?? "") : null,
     search: Boolean(config.onSearch),
     searching: Boolean(config.searching),
     left: config.left?.label ?? null,
@@ -114,6 +119,7 @@ export function useTopBar(config: TopBarConfig, active = true) {
         onBack: c.onBack ? () => ref.current.onBack?.() : undefined,
         center: c.center,
         centerSlot: c.centerSlot,
+        subSlot: c.subSlot,
         onSearch: c.onSearch ? () => ref.current.onSearch?.() : undefined,
         searching: c.searching,
         left: c.left ? { ...c.left, onTap: () => ref.current.left?.onTap() } : undefined,
@@ -177,6 +183,26 @@ interface PressOpts {
   disabled?: () => boolean;
 }
 
+/**
+ * These buttons act on pointerup, but the browser still sends a click right
+ * after — at the same spot. If the tap made the button go away (Pack's ✕
+ * clearing the selection), that click lands on whatever was underneath (a
+ * gear row) and acts on it. Swallow that one trailing click.
+ */
+function swallowGhostClick() {
+  const swallow = (e: MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    done();
+  };
+  const done = () => {
+    window.clearTimeout(timer);
+    window.removeEventListener("click", swallow, true);
+  };
+  const timer = window.setTimeout(done, 450);
+  window.addEventListener("click", swallow, true);
+}
+
 export function usePressFx<T extends HTMLElement>(opts: PressOpts) {
   const fxRef = useRef<T>(null);
   const optsRef = useRef(opts);
@@ -233,7 +259,10 @@ export function usePressFx<T extends HTMLElement>(opts: PressOpts) {
         e.clientX <= r.right + 24 &&
         e.clientY >= r.top - 24 &&
         e.clientY <= r.bottom + 24;
-      if (inside) optsRef.current.onTap?.();
+      if (inside) {
+        optsRef.current.onTap?.();
+        swallowGhostClick();
+      }
     };
     return {
       onPointerDown: (e: React.PointerEvent) => {
@@ -925,6 +954,11 @@ export function TopBarProvider({
     if (tucked) root.dataset.bars = "tucked";
     else delete root.dataset.bars;
   }, [tucked]);
+  // A sub row deepens the top band (and the room screens leave under it).
+  const hasSub = Boolean(config?.subSlot);
+  useEffect(() => {
+    document.documentElement.style.setProperty("--bar-sub", hasSub ? "44px" : "0px");
+  }, [hasSub]);
 
   // Bottom bar: another tab switches; the current one pops a detail screen
   // back to its list, or scrolls a list back to the top.
@@ -970,11 +1004,9 @@ export function TopBarProvider({
         className="pointer-events-none fixed inset-x-0 top-0 z-50 mx-auto max-w-2xl"
       >
         {/* The tuck slides this inner row; pull-to-refresh moves the nav itself. */}
-        <div
-          className="top-bar-row relative flex items-center justify-between px-[var(--gutter)] pt-[var(--bar-top)]"
-          data-tucked={tucked || undefined}
-          inert={tucked}
-        >
+        <div className="top-bar-row" data-tucked={tucked || undefined} inert={tucked}>
+        {/* above the sub row, so the open ⋯ menu covers it */}
+        <div className="relative z-[1] flex items-center justify-between px-[var(--gutter)] pt-[var(--bar-top)]">
         <div className="pointer-events-auto -ml-2.5 flex h-12 items-center">
           {config?.onBack ? (
             <GlassCircle
@@ -1057,6 +1089,8 @@ export function TopBarProvider({
             <span className="block w-11" aria-hidden="true" />
           )}
         </div>
+        </div>
+        {config?.subSlot && <div className="pointer-events-auto">{config.subSlot}</div>}
         </div>
       </nav>
       <BottomNav
