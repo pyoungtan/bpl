@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   CalendarClock,
   CalendarDays,
+  Images,
   ChevronDown,
   CircleCheck,
   ListChecks,
@@ -41,6 +42,7 @@ import { RangeCalendar } from "../ui/RangeCalendar";
 import { Sheet } from "../ui/Sheet";
 import { CategoryScrubber } from "../gear/CategoryScrubber";
 import { PlaceSheet } from "./PlaceSheet";
+import { TripPhotosSheet } from "./TripPhotosSheet";
 import { SwipeRow, SwipeDeleteButton } from "../ui/SwipeRow";
 import { Checkbox } from "../ui/Checkbox";
 import { GearFlags } from "../ui/GearFlags";
@@ -118,6 +120,7 @@ export function TripDetail({
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [pickerOpen, setPickerOpen] = useState(false);
   const [placeOpen, setPlaceOpen] = useState(false);
+  const [photosOpen, setPhotosOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Minus at quantity 1 asks before taking the item out of the trip.
@@ -589,6 +592,17 @@ export function TripDetail({
             />
             <span className="text-[14px] text-tertiary">℃</span>
           </div>
+          {/* photos taken on the trip's dates (picked, never stored) */}
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <Images size={15} className="shrink-0 text-tertiary" />
+            <button
+              type="button"
+              onClick={() => setPhotosOpen(true)}
+              className="min-w-0 flex-1 truncate text-left text-[14px] text-secondary active:opacity-60"
+            >
+              그날의 사진
+            </button>
+          </div>
         </div>
 
         {/* Collapsible memo — full text when expanded */}
@@ -800,6 +814,12 @@ export function TripDetail({
       <ExportSheet open={exportOpen} onClose={() => setExportOpen(false)} tripId={tripId} />
 
       <PlaceSheet open={placeOpen} tripId={tripId} onClose={() => setPlaceOpen(false)} />
+      <TripPhotosSheet
+        open={photosOpen}
+        onClose={() => setPhotosOpen(false)}
+        start={tripStart(trip)}
+        end={trip.endDate}
+      />
       <GearPickerSheet
         open={pickerOpen}
         tripId={tripId}
