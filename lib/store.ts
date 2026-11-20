@@ -11,6 +11,7 @@ import type {
   Trip,
   WeightUnit,
 } from "./types";
+import { snapshotTrips } from "./trips";
 import { createSampleData } from "./sample";
 
 function uid(prefix: string): string {
@@ -134,17 +135,9 @@ export const useAppStore = create<Store>()(
               };
             }
           }
-          const trips = { ...s.trips };
-          for (const tid of Object.keys(trips)) {
-            const t = trips[tid];
-            if (t.packed.some((p) => p.gearId === id)) {
-              trips[tid] = { ...t, packed: t.packed.filter((p) => p.gearId !== id) };
-            }
-          }
           return {
             gear,
             gearOrder: s.gearOrder.filter((x) => x !== id),
-            trips,
           };
         }),
 
@@ -361,14 +354,16 @@ export const useAppStore = create<Store>()(
         set((s) => {
           const t = s.trips[tripId];
           if (!t) return s;
-          const map = new Map(t.packed.map((p) => [p.gearId, p.quantity]));
-          for (const e of entries) {
-            map.set(e.gearId, (map.get(e.gearId) ?? 0) + e.quantity);
+          const map = new Map(t.packed.map(p => [p.gearId, p]));
+          for (const entry of entries) {
+            const old = map.get(entry.gearId);
+            map.set(entry.gearId, {
+              gearId: entry.gearId,
+              quantity: (old?.quantity ?? 0) + entry.quantity,
+              snapshot: old?.snapshot ?? entry.snapshot ?? s.gear[entry.gearId],
+            });
           }
-          const packed = [...map.entries()].map(([gearId, quantity]) => ({
-            gearId,
-            quantity,
-          }));
+          const packed = [...map.values()];
           return { trips: { ...s.trips, [tripId]: { ...t, packed } } };
         }),
 
@@ -417,7 +412,7 @@ export const useAppStore = create<Store>()(
     }),
     {
       name: "bpl-v5",
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => localStorage),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       migrate: (persisted: any) => {
@@ -433,7 +428,7 @@ export const useAppStore = create<Store>()(
           }
           persisted.categories = cats;
         }
-        return persisted;
+        return snapshotTrips(persisted);
       },
       partialize: (s) => ({
         gear: s.gear,

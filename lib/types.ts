@@ -31,6 +31,7 @@ export interface GearItem {
 
 /** A gear item packed for a trip, with the quantity taken. */
 export interface PackedEntry {
+  snapshot?: GearItem; // Gear as it was when first packed.
   gearId: string;
   quantity: number;
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { useAppStore, dataSignature, LOCAL_UPDATED_KEY, type Store } from "./store";
+import { snapshotTrips } from "./trips";
 import { createSampleData } from "./sample";
 import type { AppData } from "./types";
 
@@ -140,7 +141,7 @@ export function useCloudSync(): CloudState {
         if (error) throw error;
 
         if (data?.data) {
-          const remote = data.data as AppData;
+          const remote = snapshotTrips(data.data as AppData);
           const remoteAt = (data.updated_at as string) ?? "";
           const remoteJson = JSON.stringify(remote);
           const local = pickData(useAppStore.getState());
@@ -209,8 +210,8 @@ export function useCloudSync(): CloudState {
         (payload) => {
           if (conflictActive.current) return; // hold until the user chooses
           const row = payload.new as { data?: AppData; updated_at?: string };
-          const remote = row?.data;
-          if (!remote) return;
+          if (!row?.data) return;
+          const remote = snapshotTrips(row.data);
           const json = JSON.stringify(remote);
           if (json === lastPushed.current) return; // ignore our own echo
           // Never let an older row overwrite what we already have, and never

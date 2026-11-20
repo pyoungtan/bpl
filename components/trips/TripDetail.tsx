@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { flushSync } from "react-dom";
 import {
+  Archive,
   BookmarkPlus,
   CalendarCheck,
   CalendarClock,
@@ -30,7 +31,7 @@ import { computeStats } from "@/lib/calc";
 import type { GearItem } from "@/lib/types";
 import { formatWeight, formatWeightSmart } from "@/lib/units";
 import { formatTripRange, tripNights, tripStart } from "@/lib/dates";
-import { tripCompanions } from "@/lib/trips";
+import { tripCatalog, tripCompanions } from "@/lib/trips";
 import { cn } from "@/lib/cn";
 import { Donut } from "../Donut";
 import { useTopBar } from "../TopBar";
@@ -146,8 +147,9 @@ export function TripDetail({
   underlayScroll?: () => number;
 }) {
   const trip = useAppStore((s) => s.trips[tripId]);
-  const gear = useAppStore((s) => s.gear);
-  const gearOrder = useAppStore((s) => s.gearOrder);
+  const catalog = useAppStore((s) => s.gear);
+  const order = useAppStore((s) => s.gearOrder);
+  const { gear, gearOrder } = useMemo(() => tripCatalog(trip, catalog, order), [trip, catalog, order]);
   const categories = useAppStore((s) => s.categories);
   const unit = useAppStore((s) => s.displayUnit);
   const updateTrip = useAppStore((s) => s.updateTrip);
@@ -514,20 +516,19 @@ export function TripDetail({
           )}
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-1.5">
-              <span
-                className={cn(
-                  "min-w-0 truncate font-semibold leading-tight",
-                  nested ? "text-[14px] text-secondary" : "text-[15px] text-label",
-                )}
-              >
+              <span className={cn(
+                "min-w-0 truncate font-semibold leading-tight",
+                nested ? "text-[14px]" : "text-[15px]",
+                !catalog[g.id] ? "text-tertiary" : nested ? "text-secondary" : "text-label",
+              )}>
                 {g.name}
-                {nested && g.brand && (
-                  <span className="font-normal text-[12px] text-tertiary">
-                    {" · "}
-                    {g.brand}
-                  </span>
-                )}
               </span>
+              {!catalog[g.id] && (
+                <Archive size={14} role="img" aria-label="현재 장비 목록에 없음" className="shrink-0 text-secondary" />
+              )}
+              {nested && g.brand && (
+                <span className="truncate text-[12px] text-tertiary">· {g.brand}</span>
+              )}
               <GearFlags worn={g.worn} consumable={g.consumable} />
             </div>
             {!nested && (

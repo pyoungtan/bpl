@@ -170,7 +170,7 @@ export function MapTab({
 
   const totalG = (t: Trip) =>
     t.packed.reduce((sum, p) => {
-      const g = gear[p.gearId];
+      const g = p.snapshot ?? gear[p.gearId];
       return g ? sum + g.weightG * p.quantity : sum;
     }, 0) + (t.extraWeightG ?? 0);
 

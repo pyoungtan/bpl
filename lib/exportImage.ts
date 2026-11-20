@@ -1,3 +1,4 @@
+import { tripCatalog } from "./trips";
 import type { GearItem, Trip, WeightUnit } from "./types";
 import { formatWeight, formatWeightSmart } from "./units";
 
@@ -34,10 +35,11 @@ export interface ExportData {
  *  total only. */
 export function buildExportData(
   trip: Trip,
-  gear: Record<string, GearItem>,
-  gearOrder: string[],
+  catalog: Record<string, GearItem>,
+  order: string[],
   categories: string[],
 ): ExportData {
+  const { gear, gearOrder } = tripCatalog(trip, catalog, order);
   const qty = new Map(trip.packed.map((p) => [p.gearId, p.quantity]));
   const parentCat = new Map<string, string>();
   for (const p of trip.packed) {
